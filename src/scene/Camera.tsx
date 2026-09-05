@@ -19,7 +19,12 @@ interface Tween {
  * storey's mid height over 300 ms whenever the active storey changes.
  */
 export function Camera() {
-  const controls = useThree((s) => s.controls as OrbitControlsImpl | null);
+  // During a walkthrough the default controls are PointerLockControls, which have no
+  // orbit target, so only orbit controls are used here.
+  const controls = useThree((s) => {
+    const c = s.controls as OrbitControlsImpl | null;
+    return c !== null && "target" in c && c.target instanceof Vector3 ? c : null;
+  });
   const camera = useThree((s) => s.camera);
   const building = useEditorStore((s) => s.building);
   const activeStoreyId = useEditorStore((s) => s.activeStoreyId);

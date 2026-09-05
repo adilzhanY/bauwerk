@@ -143,3 +143,7 @@ The gable over a non rectangular footprint was a folded plate: one ridge through
 ## 2026-09-05: Inactive storeys hid the floor being edited
 
 With two or more storeys and a lower one active, the agent's fixed 25 % opacity for other storeys still covered rooms and windows. The user rejected the single constant and proposed a slider, hiding, or outlines. A web check of how Revit (halftone underlay), ArchiCAD (ghost story) and SketchUp (X-ray) handle it led to separate settings for storeys above and below the active one, with hidden / outline / ghost / solid modes and a ghost opacity slider. Default above is outline, default below is ghost at 15 %.
+
+## 2026-09-05: Walkthrough crashed the camera effect
+
+Starting the walkthrough replaced the orbit controls with pointer lock controls, and the agent's camera fitting effect read the orbit target off them and crashed the whole app. Found by the user on the first click. The effect now ignores any default controls without an orbit target.
