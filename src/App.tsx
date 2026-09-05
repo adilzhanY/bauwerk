@@ -7,6 +7,8 @@ import { useSync } from "@/sync/useSync";
 import { BottomBar } from "@/ui/BottomBar";
 import { LeftPanel } from "@/ui/LeftPanel";
 import { PrintView } from "@/ui/PrintView";
+import { BenchPage } from "@/ui/BenchPage";
+import type { RenderSample } from "@/scene/FrameProbe";
 import { RightPanel } from "@/ui/RightPanel";
 import { EmptyState, TooNarrow, WebGLMissing } from "@/ui/States";
 import { ToolRail } from "@/ui/ToolRail";
@@ -39,6 +41,7 @@ export function App() {
   const tool = useEditorStore((s) => s.tool);
   const mapVisible = useEditorStore((s) => s.showMap && s.building.origin !== undefined);
   const t = useT();
+  const [sample, setSample] = useState<RenderSample | null>(null);
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -49,6 +52,8 @@ export function App() {
   }, []);
 
   if (new URLSearchParams(window.location.search).get("print") === "1") return <PrintView />;
+  if (new URLSearchParams(window.location.search).get("bench") === "1")
+    return <BenchPage sample={sample} onSample={setSample} />;
   if (width < MIN_WIDTH) return <TooNarrow />;
 
   return (

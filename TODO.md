@@ -376,6 +376,6 @@ Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 
 ## 31. Performance page
 
-- [ ] A benchmark route `?bench=1` that loads a fifty storey, twenty openings per storey building, shows a frame time graph over ten seconds, draw calls and triangle count from the renderer info, and a paragraph on the memoisation strategy (geometry per element by input hash, merged prisms per wall, throttled hover).
+- [x] A benchmark route `?bench=1` that loads a fifty storey, twenty openings per storey building, shows a frame time graph over ten seconds, draw calls and triangle count from the renderer info, and a paragraph on the memoisation strategy (geometry per element by input hash, merged prisms per wall, throttled hover).
 - [ ] Instanced interior walls and merged room fills per storey if the benchmark falls below 60 fps on the RTX 5070 or 30 fps on integrated graphics.
 - [ ] The numbers from Adilzhan's machine written into the README.

@@ -12,6 +12,8 @@ import { HeatPumps } from "./Hvac";
 import { Sun } from "./Sun";
 import { SectionCut } from "./SectionCut";
 import { Walkthrough } from "./Walkthrough";
+import { FrameProbe } from "./FrameProbe";
+import type { RenderSample } from "./FrameProbe";
 import { UValueBands } from "./UValueBand";
 import { useSceneColors } from "./useSceneColors";
 import { useEditorStore } from "@/store/building";
@@ -23,7 +25,7 @@ import { Tools } from "./tools/Tools";
 import { Compass } from "./Compass";
 import { storeyElevation } from "@/store/selectors";
 
-export function Viewport() {
+export function Viewport({ onSample }: { onSample?: (s: RenderSample) => void } = {}) {
   const building = useEditorStore((s) => s.building);
   const activeStoreyId = useEditorStore((s) => s.activeStoreyId);
   const planView = useEditorStore((s) => s.planView);
@@ -106,6 +108,7 @@ export function Viewport() {
         />
       )}
       <Camera />
+      {onSample && <FrameProbe onSample={onSample} />}
     </Canvas>
   );
 }

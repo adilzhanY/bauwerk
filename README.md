@@ -29,6 +29,10 @@ The `--legacy-peer-deps` flag works around an npm 10 crash while resolving Vites
 - **Geo**: place the footprint on the earth, see the UTM easting and northing (EPSG 258xx), export GeoJSON, import a GeoJSON footprint. The projection is checked against PROJ to 1 mm.
 - **Consultant tools**: dimension labels, a 2D plan view, walls coloured by U-value, a room list, a measure tool, storey duplication, a floor plan image underlay for tracing, and a print view with plans, the room table and the energy summary.
 
+## Performance
+
+Open `/?bench=1` for a fifty storey tower with twenty openings per storey, a frame time graph over the last ten seconds and the renderer's draw call and triangle counts. Geometry is built once per element and memoised by a hash of its inputs; each wall is a single merged mesh of prisms; hover writes to the store at most once per frame; inactive storeys are excluded from raycasting. Measured numbers on the RTX 5070 and on integrated graphics: to be recorded by Adilzhan.
+
 ## Demo path
 
 About three minutes, from an empty browser tab.

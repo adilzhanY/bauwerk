@@ -190,6 +190,14 @@ describe("App", () => {
     expect(useEditorStore.getState().theme).toBe("dark");
   });
 
+  it("renders the benchmark page with the fifty storey building", () => {
+    window.history.replaceState(null, "", "/?bench=1");
+    render(<App />);
+    expect(screen.getByRole("heading", { name: "Benchmark" })).toBeTruthy();
+    expect(useEditorStore.getState().building.storeys).toHaveLength(50);
+    window.history.replaceState(null, "", "/");
+  });
+
   it("opens the shortcut sheet", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));
