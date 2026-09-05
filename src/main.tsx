@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import { App } from "./App";
+import { ErrorBoundary } from "./ui/ErrorBoundary";
 import { useEditorStore } from "./store/building";
 import { startPersistence } from "./store/persist";
 
@@ -12,6 +13,8 @@ startPersistence(useEditorStore);
 
 createRoot(root).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );
