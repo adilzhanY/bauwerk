@@ -1,5 +1,7 @@
 import { useRef, useState } from "react";
-import { Download, FileBox, Keyboard, Redo2, Undo2, Upload } from "lucide-react";
+import { Download, FileBox, FileDown, Keyboard, Redo2, Undo2, Upload } from "lucide-react";
+import { syncConfigFromEnv } from "@/sync/client";
+import { syncEnabled } from "@/sync/useSync";
 import { fromJson, toJson } from "@/geometry/export";
 import type { ImportError } from "@/geometry/export";
 import { toIfc } from "@/geometry/ifc";
@@ -62,6 +64,32 @@ export function BottomBar({ actor }: Props) {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const [ifcResult, setIfcResult] = useState<IfcImportResult | null>(null);
+  const [pdfBusy, setPdfBusy] = useState(false);
+
+  const downloadPdf = async () => {
+    const cfg = syncConfigFromEnv();
+    if (!cfg) return;
+    setPdfBusy(true);
+    try {
+      const res = await fetch(`${cfg.apiUrl}/reports?lang=${language}`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ building }),
+      });
+      if (!res.ok) throw new Error(String(res.status));
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = fileName(building.name, "pdf");
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setIfcError(t("bar.pdfFailed", { message: e instanceof Error ? e.message : String(e) }));
+    } finally {
+      setPdfBusy(false);
+    }
+  };
 
   const onImportFile = async (file: File) => {
     const text = await file.text();
@@ -113,6 +141,18 @@ export function BottomBar({ actor }: Props) {
       >
         {t("bar.exportIfc")}
       </CustomButton>
+      {syncEnabled && (
+        <CustomButton
+          variant="quiet"
+          icon={<FileDown size={14} />}
+          loading={pdfBusy}
+          onClick={() => {
+            void downloadPdf();
+          }}
+        >
+          {t("bar.pdf")}
+        </CustomButton>
+      )}
       <CustomButton
         variant="quiet"
         icon={<Upload size={14} />}

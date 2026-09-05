@@ -77,7 +77,9 @@ export function PrintView() {
 
       <div className="page">
         <div className="toolbar">
-          <a href={window.location.pathname}>{t("print.back")}</a>
+          <a href={typeof window === "undefined" ? "/" : window.location.pathname}>
+            {t("print.back")}
+          </a>
           <button
             type="button"
             onClick={() => {

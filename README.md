@@ -72,6 +72,8 @@ DATABASE_URL=postgres://user:pass@localhost:5432/bauwerk npm run dev
 cd .. && VITE_API_URL=http://localhost:3000 npm run dev
 ```
 
+The server also serves the client build from `dist/` when it exists and prints it to PDF through `POST /reports`, so build the client before starting the server if you want the Download PDF button.
+
 Open the app, create a project from the Project section, and open the same link in a second tab. Each accepted write carries the version it was based on; a stale write gets a 409 with the current state, the client takes it and puts its own change on top (last write wins). Presence and selections travel over a WebSocket room per project. The server tests run against a real Postgres and check that of twelve simultaneous writes on the same version exactly one wins.
 
 ```

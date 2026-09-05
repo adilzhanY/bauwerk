@@ -370,9 +370,9 @@ Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 
 ## 30. PDF report
 
-- [ ] Server endpoint `POST /reports/:projectId` renders the print view to PDF with headless Chromium (Playwright) on the server, vector plans, A4, file name from the building and date. Attribution and disclaimer included.
-- [ ] Client: a "Download PDF" button next to Print when the server is configured; the browser print path stays for local use.
-- [ ] Test: the endpoint returns a PDF whose first page contains the building name (checked with pdf-parse).
+- [x] Server endpoint `POST /reports/:projectId` renders the print view to PDF with headless Chromium (Playwright) on the server, vector plans, A4, file name from the building and date. Attribution and disclaimer included.
+- [x] Client: a "Download PDF" button next to Print when the server is configured; the browser print path stays for local use.
+- [x] Test: the endpoint returns a PDF whose first page contains the building name (checked with pdf-parse).
 
 ## 31. Performance page
 

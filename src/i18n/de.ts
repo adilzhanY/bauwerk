@@ -417,6 +417,8 @@ export const de: Messages = {
   "view.walkHint":
     "In die Szene klicken, um sich mit der Maus umzusehen. WASD oder Pfeiltasten bewegen, Bild auf und Bild ab wechseln das Geschoss, Escape beendet.",
   "view.walkStart": "Begehung starten",
+  "bar.pdf": "PDF herunterladen",
+  "bar.pdfFailed": "Das PDF konnte nicht erstellt werden: {message}",
   "common.metres": "m",
   "common.squareMetres": "m²",
   "common.remove": "Entfernen",

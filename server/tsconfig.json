@@ -16,7 +16,10 @@
     "verbatimModuleSyntax": true,
     "allowImportingTsExtensions": true,
     "baseUrl": ".",
-    "paths": { "@/geometry/*": ["../src/geometry/*"], "@/*": ["../src/*"] }
+    "paths": {
+      "@/geometry/*": ["../src/geometry/*"],
+      "@/*": ["../src/*"]
+    }
   },
   "include": ["src", "vitest.config.ts", "../src/geometry/**/*.ts"],
   "exclude": ["../src/geometry/**/*.test.ts"]

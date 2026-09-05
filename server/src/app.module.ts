@@ -4,11 +4,13 @@ import { DB, createPool } from "./db";
 import { ProjectsController } from "./projects/projects.controller";
 import { ProjectsGateway } from "./projects/projects.gateway";
 import { ProjectsService } from "./projects/projects.service";
+import { ReportsController } from "./reports/reports.controller";
+import { ReportService } from "./reports/report.service";
 
 export function createAppModule(pool: Pool = createPool()) {
   @Module({
-    controllers: [ProjectsController],
-    providers: [{ provide: DB, useValue: pool }, ProjectsService, ProjectsGateway],
+    controllers: [ProjectsController, ReportsController],
+    providers: [{ provide: DB, useValue: pool }, ProjectsService, ProjectsGateway, ReportService],
   })
   // eslint-disable-next-line @typescript-eslint/no-extraneous-class -- Nest modules are declared as empty classes
   class AppModule {}

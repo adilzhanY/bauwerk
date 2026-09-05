@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "check": "npm run typecheck && npm run lint && npm run test",
-    "lint": "../node_modules/.bin/eslint src --max-warnings 0 --config ../eslint.config.js"
+    "lint": "../node_modules/.bin/eslint src --max-warnings 0 --config ../eslint.config.js",
+    "postinstall": "playwright install chromium"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
@@ -17,7 +18,9 @@
     "@nestjs/platform-express": "^12.0.1",
     "@nestjs/platform-ws": "^12.0.1",
     "@nestjs/websockets": "^12.0.1",
+    "pdf-parse": "^2.4.5",
     "pg": "^8.23.0",
+    "playwright": "^1.63.0",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "tsx": "^4.23.13",

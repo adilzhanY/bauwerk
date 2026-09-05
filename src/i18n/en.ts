@@ -408,6 +408,8 @@ export const en = {
   "view.walkHint":
     "Click the scene to look around with the mouse. WASD or the arrow keys move, PageUp and PageDown change the storey, Escape leaves.",
   "view.walkStart": "Start walking",
+  "bar.pdf": "Download PDF",
+  "bar.pdfFailed": "The PDF could not be created: {message}",
   "common.metres": "m",
   "common.squareMetres": "m²",
   "common.remove": "Remove",
