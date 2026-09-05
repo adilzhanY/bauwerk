@@ -47,6 +47,7 @@ export function useKeyboardShortcuts() {
       if (e.key === "Escape") {
         s.clearSelection();
         s.setMeasurement(null);
+        if (s.walkthrough) s.setWalkthrough(false);
         return;
       }
       const toolIndex = Number(e.key) - 1;

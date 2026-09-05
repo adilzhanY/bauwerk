@@ -358,15 +358,15 @@ Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 
 ## 28. Section cut
 
-- [ ] A clipping plane through the model: a switch in the View section, a slider for the cut height and a segmented control for the cut axis (horizontal, along x, along y); Three.js clipping planes on every material, cap faces drawn in the mark colour so cut walls read as solid.
-- [ ] Rooms stay labelled in the cut view; the plan view reuses the horizontal cut at eye height.
-- [ ] Test: the clipping plane constant follows the slider value and the storey elevation.
+- [x] A clipping plane through the model: a switch in the View section, a slider for the cut height and a segmented control for the cut axis (horizontal, along x, along y); Three.js clipping planes on every material, cap faces drawn in the mark colour so cut walls read as solid.
+- [x] Rooms stay labelled in the cut view; the plan view reuses the horizontal cut at eye height.
+- [x] Test: the clipping plane constant follows the slider value and the storey elevation.
 
 ## 29. Walkthrough camera
 
-- [ ] First person mode: a camera at 1.6 m above the active storey floor, WASD and arrow keys to move, mouse look with pointer lock, collision with exterior and interior walls, doors passable, stairs not modelled so PageUp and PageDown teleport between storeys.
-- [ ] Enter and exit through a View switch and the Escape key; the orbit camera position is restored on exit.
-- [ ] Test: the collision helper keeps a point inside the footprint and outside interior wall thickness, and lets it through a door span.
+- [x] First person mode: a camera at 1.6 m above the active storey floor, WASD and arrow keys to move, mouse look with pointer lock, collision with exterior and interior walls, doors passable, stairs not modelled so PageUp and PageDown teleport between storeys.
+- [x] Enter and exit through a View switch and the Escape key; the orbit camera position is restored on exit.
+- [x] Test: the collision helper keeps a point inside the footprint and outside interior wall thickness, and lets it through a door span.
 
 ## 30. PDF report
 

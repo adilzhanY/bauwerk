@@ -15,6 +15,64 @@ import { CustomSlider } from "@/components/CustomSlider";
 import { CustomField, CustomReadOnly, CustomSection } from "@/components/CustomField";
 import { formatNumber } from "@/lib/format";
 import { BERLIN_FALLBACK, daylight, formatClock, formatDay, sunAt } from "@/lib/sunTime";
+import { bounds } from "@/geometry/polygon";
+import { selectTotalHeight } from "@/store/selectors";
+
+function CutControls() {
+  const t = useT();
+  const s = useEditorStore();
+  const height = selectTotalHeight(s);
+  const { min, max } = bounds(s.building.footprint);
+  const range =
+    s.sectionCut.axis === "horizontal"
+      ? { min: 0.1, max: Math.max(1, height + 1) }
+      : s.sectionCut.axis === "x"
+        ? { min: min.x - 1, max: max.x + 1 }
+        : { min: min.y - 1, max: max.y + 1 };
+  return (
+    <div className="flex flex-col gap-3">
+      <CustomCheckbox
+        variant="switch"
+        label={t("view.sectionCut")}
+        checked={s.sectionCut.enabled}
+        onChange={(enabled) => {
+          s.setSectionCut({ enabled });
+        }}
+      />
+      {s.sectionCut.enabled && (
+        <>
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted">{t("view.cutAxis")}</span>
+            <CustomSegmented
+              label={t("view.cutAxis")}
+              value={s.sectionCut.axis}
+              options={[
+                { value: "horizontal", label: t("view.cutHorizontal") },
+                { value: "x", label: t("view.cutX") },
+                { value: "y", label: t("view.cutY") },
+              ]}
+              onChange={(axis) => {
+                s.setSectionCut({ axis });
+              }}
+            />
+          </div>
+          <CustomNumberInput
+            label={t("view.cutValue")}
+            value={s.sectionCut.value}
+            min={range.min}
+            max={range.max}
+            step={0.1}
+            unit={t("common.metres")}
+            language={s.language}
+            onChange={(value) => {
+              s.setSectionCut({ value });
+            }}
+          />
+        </>
+      )}
+    </div>
+  );
+}
 
 function SunControls() {
   const t = useT();
@@ -119,6 +177,21 @@ export function SettingsSection() {
           onChange={s.setShowBridges}
         />
         <SunControls />
+        <CutControls />
+        <CustomCheckbox
+          variant="switch"
+          label={t("view.walkthrough")}
+          checked={s.walkthrough}
+          onChange={s.setWalkthrough}
+        />
+        {s.walkthrough && (
+          <>
+            <p className="text-xs text-muted">{t("view.walkHint")}</p>
+            <CustomButton id="walk-lock" variant="primary" className="self-start">
+              {t("view.walkStart")}
+            </CustomButton>
+          </>
+        )}
         <div className="flex flex-col gap-1">
           <span className="text-xs font-medium text-muted">{t("settings.theme")}</span>
           <CustomSegmented

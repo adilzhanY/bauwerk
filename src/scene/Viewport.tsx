@@ -10,6 +10,8 @@ import { Roof } from "./Roof";
 import { ProposalOverlay } from "./ProposalOverlay";
 import { HeatPumps } from "./Hvac";
 import { Sun } from "./Sun";
+import { SectionCut } from "./SectionCut";
+import { Walkthrough } from "./Walkthrough";
 import { UValueBands } from "./UValueBand";
 import { useSceneColors } from "./useSceneColors";
 import { useEditorStore } from "@/store/building";
@@ -27,6 +29,7 @@ export function Viewport() {
   const planView = useEditorStore((s) => s.planView);
   const scene = useSceneColors();
   const sunEnabled = useEditorStore((s) => s.sun.enabled);
+  const walking = useEditorStore((s) => s.walkthrough);
   const activeElevation = activeStoreyId ? storeyElevation(building, activeStoreyId) : 0;
   const plan = planCamera(
     bounds(building.footprint),
@@ -44,6 +47,8 @@ export function Viewport() {
     >
       <hemisphereLight args={["#eef1f7", "#6b6f78", 0.9]} />
       <Sun />
+      <SectionCut />
+      <Walkthrough />
       <directionalLight
         position={[20, 30, 10]}
         intensity={sunEnabled ? 0.25 : 1.6}
@@ -87,17 +92,19 @@ export function Viewport() {
         ))}
       <Compass />
       <Tools />
-      <OrbitControls
-        makeDefault
-        enableRotate={!planView}
-        target={planView ? plan.target : undefined}
-        enableDamping
-        dampingFactor={0.12}
-        minDistance={2}
-        maxDistance={150}
-        maxPolarAngle={Math.PI / 2 - 0.03}
-        mouseButtons={{ LEFT: 0, MIDDLE: 1, RIGHT: 2 }}
-      />
+      {!walking && (
+        <OrbitControls
+          makeDefault
+          enableRotate={!planView}
+          target={planView ? plan.target : undefined}
+          enableDamping
+          dampingFactor={0.12}
+          minDistance={2}
+          maxDistance={150}
+          maxPolarAngle={Math.PI / 2 - 0.03}
+          mouseButtons={{ LEFT: 0, MIDDLE: 1, RIGHT: 2 }}
+        />
+      )}
       <Camera />
     </Canvas>
   );

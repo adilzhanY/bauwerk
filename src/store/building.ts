@@ -90,6 +90,10 @@ export interface EditorState {
   theme: Theme;
   /** Red lines for thermal bridges. UI state. */
   showBridges: boolean;
+  /** Section cut through the model. UI state. */
+  sectionCut: { enabled: boolean; axis: "horizontal" | "x" | "y"; value: number };
+  /** First person walkthrough. UI state. */
+  walkthrough: boolean;
   /** Sun simulation: a real sun over the model for a day of the year and a local time. UI state. */
   sun: { enabled: boolean; dayOfYear: number; minutes: number };
   /** OpenStreetMap tiles on the ground when a location is set. UI state. */
@@ -191,6 +195,10 @@ export interface EditorActions {
   setShowMap: (on: boolean) => void;
   setShowBridges: (on: boolean) => void;
   setSun: (patch: Partial<{ enabled: boolean; dayOfYear: number; minutes: number }>) => void;
+  setSectionCut: (
+    patch: Partial<{ enabled: boolean; axis: "horizontal" | "x" | "y"; value: number }>,
+  ) => void;
+  setWalkthrough: (on: boolean) => void;
   setMapOpacity: (opacity: number) => void;
   /** Replaces the building with server state. Not recorded in history and clears the redo stack. */
   applyRemoteBuilding: (building: Building) => void;
@@ -290,6 +298,8 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           showMap: true,
           showBridges: false,
           sun: { enabled: false, dayOfYear: 172, minutes: 14 * 60 },
+          sectionCut: { enabled: false, axis: "horizontal", value: 1.5 },
+          walkthrough: false,
           mapOpacity: 0.85,
 
           setFootprintVertex: (index, position) => {
@@ -817,6 +827,19 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           setUnderlay: (underlay) => {
             set((state) => {
               state.underlay = underlay;
+            });
+          },
+
+          setSectionCut: (patch) => {
+            set((state) => {
+              state.sectionCut = { ...state.sectionCut, ...patch };
+            });
+          },
+
+          setWalkthrough: (on) => {
+            set((state) => {
+              state.walkthrough = on;
+              if (on) state.planView = false;
             });
           },
 
