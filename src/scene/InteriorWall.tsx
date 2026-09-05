@@ -1,28 +1,29 @@
 import { useMemo } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
-import { wallSolids } from "@/geometry/walls";
-import type { Wall as WallData } from "@/geometry/walls";
-import type { Id, Opening } from "@/geometry/types";
+import { distance, normalize, sub } from "@/geometry/polygon";
+import type { Id, Segment } from "@/geometry/types";
 import { colors, INACTIVE_OPACITY } from "@/lib/colors";
 import { sameSelection, useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
 import { useHover } from "./hover";
-import { mergeAll, prismGeometry } from "./three";
+import { yawFor } from "./three";
 
 interface Props {
   storeyId: Id;
-  wall: WallData;
-  openings: readonly Opening[];
+  index: number;
+  segment: Segment;
+  height: number;
   elevation: number;
   active: boolean;
 }
 
+export const INTERIOR_WALL_THICKNESS = 0.1;
 const noRaycast = () => null;
 
-export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
+export function InteriorWall({ storeyId, index, segment, height, elevation, active }: Props) {
   const target: Selection = useMemo(
-    () => ({ kind: "wall", storeyId, wallIndex: wall.index }),
-    [storeyId, wall.index],
+    () => ({ kind: "interiorWall", storeyId, index }),
+    [storeyId, index],
   );
   const selected = useEditorStore((s) => sameSelection(s.selection, target));
   const hovered = useEditorStore((s) => sameSelection(s.hovered, target));
@@ -30,34 +31,29 @@ export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
   const tool = useEditorStore((s) => s.tool);
   const hover = useHover(target, active);
 
-  // Memoised by a hash of the inputs: the wall quad, height and the openings on it.
-  const hash = JSON.stringify([wall.quad, wall.height, openings]);
-  const geometry = useMemo(() => {
-    const prisms = wallSolids(wall, openings);
-    return mergeAll(prisms.map((p) => prismGeometry(p.plan, p.bottom, p.top)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hash]);
+  const length = distance(segment.a, segment.b);
+  const yaw = yawFor(normalize(sub(segment.b, segment.a)));
+  const cx = (segment.a.x + segment.b.x) / 2;
+  const cz = (segment.a.y + segment.b.y) / 2;
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
-    if (!active) return;
+    if (!active || (tool !== "select" && tool !== "interiorWall")) return;
     e.stopPropagation();
-    if (tool === "select" || tool === "opening") select(target);
+    select(target);
   };
-
-  const color = selected ? colors.accent : hovered ? colors.wallHover : colors.wall;
 
   return (
     <mesh
-      geometry={geometry}
-      position={[0, elevation, 0]}
+      position={[cx, elevation + height / 2, cz]}
+      rotation={[0, yaw, 0]}
       onClick={onClick}
       raycast={active ? undefined : noRaycast}
       castShadow
-      receiveShadow
       {...hover}
     >
+      <boxGeometry args={[length, height, INTERIOR_WALL_THICKNESS]} />
       <meshStandardMaterial
-        color={color}
+        color={selected ? colors.accent : hovered ? colors.wallHover : colors.interiorWall}
         emissive={selected ? colors.accent : "#000000"}
         emissiveIntensity={selected ? 0.35 : 0}
         roughness={0.9}

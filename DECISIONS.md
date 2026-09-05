@@ -31,3 +31,7 @@ Two calls the agent could not make alone. First: the footprint polygon is the ou
 ## 2026-09-05 Room identity survives recomputation by centroid, not by index
 
 Rooms are derived from interior walls, but the user names them and assigns zones. When a wall is added the agent's first idea was to match old rooms to new ones by array index, which reshuffles names as soon as face order changes. Replaced with centroid matching: a previous room keeps its id, name and zone in whichever new face contains its old centroid, largest rooms first. Splitting a room keeps the identity in the half that holds the centroid; merging keeps the larger room. Tested in `rooms.test.ts` and `building.test.ts`.
+
+## 2026-09-05 Openings cut walls by splitting into prisms, not by CSG
+
+`INFO.md` left the choice open between `three-bvh-csg` and manual subtraction. Chosen: no CSG at all. A wall is split along its length into columns at every opening edge; a column with an opening becomes a prism below the sill and a prism above the head, the other columns are full height. Each prism is a plan quad following the mitred inner face, extruded vertically, and the prisms of one wall are merged into a single mesh. This is a pure function (`wallSolids` in `src/geometry/walls.ts`) whose volume is unit tested: full wall volume minus cut volume equals the sum of the opening areas times the thickness. CSG would have added a dependency, been untestable without WebGL, and produced dirty topology at shared edges. The cost is that openings are always rectangular, which the spec already requires.

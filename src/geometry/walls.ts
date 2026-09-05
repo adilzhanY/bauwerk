@@ -1,6 +1,7 @@
 import { add, edges, lineIntersection, scale, sub } from "./polygon";
 import type { Edge } from "./polygon";
-import type { Vec2 } from "./types";
+import { isOpeningValid } from "./openings";
+import type { Opening, Vec2 } from "./types";
 
 /**
  * An exterior wall as a footprint quad. The building footprint is the outer
@@ -73,4 +74,79 @@ export function wallThicknessAt(wall: Wall, t: number): number {
   const inner = add(wall.innerA, scale(sub(wall.innerB, wall.innerA), t));
   const d = sub(outer, inner);
   return Math.abs(d.x * wall.normal.x + d.y * wall.normal.y);
+}
+
+/**
+ * A wall as a set of solid prisms. Each prism is a plan quad in world XZ metres
+ * (as x, y here) with a bottom and top height. Openings are the gaps between
+ * prisms: a column that holds an opening is split into a part below the sill
+ * and a part above the head. This avoids CSG entirely and the volume is easy
+ * to check in a test. Invalid openings are ignored.
+ */
+export interface WallPrism {
+  plan: [Vec2, Vec2, Vec2, Vec2];
+  bottom: number;
+  top: number;
+}
+
+interface Column {
+  u0: number;
+  u1: number;
+  cuts: { v0: number; v1: number }[];
+}
+
+export function wallSolids(wall: Wall, openings: readonly Opening[]): WallPrism[] {
+  const valid = openings.filter((o) =>
+    isOpeningValid(o, { wallLength: wall.length, storeyHeight: wall.height, siblings: openings }),
+  );
+  const sorted = [...valid].sort((a, b) => a.offset - b.offset);
+  const columns: Column[] = [];
+  let cursor = 0;
+  for (const o of sorted) {
+    if (o.offset > cursor + 1e-9) columns.push({ u0: cursor, u1: o.offset, cuts: [] });
+    columns.push({
+      u0: o.offset,
+      u1: o.offset + o.width,
+      cuts: [{ v0: o.sill, v1: o.sill + o.height }],
+    });
+    cursor = o.offset + o.width;
+  }
+  if (cursor < wall.length - 1e-9) columns.push({ u0: cursor, u1: wall.length, cuts: [] });
+
+  const prisms: WallPrism[] = [];
+  for (const c of columns) {
+    const plan = wallPlanSlice(wall, c.u0, c.u1);
+    const cut = c.cuts[0];
+    if (!cut) {
+      prisms.push({ plan, bottom: 0, top: wall.height });
+      continue;
+    }
+    if (cut.v0 > 1e-9) prisms.push({ plan, bottom: 0, top: cut.v0 });
+    if (cut.v1 < wall.height - 1e-9) prisms.push({ plan, bottom: cut.v1, top: wall.height });
+  }
+  return prisms;
+}
+
+/**
+ * Plan quad of the wall between u0 and u1 metres along the outer edge. The
+ * inner side follows the mitred inner face, so the end slices meet their
+ * neighbours exactly at the corners.
+ */
+export function wallPlanSlice(wall: Wall, u0: number, u1: number): [Vec2, Vec2, Vec2, Vec2] {
+  const outer = (u: number) => add(wall.outerA, scale(wall.direction, u));
+  const innerDir = sub(wall.innerB, wall.innerA);
+  const innerLen = Math.hypot(innerDir.x, innerDir.y);
+  const inner = (u: number): Vec2 => {
+    if (u <= 1e-9) return wall.innerA;
+    if (u >= wall.length - 1e-9) return wall.innerB;
+    // Project the outer point onto the inner face along the inward normal, then
+    // clamp to the inner segment so a slice never pokes past a mitred corner.
+    const p = add(outer(u), scale(wall.normal, -wallThicknessAt(wall, 0.5)));
+    if (innerLen < 1e-9) return p;
+    const t =
+      ((p.x - wall.innerA.x) * innerDir.x + (p.y - wall.innerA.y) * innerDir.y) /
+      (innerLen * innerLen);
+    return add(wall.innerA, scale(innerDir, Math.min(1, Math.max(0, t))));
+  };
+  return [outer(u0), outer(u1), inner(u1), inner(u0)];
 }

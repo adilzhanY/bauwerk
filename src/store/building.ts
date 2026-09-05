@@ -24,8 +24,11 @@ export interface EditorState {
   building: Building;
   activeStoreyId: Id | null;
   selection: Selection | null;
+  /** Throttled hover target from the viewport. UI state, never in history. */
+  hovered: Selection | null;
   tool: Tool;
   language: Language;
+  showGrid: boolean;
 }
 
 export interface EditorActions {
@@ -49,6 +52,8 @@ export interface EditorActions {
   setActiveStorey: (storeyId: Id) => void;
   select: (selection: Selection) => void;
   clearSelection: () => void;
+  setHovered: (hovered: Selection | null) => void;
+  setShowGrid: (show: boolean) => void;
   setTool: (tool: Tool) => void;
   setLanguage: (language: Language) => void;
 }
@@ -85,6 +90,12 @@ export function createDefaultBuilding(language: Language = "en"): Building {
   return building;
 }
 
+export function sameSelection(a: Selection | null, b: Selection | null): boolean {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
 function findStorey(building: Building, storeyId: Id): Storey | undefined {
   return building.storeys.find((s) => s.id === storeyId);
 }
@@ -111,8 +122,10 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           building,
           activeStoreyId: initial?.activeStoreyId ?? building.storeys[0]?.id ?? null,
           selection: initial?.selection ?? null,
+          hovered: null,
           tool: initial?.tool ?? "select",
           language,
+          showGrid: initial?.showGrid ?? true,
 
           setFootprintVertex: (index, position) => {
             set((state) => {
@@ -287,6 +300,19 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           clearSelection: () => {
             set((state) => {
               state.selection = null;
+            });
+          },
+
+          setHovered: (hovered) => {
+            set((state) => {
+              if (sameSelection(state.hovered, hovered)) return;
+              state.hovered = hovered;
+            });
+          },
+
+          setShowGrid: (show) => {
+            set((state) => {
+              state.showGrid = show;
             });
           },
 

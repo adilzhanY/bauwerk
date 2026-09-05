@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { area, equals } from "./polygon";
 import { lShape, rect } from "./fixtures";
-import { buildWalls, wallThicknessAt } from "./walls";
+import { buildWalls, wallSolids, wallThicknessAt } from "./walls";
+import type { WallPrism } from "./walls";
+import type { Opening } from "./types";
 
 describe("buildWalls", () => {
   it("produces one wall per vertex with the storey height", () => {
@@ -58,5 +60,64 @@ describe("buildWalls", () => {
     const quadArea = walls.reduce((sum, w) => sum + area(w.quad), 0);
     const ring = 80 - (10 - 0.6) * (8 - 0.6);
     expect(quadArea).toBeCloseTo(ring);
+  });
+});
+
+describe("wallSolids", () => {
+  const wall = () => buildWalls(rect, 0.3, 3)[0]!;
+  const windowOpening: Opening = {
+    id: "w",
+    wallIndex: 0,
+    kind: "window",
+    offset: 2,
+    width: 1.2,
+    height: 1.4,
+    sill: 0.9,
+  };
+  const doorOpening: Opening = {
+    id: "d",
+    wallIndex: 0,
+    kind: "door",
+    offset: 6,
+    width: 1,
+    height: 2.1,
+    sill: 0,
+  };
+  const volume = (prisms: readonly WallPrism[]) =>
+    prisms.reduce((sum, p) => sum + area(p.plan) * (p.top - p.bottom), 0);
+
+  it("a wall without openings is a single full height prism", () => {
+    const prisms = wallSolids(wall(), []);
+    expect(prisms).toHaveLength(1);
+    expect(prisms[0]?.bottom).toBe(0);
+    expect(prisms[0]?.top).toBe(3);
+    expect(prisms[0]?.plan).toEqual(wall().quad);
+  });
+
+  it("removes exactly the opening volume", () => {
+    const w = wall();
+    const full = volume(wallSolids(w, []));
+    const cut = volume(wallSolids(w, [windowOpening, doorOpening]));
+    const removed = (1.2 * 1.4 + 1 * 2.1) * 0.3;
+    expect(full - cut).toBeCloseTo(removed, 6);
+  });
+
+  it("a window column has a part below and above, a door column only above", () => {
+    const prisms = wallSolids(wall(), [windowOpening, doorOpening]);
+    // left, below window, above window, between, above door, right
+    expect(prisms).toHaveLength(6);
+    const aboveDoor = prisms.find((p) => p.bottom === 2.1);
+    expect(aboveDoor?.top).toBe(3);
+    expect(prisms.some((p) => p.bottom === 0 && p.top === 0.9)).toBe(true);
+  });
+
+  it("ignores an invalid opening", () => {
+    expect(wallSolids(wall(), [{ ...windowOpening, offset: 9.5 }])).toHaveLength(1);
+  });
+
+  it("an opening flush with the wall start still keeps the mitred corner", () => {
+    const prisms = wallSolids(wall(), [{ ...doorOpening, offset: 0 }]);
+    expect(prisms).toHaveLength(2);
+    expect(prisms[0]?.plan[3]).toEqual(wall().innerA);
   });
 });

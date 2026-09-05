@@ -11,6 +11,18 @@ const base = process.env.VITE_BASE_PATH ?? "/";
 export default defineConfig({
   base,
   plugins: [react(), tailwindcss()],
+  build: {
+    // Three.js plus drei is about 1 MB minified and lives in its own cached chunk.
+    chunkSizeWarningLimit: 1100,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          three: ["three", "@react-three/fiber", "@react-three/drei"],
+          react: ["react", "react-dom", "zustand", "immer"],
+        },
+      },
+    },
+  },
   resolve: {
     alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
   },
