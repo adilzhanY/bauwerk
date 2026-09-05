@@ -54,31 +54,31 @@ Work top to bottom. Tick with `[x]`. A task is done when `npm run check` passes 
 - [x] Opening tool: click a wall to place a window at the click position with default size; hold Shift for a door. Then drag the opening along the wall, snapped to 0.1 m.
 - [x] Interior wall tool: click two grid points on the active storey to add a wall segment. Preview line while placing.
 - [x] Zone tool: click rooms to toggle them into the active zone.
-- [ ] Keyboard shortcuts from `INFO.md`, with a small shortcut sheet behind a `?` button.
+- [x] Keyboard shortcuts from `INFO.md`, with a small shortcut sheet behind a `?` button.
 
 ## 5. UI panels
 
-- [ ] `LeftPanel.tsx`: storey list with add, remove, rename, reorder by drag; tool palette; settings for wall thickness, grid visibility, language.
-- [ ] `RightPanel.tsx`: properties of the selection. Wall: length, thickness, number of openings. Opening: kind, offset, width, height, sill, with sliders and number inputs, validation message when invalid. Room: name, area, zone select. Storey: name, height. Zone: name, colour from the fixed set.
-- [ ] `BottomBar.tsx`: undo, redo (disabled when nothing to do), export, import, status line.
-- [ ] Empty state when the building has no storeys, and a WebGL-missing state.
-- [ ] Below 1024 px: full-screen message that the editor needs a desktop browser.
-- [ ] Focus rings, labels, keyboard operation of every panel control.
+- [x] `LeftPanel.tsx`: storey list with add, remove, rename, reorder by drag; tool palette; settings for wall thickness, grid visibility, language.
+- [x] `RightPanel.tsx`: properties of the selection. Wall: length, thickness, number of openings. Opening: kind, offset, width, height, sill, with sliders and number inputs, validation message when invalid. Room: name, area, zone select. Storey: name, height. Zone: name, colour from the fixed set.
+- [x] `BottomBar.tsx`: undo, redo (disabled when nothing to do), export, import, status line.
+- [x] Empty state when the building has no storeys, and a WebGL-missing state.
+- [x] Below 1024 px: full-screen message that the editor needs a desktop browser.
+- [x] Focus rings, labels, keyboard operation of every panel control.
 
 ## 6. Internationalisation
 
-- [ ] `src/i18n/index.ts`: `t(key)` hook bound to the store language, typed keys, missing key is a compile error.
-- [ ] `en.ts` complete.
-- [ ] `de.ts` complete, checked against a dictionary. Storey naming rules: ground floor "Erdgeschoss", then "1. Obergeschoss", "2. Obergeschoss"; English "Ground floor", "1st floor", "2nd floor".
-- [ ] Language persisted in localStorage, default from `navigator.language`.
-- [ ] Number formatting via `Intl.NumberFormat` in inputs and status line.
+- [x] `src/i18n/index.ts`: `t(key)` hook bound to the store language, typed keys, missing key is a compile error.
+- [x] `en.ts` complete.
+- [x] `de.ts` complete, checked against a dictionary. Storey naming rules: ground floor "Erdgeschoss", then "1. Obergeschoss", "2. Obergeschoss"; English "Ground floor", "1st floor", "2nd floor".
+- [x] Language persisted in localStorage, default from `navigator.language`.
+- [x] Number formatting via `Intl.NumberFormat` in inputs and status line.
 
 ## 7. Persistence and export
 
-- [ ] Autosave the building to localStorage on every change, restore on load, "Reset to example" button.
-- [ ] Export button downloads `bauwerk-<name>-<date>.json`.
-- [ ] Import button opens a file picker, validates, shows the error message inline if invalid.
-- [ ] Two example buildings bundled: a simple two-storey house and an L-shaped three-storey block.
+- [x] Autosave the building to localStorage on every change, restore on load, "Reset to example" button.
+- [x] Export button downloads `bauwerk-<name>-<date>.json`.
+- [x] Import button opens a file picker, validates, shows the error message inline if invalid.
+- [x] Two example buildings bundled: a simple two-storey house and an L-shaped three-storey block.
 
 ## 8. Quality gates
 

@@ -4,7 +4,8 @@ import type { Building, Id, Opening, Segment, Storey, Vec2, Zone } from "@/geome
 import { DEFAULT_STOREY_HEIGHT, DEFAULT_WALL_THICKNESS, GRID_SIZE } from "@/geometry/types";
 import { isCounterClockwise, isSimplePolygon, snapPoint } from "@/geometry/polygon";
 import { computeRooms } from "@/geometry/rooms";
-import { defaultRoomName, defaultStoreyName } from "@/i18n";
+import { defaultRoomName, defaultStoreyName, detectLanguage } from "@/i18n";
+import { loadBuilding, loadLanguage } from "@/lib/storage";
 import type { Language } from "@/i18n";
 import { createId } from "@/lib/ids";
 import { history } from "./history";
@@ -426,4 +427,8 @@ export function createEditorStore(initial?: Partial<EditorState>) {
   );
 }
 
-export const useEditorStore = createEditorStore();
+const startLanguage = loadLanguage() ?? detectLanguage();
+export const useEditorStore = createEditorStore({
+  language: startLanguage,
+  building: loadBuilding() ?? undefined,
+});
