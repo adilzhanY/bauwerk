@@ -20,6 +20,7 @@ import { CustomTabPanel, CustomTabs } from "@/components/CustomTabs";
 import { CustomTextInput } from "@/components/CustomTextInput";
 import { ConstructionSelect, EnergyPanel } from "./EnergyPanel";
 import { effectiveWallThickness } from "@/geometry/layers";
+import { buildRoof, roofOf } from "@/geometry/roof";
 
 const openingErrorKey: Record<OpeningError, MessageKey> = {
   outsideWallStart: "opening.error.outsideWallStart",
@@ -93,7 +94,118 @@ function Properties({ selection }: { selection: Selection }) {
       return <StoreyProperties storeyId={selection.id} />;
     case "zone":
       return <ZoneProperties zoneId={selection.id} />;
+    case "roof":
+      return <RoofProperties />;
   }
+}
+
+function RoofProperties() {
+  const t = useT();
+  const language = useEditorStore((s) => s.language);
+  const building = useEditorStore((s) => s.building);
+  const setRoof = useEditorStore((s) => s.setRoof);
+  const batch = useBatch();
+  const roof = roofOf(building);
+  const geo = buildRoof(building, 0);
+  const m = t("common.metres");
+  return (
+    <>
+      <Title>{t("roof.title")}</Title>
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-muted">{t("roof.kind")}</span>
+        <CustomSegmented
+          label={t("roof.kind")}
+          value={roof.kind}
+          options={[
+            { value: "flat", label: t("roof.flat") },
+            { value: "gable", label: t("roof.gable") },
+            { value: "hip", label: t("roof.hip") },
+          ]}
+          onChange={(kind) => {
+            setRoof({ kind });
+          }}
+        />
+      </div>
+      {roof.kind === "flat" ? (
+        <CustomNumberInput
+          label={t("roof.parapet")}
+          value={roof.parapet}
+          min={0}
+          max={1.5}
+          step={0.05}
+          unit={m}
+          language={language}
+          onChange={(parapet) => {
+            setRoof({ parapet });
+          }}
+          {...batch}
+        />
+      ) : (
+        <>
+          {geo.kind === "hip" && geo.builtKind !== "hip" && (
+            <p className="text-xs text-mark">{t("roof.hipFallback")}</p>
+          )}
+          <CustomNumberInput
+            label={t("roof.pitch")}
+            value={roof.pitch}
+            min={5}
+            max={75}
+            step={1}
+            unit="°"
+            language={language}
+            onChange={(pitch) => {
+              setRoof({ pitch });
+            }}
+            {...batch}
+          />
+          <CustomNumberInput
+            label={t("roof.overhang")}
+            value={roof.overhang}
+            min={0}
+            max={1.5}
+            step={0.05}
+            unit={m}
+            language={language}
+            onChange={(overhang) => {
+              setRoof({ overhang });
+            }}
+            {...batch}
+          />
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted">{t("roof.ridgeAxis")}</span>
+            <CustomSegmented
+              label={t("roof.ridgeAxis")}
+              value={roof.ridgeAxis}
+              options={[
+                { value: "x", label: "X" },
+                { value: "y", label: "Y" },
+              ]}
+              onChange={(ridgeAxis) => {
+                setRoof({ ridgeAxis });
+              }}
+            />
+          </div>
+          <CustomCheckbox
+            variant="switch"
+            label={t("roof.heatedAttic")}
+            checked={roof.heatedAttic}
+            onChange={(heatedAttic) => {
+              setRoof({ heatedAttic });
+            }}
+          />
+          <CustomReadOnly
+            label={t("roof.ridgeHeight")}
+            value={formatMetres(geo.ridgeHeight, language)}
+          />
+          <CustomReadOnly
+            label={t("roof.atticVolume")}
+            value={`${formatNumber(geo.atticVolume, language, 1)} m³`}
+          />
+        </>
+      )}
+      <CustomReadOnly label={t("roof.area")} value={formatArea(geo.area, language)} />
+    </>
+  );
 }
 
 function useStorey(storeyId: string): Storey | undefined {

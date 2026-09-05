@@ -196,3 +196,23 @@ describe("thermal bridges in the energy balance", () => {
     expect(good.bridgeLoss).toBeCloseTo(r.bridgeLoss);
   });
 });
+
+describe("roof shape in the energy balance", () => {
+  it("a gable roof enlarges the roof area by 1 / cos(pitch) and a heated attic adds volume", () => {
+    const flat = computeEnergy(building());
+    const gable = computeEnergy({
+      ...building(),
+      roof: { kind: "gable", pitch: 45, overhang: 0, ridgeAxis: "x" },
+    });
+    expect(gable.storeys[0]!.roofArea).toBeCloseTo(80 / Math.cos(Math.PI / 4));
+    expect(
+      gable.transmissionLoss - gable.bridgeLoss - (flat.transmissionLoss - flat.bridgeLoss),
+    ).toBeCloseTo(ROOF * (80 / Math.cos(Math.PI / 4) - 80));
+    expect(gable.heatedVolume).toBeCloseTo(flat.heatedVolume);
+    const attic = computeEnergy({
+      ...building(),
+      roof: { kind: "gable", pitch: 45, overhang: 0, ridgeAxis: "x", heatedAttic: true },
+    });
+    expect(attic.heatedVolume).toBeCloseTo(240 + 0.5 * 8 * 4 * 10);
+  });
+});

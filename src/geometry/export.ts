@@ -1,6 +1,7 @@
 import { DEFAULT_ASSIGNMENT, defaultConstructions } from "./constructions";
 import { computeEnergy } from "./energy";
 import { withComputedU } from "./layers";
+import { roofOf } from "./roof";
 import type { EnergySummary } from "./energy";
 import { validateOpening } from "./openings";
 import { area, isCounterClockwise, isSimplePolygon, pointInPolygon, edges } from "./polygon";
@@ -38,7 +39,8 @@ export type ImportErrorCode =
   | "unknownZone"
   | "unknownConstruction"
   | "constructionInvalid"
-  | "originInvalid";
+  | "originInvalid"
+  | "roofInvalid";
 
 export interface ImportError {
   code: ImportErrorCode;
@@ -162,6 +164,13 @@ export function validateBuilding(b: Building): ImportError | null {
   }
   if (!(b.wallThickness > 0))
     return { code: "wallThicknessInvalid", path: "building.wallThickness" };
+
+  if (b.roof) {
+    const r = roofOf(b);
+    if (r.pitch < 0 || r.pitch > 80 || r.overhang < 0 || r.parapet < 0) {
+      return { code: "roofInvalid", path: "building.roof" };
+    }
+  }
 
   const ids = new Set<string>();
   const seen = (id: string, path: string): ImportError | null => {
@@ -356,6 +365,19 @@ function checkBuildingShape(v: unknown, path: string): ImportError | null {
   if (!isNumber(b.wallThickness)) return bad(`${path}.wallThickness`);
   if (b.bridgeDetail !== undefined && b.bridgeDetail !== "good" && b.bridgeDetail !== "poor") {
     return bad(`${path}.bridgeDetail`);
+  }
+  if (b.roof !== undefined) {
+    if (!isRecord(b.roof)) return bad(`${path}.roof`);
+    const r = b.roof;
+    if (r.kind !== undefined && !["flat", "gable", "hip"].includes(r.kind as string))
+      return bad(`${path}.roof.kind`);
+    for (const k of ["pitch", "overhang", "parapet"]) {
+      if (r[k] !== undefined && !isNumber(r[k])) return bad(`${path}.roof.${k}`);
+    }
+    if (r.ridgeAxis !== undefined && r.ridgeAxis !== "x" && r.ridgeAxis !== "y")
+      return bad(`${path}.roof.ridgeAxis`);
+    if (r.heatedAttic !== undefined && typeof r.heatedAttic !== "boolean")
+      return bad(`${path}.roof.heatedAttic`);
   }
   if (b.origin !== undefined) {
     if (!isRecord(b.origin)) return bad(`${path}.origin`);

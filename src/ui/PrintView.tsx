@@ -8,6 +8,7 @@ import { useT } from "@/i18n/useT";
 import type { MessageKey } from "@/i18n";
 import { useEditorStore } from "@/store/building";
 import { LayerSection, LayerTable } from "./LayerSection";
+import { buildRoof, roofOf } from "@/geometry/roof";
 
 /*
   The report is a document, not an interface. It follows the conventions of
@@ -348,6 +349,10 @@ function BuildingFields({ building, energy }: { building: Building; energy: Ener
       <Field k={t("energy.heatedFloorArea")} v={`${num(energy.heatedFloorArea, 2)} m²`} />
       <Field k={t("energy.envelopeArea")} v={`${num(energy.envelopeArea, 2)} m²`} />
       <Field k={t("energy.windowToWall")} v={`${num(energy.windowToWallRatio * 100, 0)} %`} />
+      <Field
+        k={t("roof.kind")}
+        v={`${t(`roof.${roofOf(building).kind}`)}${roofOf(building).kind === "flat" ? "" : `, ${num(roofOf(building).pitch, 0)}°`}`}
+      />
       <Field k={t("energy.wallConstruction")} v={construction(building.wallConstructionId)} />
       <Field k={t("energy.roofConstruction")} v={construction(building.roofConstructionId)} />
       <Field k={t("energy.floorConstruction")} v={construction(building.floorConstructionId)} />
@@ -543,6 +548,8 @@ function StoreyPlan({ storey }: { storey: Storey }) {
   const py = (y: number) => max.y - y + pad;
   const pt = (p: { x: number; y: number }) => `${px(p.x)},${py(p.y)}`;
   const es = edges(building.footprint);
+  const ridge =
+    storey === building.storeys[building.storeys.length - 1] ? buildRoof(building, 0).ridge : null;
   return (
     <svg
       viewBox={`0 0 ${w} ${h}`}
@@ -589,6 +596,17 @@ function StoreyPlan({ storey }: { storey: Storey }) {
           />
         );
       })}
+      {ridge && (
+        <line
+          x1={px(ridge.a.x)}
+          y1={py(ridge.a.y)}
+          x2={px(ridge.b.x)}
+          y2={py(ridge.b.y)}
+          stroke="#000"
+          strokeWidth={0.12}
+          strokeDasharray="0.6 0.3"
+        />
+      )}
       {storey.rooms.map((r) => {
         const c = r.polygon.reduce(
           (s, p) => ({ x: s.x + p.x / r.polygon.length, y: s.y + p.y / r.polygon.length }),

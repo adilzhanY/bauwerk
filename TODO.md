@@ -288,15 +288,15 @@ Goal: the extra heat loss at edges and corners, computed from lengths the geomet
 
 Goal: a house reads as a house, and the roof area feeds the heat loss. Answers element types and geometry.
 
-- [ ] Data model: `Roof { kind: "flat" | "gable" | "hip"; pitch: number; overhang: number; ridgeAxis: "x" | "y"; parapet?: number }` on the building; default flat with 0.3 m parapet.
-- [ ] `src/geometry/roof.ts`, pure, for rectangular and general convex footprints: gable roof as two planes meeting at a ridge along the chosen axis, hip roof as the straight skeleton of the footprint (implement for convex polygons, fall back to gable for concave with a documented limitation), flat roof as a slab with parapet. Output: roof faces as 3D polygons in metres, ridge and eave lines, true surface area, enclosed attic volume.
-- [ ] Tests: gable on the 10 by 8 rectangle at 40 degrees gives two faces of equal area, surface area equals footprint area divided by cos(pitch) plus overhang strips, eave height equals storey top, ridge height equals half span times tan(pitch); hip roof faces sum to the same area as the gable for a square; flat roof area equals footprint area.
-- [ ] Scene: roof faces as meshes in a roof colour, underside not rendered, eave overhang visible, opacity follows the top storey. Clicking the roof selects it.
-- [ ] Properties: kind as segmented control, pitch and overhang as number inputs with live update, ridge axis toggle.
-- [ ] Energy: roof area in the envelope uses the true sloped area for gable and hip; the attic counts as unheated (no volume added) unless a "heated attic" switch is on.
-- [ ] IFC: IfcRoof with IfcSlab members of PredefinedType ROOF, one per face, as IfcFacetedBrep or extruded solids; ridge height exported in Pset_RoofCommon (TotalArea, ProjectedArea).
-- [ ] Print view plan gets the ridge line and the roof kind in the building fields.
-- [ ] i18n: Flachdach, Satteldach, Walmdach, Dachneigung, Dachüberstand, Firstrichtung, Attika.
+- [x] Data model: `Roof { kind: "flat" | "gable" | "hip"; pitch: number; overhang: number; ridgeAxis: "x" | "y"; parapet?: number }` on the building; default flat with 0.3 m parapet.
+- [x] `src/geometry/roof.ts`, pure, for rectangular and general convex footprints: gable roof as two planes meeting at a ridge along the chosen axis, hip roof as the straight skeleton of the footprint (implement for convex polygons, fall back to gable for concave with a documented limitation), flat roof as a slab with parapet. Output: roof faces as 3D polygons in metres, ridge and eave lines, true surface area, enclosed attic volume.
+- [x] Tests: gable on the 10 by 8 rectangle at 40 degrees gives two faces of equal area, surface area equals footprint area divided by cos(pitch) plus overhang strips, eave height equals storey top, ridge height equals half span times tan(pitch); hip roof faces sum to the same area as the gable for a square; flat roof area equals footprint area.
+- [x] Scene: roof faces as meshes in a roof colour, underside not rendered, eave overhang visible, opacity follows the top storey. Clicking the roof selects it.
+- [x] Properties: kind as segmented control, pitch and overhang as number inputs with live update, ridge axis toggle.
+- [x] Energy: roof area in the envelope uses the true sloped area for gable and hip; the attic counts as unheated (no volume added) unless a "heated attic" switch is on.
+- [x] IFC: IfcRoof with IfcSlab members of PredefinedType ROOF, one per face, as IfcFacetedBrep or extruded solids; ridge height exported in Pset_RoofCommon (TotalArea, ProjectedArea).
+- [x] Print view plan gets the ridge line and the roof kind in the building fields.
+- [x] i18n: Flachdach, Satteldach, Walmdach, Dachneigung, Dachüberstand, Firstrichtung, Attika.
 
 ## 23. Footprint from a photo
 

@@ -1,0 +1,256 @@
+import {
+  area,
+  bounds,
+  centroid,
+  edges,
+  lineIntersection,
+  add,
+  scale,
+  sub,
+  cross,
+  isCounterClockwise,
+} from "./polygon";
+import type { Building, Roof, Vec2 } from "./types";
+
+/**
+ * Roof shapes over the footprint. Faces are planar 3D polygons in metres with
+ * plan (x, y) and height z; the scene triangulates them, the energy layer uses
+ * their true area, IFC gets them as a surface model.
+ *
+ * Gable: the ridge runs through the footprint centre along the chosen axis;
+ * every point rises by (distance to the outer eave - distance to the ridge) x
+ * tan(pitch). This works for any footprint as a folded plate; for a rectangle
+ * it is the classic two-plane gable.
+ * Hip: only for rectangular footprints (four axis-aligned vertices), where the
+ * straight skeleton is two trapezoids and two triangles. Other footprints fall
+ * back to a gable, documented in the roof summary.
+ * Flat: the footprint at the top with a parapet band of the given height.
+ * Attic volume under a gable or hip is the integral of a piecewise linear
+ * height, which for each planar face is its plan area times the height at its
+ * plan centroid.
+ */
+
+export interface Vec3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+export interface RoofFace {
+  points: Vec3[];
+  /** Plan area of the face's projection. */
+  planArea: number;
+  /** True sloped area. */
+  area: number;
+}
+
+export interface RoofGeometry {
+  kind: Roof["kind"];
+  /** The kind actually built; a hip on a non-rectangular footprint falls back to gable. */
+  builtKind: Roof["kind"];
+  faces: RoofFace[];
+  ridge: { a: Vec3; b: Vec3 } | null;
+  /** Outline of the roof at eave level, footprint plus overhang. */
+  eaves: Vec2[];
+  area: number;
+  ridgeHeight: number;
+  atticVolume: number;
+}
+
+export const DEFAULT_ROOF: Roof = {
+  kind: "flat",
+  pitch: 35,
+  overhang: 0.3,
+  ridgeAxis: "x",
+  parapet: 0.3,
+  heatedAttic: false,
+};
+
+export const roofOf = (building: Building): Roof => ({ ...DEFAULT_ROOF, ...building.roof });
+
+const rad = (d: number) => (d * Math.PI) / 180;
+
+/** Offsets a counter-clockwise polygon outward by `d` metres with mitred corners. */
+export function offsetPolygon(polygon: readonly Vec2[], d: number): Vec2[] {
+  if (Math.abs(d) < 1e-9) return [...polygon];
+  const es = edges(polygon);
+  const n = es.length;
+  const lines = es.map(
+    (e) => [add(e.a, scale(e.normal, d)), add(e.b, scale(e.normal, d))] as const,
+  );
+  const out: Vec2[] = [];
+  for (let i = 0; i < n; i++) {
+    const prev = lines[(i + n - 1) % n];
+    const curr = lines[i];
+    if (!prev || !curr) continue;
+    out.push(lineIntersection(prev[0], prev[1], curr[0], curr[1]) ?? curr[0]);
+  }
+  return out;
+}
+
+function isAxisAlignedRectangle(polygon: readonly Vec2[]): boolean {
+  if (polygon.length !== 4) return false;
+  return polygon.every((p, i) => {
+    const q = polygon[(i + 1) % 4];
+    return q !== undefined && (Math.abs(p.x - q.x) < 1e-9 || Math.abs(p.y - q.y) < 1e-9);
+  });
+}
+
+/** Splits a polygon by the line through `p` with direction `d`; returns the left and right parts. */
+function splitByLine(polygon: readonly Vec2[], p: Vec2, d: Vec2): [Vec2[], Vec2[]] {
+  const side = (q: Vec2) => cross(d, sub(q, p));
+  const clip = (keepLeft: boolean): Vec2[] => {
+    const out: Vec2[] = [];
+    const n = polygon.length;
+    for (let i = 0; i < n; i++) {
+      const a = polygon[i];
+      const b = polygon[(i + 1) % n];
+      if (!a || !b) continue;
+      const sa = side(a);
+      const sb = side(b);
+      const inA = keepLeft ? sa >= -1e-9 : sa <= 1e-9;
+      const inB = keepLeft ? sb >= -1e-9 : sb <= 1e-9;
+      if (inA) out.push(a);
+      if (inA !== inB) {
+        const t = sa / (sa - sb);
+        out.push(add(a, scale(sub(b, a), t)));
+      }
+    }
+    return out;
+  };
+  return [clip(true), clip(false)];
+}
+
+function face(points2: readonly Vec2[], z: (p: Vec2) => number): RoofFace {
+  const pts = points2.map((p) => ({ x: p.x, y: p.y, z: z(p) }));
+  const planArea = area(points2);
+  // A planar face over the plan: true area = plan area / cos(slope), where the slope
+  // is the face normal's angle from vertical. Compute the normal from three points.
+  let trueArea = planArea;
+  const [a, b, c] = pts;
+  if (a && b && c) {
+    const u = { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z };
+    const v = { x: c.x - a.x, y: c.y - a.y, z: c.z - a.z };
+    const nx = u.y * v.z - u.z * v.y;
+    const ny = u.z * v.x - u.x * v.z;
+    const nz = u.x * v.y - u.y * v.x;
+    const len = Math.hypot(nx, ny, nz);
+    const cos = len > 0 ? Math.abs(nz) / len : 1;
+    trueArea = cos > 1e-9 ? planArea / cos : planArea;
+  }
+  return { points: pts, planArea, area: trueArea };
+}
+
+export function buildRoof(building: Building, topElevation: number): RoofGeometry {
+  const roof = roofOf(building);
+  const fp = isCounterClockwise(building.footprint)
+    ? building.footprint
+    : [...building.footprint].reverse();
+  if (roof.kind === "flat") {
+    const f = face(fp, () => topElevation);
+    return {
+      kind: "flat",
+      builtKind: "flat",
+      faces: [f],
+      ridge: null,
+      eaves: [...fp],
+      area: f.area,
+      ridgeHeight: 0,
+      atticVolume: 0,
+    };
+  }
+  const eaves = offsetPolygon(fp, roof.overhang);
+  const tan = Math.tan(rad(roof.pitch));
+  const { min, max } = bounds(eaves);
+  const centre = { x: (min.x + max.x) / 2, y: (min.y + max.y) / 2 };
+  const useHip = roof.kind === "hip" && isAxisAlignedRectangle(fp);
+  const alongX = roof.ridgeAxis === "x";
+  const halfSpan = alongX ? (max.y - min.y) / 2 : (max.x - min.x) / 2;
+  const ridgeHeight = halfSpan * tan;
+  const zOf = (p: Vec2) => {
+    const dist = alongX ? Math.abs(p.y - centre.y) : Math.abs(p.x - centre.x);
+    return topElevation + Math.max(0, halfSpan - dist) * tan;
+  };
+  const faces: RoofFace[] = [];
+  let ridge: { a: Vec3; b: Vec3 };
+  if (useHip) {
+    // Rectangle eaves: ridge shortened by half span at both ends, four planar faces.
+    const long = alongX ? max.x - min.x : max.y - min.y;
+    const ridgeLen = Math.max(0, long - 2 * halfSpan);
+    const r0 = alongX
+      ? { x: centre.x - ridgeLen / 2, y: centre.y }
+      : { x: centre.x, y: centre.y - ridgeLen / 2 };
+    const r1 = alongX
+      ? { x: centre.x + ridgeLen / 2, y: centre.y }
+      : { x: centre.x, y: centre.y + ridgeLen / 2 };
+    const zHip = (p: Vec2) => {
+      // Distance to the ridge segment decides the height on a hip.
+      const t = alongX
+        ? Math.min(1, Math.max(0, (p.x - r0.x) / Math.max(ridgeLen, 1e-9)))
+        : Math.min(1, Math.max(0, (p.y - r0.y) / Math.max(ridgeLen, 1e-9)));
+      const q = add(r0, scale(sub(r1, r0), ridgeLen > 0 ? t : 0));
+      const dist = Math.max(Math.abs(p.x - q.x), Math.abs(p.y - q.y));
+      return topElevation + Math.max(0, halfSpan - dist) * tan;
+    };
+    const [c0, c1, c2, c3] = eaves;
+    if (!c0 || !c1 || !c2 || !c3) throw new Error("hip roof needs four eave corners");
+    // Faces: each eave edge plus the nearest ridge end(s).
+    const edgeFace = (a: Vec2, b: Vec2) => {
+      const mid = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const isLongEdge = alongX ? Math.abs(a.y - b.y) < 1e-9 : Math.abs(a.x - b.x) < 1e-9;
+      if (isLongEdge) {
+        const near = (p: Vec2) => (alongX ? (p.x < centre.x ? r0 : r1) : p.y < centre.y ? r0 : r1);
+        return face([a, b, near(b), near(a)], zHip);
+      }
+      const end = alongX ? (mid.x < centre.x ? r0 : r1) : mid.y < centre.y ? r0 : r1;
+      return face([a, b, end], zHip);
+    };
+    faces.push(edgeFace(c0, c1), edgeFace(c1, c2), edgeFace(c2, c3), edgeFace(c3, c0));
+    ridge = {
+      a: { ...r0, z: topElevation + ridgeHeight },
+      b: { ...r1, z: topElevation + ridgeHeight },
+    };
+  } else {
+    const dir = alongX ? { x: 1, y: 0 } : { x: 0, y: 1 };
+    const [left, right] = splitByLine(eaves, centre, dir);
+    if (left.length >= 3) faces.push(face(left, zOf));
+    if (right.length >= 3) faces.push(face(right, zOf));
+    const a = alongX ? { x: min.x, y: centre.y } : { x: centre.x, y: min.y };
+    const b = alongX ? { x: max.x, y: centre.y } : { x: centre.x, y: max.y };
+    ridge = {
+      a: { ...a, z: topElevation + ridgeHeight },
+      b: { ...b, z: topElevation + ridgeHeight },
+    };
+  }
+  // Attic volume: Σ plan area x (height at plan centroid - top) per planar face.
+  const atticVolume = faces.reduce((s, f) => {
+    const c = centroid(f.points.map((p) => ({ x: p.x, y: p.y })));
+    const z = useHip ? 0 : zOf(c) - topElevation;
+    return s + f.planArea * (useHip ? hipHeightAt(f, c) : z);
+  }, 0);
+  return {
+    kind: roof.kind,
+    builtKind: useHip ? "hip" : "gable",
+    faces,
+    ridge,
+    eaves,
+    area: faces.reduce((s, f) => s + f.area, 0),
+    ridgeHeight,
+    atticVolume,
+  };
+}
+
+/** Height of a planar face above its lowest point at a plan point, from the plane through its first three vertices. */
+function hipHeightAt(f: RoofFace, p: Vec2): number {
+  const [a, b, c] = f.points;
+  if (!a || !b || !c) return 0;
+  const u = { x: b.x - a.x, y: b.y - a.y, z: b.z - a.z };
+  const v = { x: c.x - a.x, y: c.y - a.y, z: c.z - a.z };
+  const nx = u.y * v.z - u.z * v.y;
+  const ny = u.z * v.x - u.x * v.z;
+  const nz = u.x * v.y - u.y * v.x;
+  if (Math.abs(nz) < 1e-12) return 0;
+  const z = a.z - (nx * (p.x - a.x) + ny * (p.y - a.y)) / nz;
+  const base = Math.min(...f.points.map((q) => q.z));
+  return z - base;
+}

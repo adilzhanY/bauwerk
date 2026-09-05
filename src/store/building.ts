@@ -7,6 +7,7 @@ import type {
   Id,
   Layer,
   Opening,
+  Roof,
   Segment,
   Storey,
   Vec2,
@@ -21,6 +22,7 @@ import {
 } from "@/geometry/types";
 import { DEFAULT_ASSIGNMENT, defaultConstructions } from "@/geometry/constructions";
 import { uValueFromLayers } from "@/geometry/layers";
+import { roofOf } from "@/geometry/roof";
 import {
   ensureCounterClockwise,
   isCounterClockwise,
@@ -46,7 +48,8 @@ export type Selection =
   | { kind: "interiorWall"; storeyId: Id; index: number }
   | { kind: "room"; storeyId: Id; id: Id }
   | { kind: "storey"; id: Id }
-  | { kind: "zone"; id: Id };
+  | { kind: "zone"; id: Id }
+  | { kind: "roof" };
 
 export interface EditorState {
   building: Building;
@@ -116,6 +119,7 @@ export interface EditorActions {
   renameBuilding: (name: string) => void;
   setOrigin: (origin: GeoOrigin | undefined) => void;
   setBridgeDetail: (detail: "good" | "poor") => void;
+  setRoof: (patch: Partial<Roof>) => void;
   /** Replaces the footprint, for a GeoJSON import. Rooms are recomputed. */
   setFootprint: (footprint: Vec2[], origin?: GeoOrigin) => void;
   addOpening: (storeyId: Id, opening: NewOpening) => Id;
@@ -328,6 +332,7 @@ export function createEditorStore(initial?: Partial<EditorState>) {
                 break;
               case "wall":
               case "room":
+              case "roof":
                 break;
             }
           },
@@ -370,6 +375,12 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             set((state) => {
               const storey = findStorey(state.building, storeyId);
               if (storey) storey.name = name;
+            });
+          },
+
+          setRoof: (patch) => {
+            set((state) => {
+              state.building.roof = { ...roofOf(state.building), ...patch };
             });
           },
 

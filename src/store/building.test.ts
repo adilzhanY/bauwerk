@@ -594,3 +594,19 @@ describe("layer actions", () => {
     expect(wall().uValue).toBe(0.9);
   });
 });
+
+describe("roof", () => {
+  it("setRoof merges onto the defaults and is undoable", () => {
+    store.getState().setRoof({ kind: "gable", pitch: 40 });
+    expect(store.getState().building.roof).toMatchObject({
+      kind: "gable",
+      pitch: 40,
+      overhang: 0.3,
+      ridgeAxis: "x",
+    });
+    store.getState().setRoof({ ridgeAxis: "y" });
+    expect(store.getState().building.roof?.pitch).toBe(40);
+    store.getState().undo();
+    expect(store.getState().building.roof?.ridgeAxis).toBe("x");
+  });
+});

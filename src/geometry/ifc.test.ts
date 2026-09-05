@@ -228,3 +228,20 @@ describe("material layers", () => {
     expect(layer.args).toMatch(/^#\d+,0\.02,/); // render, 20 mm, outside first
   });
 });
+
+describe("roof", () => {
+  it("a gable roof is an IfcRoof with one ROOF slab member per face and a Pset_RoofCommon", () => {
+    const b = {
+      ...house(),
+      roof: { kind: "gable" as const, pitch: 40, overhang: 0.3, ridgeAxis: "x" as const },
+    };
+    const { entities } = parse(toIfc(b));
+    expect(count(entities, "IFCROOF")).toBe(1);
+    expect(count(entities, "IFCSHELLBASEDSURFACEMODEL")).toBe(2);
+    expect(
+      [...entities.values()].filter((e) => e.type === "IFCSLAB" && e.args.includes(".ROOF."))
+        .length,
+    ).toBe(1 + 2);
+    expect(toIfc(house())).not.toContain("IFCROOF(");
+  });
+});

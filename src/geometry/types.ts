@@ -100,6 +100,22 @@ export interface Building {
   origin?: GeoOrigin;
   /** Thermal bridge detailing level. Missing means "poor", the uninsulated stock. */
   bridgeDetail?: "good" | "poor";
+  /** Roof over the top storey. Missing means a flat roof with a 0.3 m parapet. */
+  roof?: Partial<Roof>;
+}
+
+export interface Roof {
+  kind: "flat" | "gable" | "hip";
+  /** Degrees from horizontal. */
+  pitch: number;
+  /** Metres beyond the footprint at the eaves. */
+  overhang: number;
+  /** Axis the ridge runs along. */
+  ridgeAxis: "x" | "y";
+  /** Flat roofs: parapet height in metres. */
+  parapet: number;
+  /** Count the attic as heated volume. */
+  heatedAttic: boolean;
 }
 
 export interface GeoOrigin {

@@ -1,6 +1,7 @@
 import { bridgeDetailOf, summarizeBridges } from "./bridges";
 import type { BridgeSummary } from "./bridges";
 import { bestInCategory, findConstruction } from "./constructions";
+import { buildRoof, roofOf } from "./roof";
 import { validateOpening } from "./openings";
 import { area, edges, pointInPolygon, pointOnSegment, sub, distance } from "./polygon";
 import type { Edge } from "./polygon";
@@ -285,10 +286,14 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
       for (const r of heatedRooms) addZone(r.zoneId ?? null, r.area, 0);
     }
     if (storeyIndex === building.storeys.length - 1) {
-      env.roofArea = footprintArea;
-      const heated = storey.rooms.length === 0 ? footprintArea : env.heatedFloorArea;
+      // The roof's true sloped area, scaled to the heated share of the plan.
+      const roofGeo = buildRoof(building, 0);
+      const slope = footprintArea > 0 ? roofGeo.area / footprintArea : 1;
+      env.roofArea = roofGeo.area;
+      const heatedPlan = storey.rooms.length === 0 ? footprintArea : env.heatedFloorArea;
+      const heated = heatedPlan * slope;
       transmission += roofU * heated;
-      if (heated > 0)
+      if (heated > 0) {
         elements.push({
           category: "roof",
           label: storey.name,
@@ -296,7 +301,13 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
           uValue: roofU,
           loss: roofU * heated,
         });
-      for (const r of heatedRooms) addZone(r.zoneId ?? null, 0, roofU * r.area);
+      }
+      for (const r of heatedRooms) addZone(r.zoneId ?? null, 0, roofU * r.area * slope);
+      if (roofOf(building).heatedAttic && roofGeo.atticVolume > 0) {
+        const share = footprintArea > 0 ? heatedPlan / footprintArea : 0;
+        env.heatedVolume += roofGeo.atticVolume * share;
+        heatedVolume += roofGeo.atticVolume * share;
+      }
     }
 
     // Interior walls between heated and unheated rooms.

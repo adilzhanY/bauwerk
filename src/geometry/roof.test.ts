@@ -1,0 +1,111 @@
+import { describe, expect, it } from "vitest";
+import { DEFAULT_ASSIGNMENT, defaultConstructions } from "./constructions";
+import { lShape, rect } from "./fixtures";
+import { area } from "./polygon";
+import { buildRoof, offsetPolygon } from "./roof";
+import type { Building, Roof } from "./types";
+
+const b = (roof: Partial<Roof>, footprint = rect): Building => ({
+  id: "b",
+  name: "b",
+  footprint,
+  wallThickness: 0.3,
+  storeys: [],
+  zones: [],
+  constructions: defaultConstructions("en"),
+  ...DEFAULT_ASSIGNMENT,
+  roof,
+});
+
+const deg = (d: number) => (d * Math.PI) / 180;
+
+describe("offsetPolygon", () => {
+  it("grows a rectangle by the overhang on every side", () => {
+    const o = offsetPolygon(rect, 0.5);
+    expect(area(o)).toBeCloseTo(11 * 9);
+    expect(o[0]?.x).toBeCloseTo(-0.5);
+    expect(o[0]?.y).toBeCloseTo(-0.5);
+  });
+});
+
+describe("gable roof", () => {
+  it("on the 10 by 8 rectangle at 40 degrees, ridge along x, no overhang", () => {
+    const r = buildRoof(b({ kind: "gable", pitch: 40, overhang: 0, ridgeAxis: "x" }), 3);
+    expect(r.builtKind).toBe("gable");
+    expect(r.faces).toHaveLength(2);
+    expect(r.faces[0]!.area).toBeCloseTo(r.faces[1]!.area);
+    expect(r.area).toBeCloseTo(80 / Math.cos(deg(40)));
+    expect(r.ridgeHeight).toBeCloseTo(4 * Math.tan(deg(40)));
+    expect(r.ridge?.a.z).toBeCloseTo(3 + 4 * Math.tan(deg(40)));
+    // Eave points sit at the storey top.
+    const eaveZ = r.faces
+      .flatMap((f) => f.points)
+      .filter((p) => Math.abs(p.y) < 1e-9 || Math.abs(p.y - 8) < 1e-9);
+    expect(eaveZ.every((p) => Math.abs(p.z - 3) < 1e-9)).toBe(true);
+    // Attic volume of a triangular prism: 0.5 x span x ridge height x length.
+    expect(r.atticVolume).toBeCloseTo(0.5 * 8 * 4 * Math.tan(deg(40)) * 10);
+  });
+
+  it("overhang adds eave strips and area follows the enlarged plan", () => {
+    const r = buildRoof(b({ kind: "gable", pitch: 30, overhang: 0.5, ridgeAxis: "x" }), 3);
+    expect(area(r.eaves)).toBeCloseTo(99);
+    expect(r.area).toBeCloseTo(99 / Math.cos(deg(30)));
+  });
+
+  it("ridge axis y swaps the span", () => {
+    const r = buildRoof(b({ kind: "gable", pitch: 45, overhang: 0, ridgeAxis: "y" }), 0);
+    expect(r.ridgeHeight).toBeCloseTo(5);
+    expect(r.ridge?.a.x).toBeCloseTo(5);
+    expect(r.ridge?.a.y).toBeCloseTo(0);
+    expect(r.ridge?.b.y).toBeCloseTo(8);
+  });
+
+  it("works as a folded plate on the L shape", () => {
+    const r = buildRoof(b({ kind: "gable", pitch: 30, overhang: 0, ridgeAxis: "x" }, lShape), 3);
+    expect(r.faces.length).toBeGreaterThanOrEqual(2);
+    expect(r.faces.reduce((s, f) => s + f.planArea, 0)).toBeCloseTo(area(lShape));
+    expect(r.area).toBeGreaterThan(area(lShape));
+  });
+});
+
+describe("hip roof", () => {
+  it("on a square equals the gable area and has four faces", () => {
+    const square = [
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+      { x: 10, y: 10 },
+      { x: 0, y: 10 },
+    ];
+    const hip = buildRoof(b({ kind: "hip", pitch: 35, overhang: 0, ridgeAxis: "x" }, square), 0);
+    const gable = buildRoof(
+      b({ kind: "gable", pitch: 35, overhang: 0, ridgeAxis: "x" }, square),
+      0,
+    );
+    expect(hip.builtKind).toBe("hip");
+    expect(hip.faces).toHaveLength(4);
+    expect(hip.area).toBeCloseTo(gable.area, 5);
+    expect(hip.ridge?.a.x).toBeCloseTo(5); // a pyramid: ridge collapses to a point
+    expect(hip.atticVolume).toBeCloseTo((100 * 5 * Math.tan(deg(35))) / 3); // pyramid volume
+  });
+
+  it("on the 10 by 8 rectangle has a ridge of 2 m and falls back to gable on the L shape", () => {
+    const hip = buildRoof(b({ kind: "hip", pitch: 30, overhang: 0, ridgeAxis: "x" }), 3);
+    expect(hip.ridge!.b.x - hip.ridge!.a.x).toBeCloseTo(2);
+    expect(hip.area).toBeCloseTo(80 / Math.cos(deg(30)), 5);
+    const fallback = buildRoof(
+      b({ kind: "hip", pitch: 30, overhang: 0, ridgeAxis: "x" }, lShape),
+      3,
+    );
+    expect(fallback.builtKind).toBe("gable");
+  });
+});
+
+describe("flat roof", () => {
+  it("area equals the footprint and there is no attic", () => {
+    const r = buildRoof(b({ kind: "flat" }), 6);
+    expect(r.area).toBe(80);
+    expect(r.faces[0]?.points[0]?.z).toBe(6);
+    expect(r.atticVolume).toBe(0);
+    expect(r.ridge).toBeNull();
+  });
+});

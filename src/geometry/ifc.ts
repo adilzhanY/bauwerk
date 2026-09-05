@@ -21,6 +21,7 @@
  */
 import { findConstruction } from "./constructions";
 import { effectiveWallThickness } from "./layers";
+import { buildRoof } from "./roof";
 import { epsgForZone, northInPlan, toUtm } from "./geo";
 import { validateOpening } from "./openings";
 import { area, sub } from "./polygon";
@@ -363,6 +364,95 @@ export function toIfc(building: Building, options: IfcOptions = {}): string {
     }
     elevation += storey.height;
   });
+
+  // Pitched roof as an IfcRoof with one IfcSlab ROOF member per face, each a surface model.
+  const roofGeo = buildRoof(building, 0);
+  const lastStoreyIfc = storeyIds[storeyIds.length - 1];
+  if (roofGeo.builtKind !== "flat" && lastStoreyIfc !== undefined) {
+    const roofPlacement = localPlacement(ctx, buildingPlacement, elevation);
+    const ifcRoof = w.add("IFCROOF", [
+      guid(`${building.id}/roof`),
+      NULL,
+      str("Roof"),
+      NULL,
+      NULL,
+      ref(roofPlacement),
+      NULL,
+      NULL,
+      enm(roofGeo.builtKind === "hip" ? "HIP_ROOF" : "GABLE_ROOF"),
+    ]);
+    const members = roofGeo.faces.map((f, i) => {
+      const pts = f.points.map((p) =>
+        w.add("IFCCARTESIANPOINT", [list([real(p.x), real(p.y), real(p.z)])]),
+      );
+      const loop = w.add("IFCPOLYLOOP", [list(pts.map(ref))]);
+      const bound = w.add("IFCFACEOUTERBOUND", [ref(loop), bool(true)]);
+      const ifcFace = w.add("IFCFACE", [list([ref(bound)])]);
+      const shell = w.add("IFCOPENSHELL", [list([ref(ifcFace)])]);
+      const model = w.add("IFCSHELLBASEDSURFACEMODEL", [list([ref(shell)])]);
+      const rep = w.add("IFCSHAPEREPRESENTATION", [
+        ref(bodyContext),
+        str("Body"),
+        str("SurfaceModel"),
+        list([ref(model)]),
+      ]);
+      const shapeRep = w.add("IFCPRODUCTDEFINITIONSHAPE", [NULL, NULL, list([ref(rep)])]);
+      return w.add("IFCSLAB", [
+        guid(`${building.id}/roof/face/${i}`),
+        NULL,
+        str(`Roof face ${i + 1}`),
+        NULL,
+        NULL,
+        ref(localPlacement(ctx, roofPlacement, 0)),
+        ref(shapeRep),
+        NULL,
+        enm("ROOF"),
+      ]);
+    });
+    w.add("IFCRELAGGREGATES", [
+      guid(`${building.id}/roof/agg`),
+      NULL,
+      NULL,
+      NULL,
+      ref(ifcRoof),
+      list(members.map(ref)),
+    ]);
+    w.add("IFCRELCONTAINEDINSPATIALSTRUCTURE", [
+      guid(`${building.id}/roof/contains`),
+      NULL,
+      NULL,
+      NULL,
+      list([ref(ifcRoof)]),
+      ref(lastStoreyIfc),
+    ]);
+    const total = w.add("IFCPROPERTYSINGLEVALUE", [
+      str("TotalArea"),
+      NULL,
+      typed("IFCAREAMEASURE", real(roofGeo.area)),
+      NULL,
+    ]);
+    const projected = w.add("IFCPROPERTYSINGLEVALUE", [
+      str("ProjectedArea"),
+      NULL,
+      typed("IFCAREAMEASURE", real(area(building.footprint))),
+      NULL,
+    ]);
+    const pset = w.add("IFCPROPERTYSET", [
+      guid(`${building.id}/roof/pset`),
+      NULL,
+      str("Pset_RoofCommon"),
+      NULL,
+      list([ref(total), ref(projected)]),
+    ]);
+    w.add("IFCRELDEFINESBYPROPERTIES", [
+      guid(`${building.id}/roof/pset/rel`),
+      NULL,
+      NULL,
+      NULL,
+      list([ref(ifcRoof)]),
+      ref(pset),
+    ]);
+  }
 
   if (storeyIds.length > 0) {
     w.add("IFCRELAGGREGATES", [
