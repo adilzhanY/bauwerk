@@ -47,3 +47,11 @@ The building physics layer computes transmission loss as a plain sum of U times 
 ## 2026-09-05 IFC LongName written as a typed value, caught by an independent validator
 
 The first IFC export wrote the IfcSpace LongName as `IFCLABEL('Küche')`. The agent's own tests passed, because they only checked structure and references. Running the file through IfcOpenShell's schema validator reported five errors: LongName is declared as IfcLabel, so the value must be a plain string; the typed wrapper form is only for SELECT attributes. Fixed, a regression test now forbids `IFCLABEL(` in the output, and the validator run is kept as `scripts/validate-ifc.py` so the export is checked against something the agent did not write. Lesson recorded for the interview: a self-written parser agreeing with a self-written writer proves little.
+
+## 2026-09-05 Plain pg over an ORM, and last write wins over a CRDT
+
+Two calls for the server. Storage: plain `pg` with one SQL migration file instead of Prisma or TypeORM. The schema is two tables and the one query that matters, `UPDATE ... WHERE id = $1 AND version = $2`, is exactly the kind of statement an ORM hides. Concurrency: optimistic version numbers with last write wins instead of a CRDT. Two people dragging the same window at once is not the demo's problem; two people editing the same project and never losing a whole session is. Every accepted write is one row in `project_events`, so the history is replayable. A CRDT would need a per-element merge policy for a data model that derives rooms from walls, which is a research task, not a weekend one. The client documents the choice in `src/sync/client.ts` and tests the 409 path.
+
+## 2026-09-05 Connection pool deadlock in the conflict path, caught by the concurrency test
+
+The first version of `ProjectsService.update` held its pooled client through the transaction and, when the version check failed, called `this.get(id)`, which asked the pool for a second connection. The test with twelve simultaneous writers on a ten-connection pool hung until it timed out: every client was held by a writer waiting for a connection that no writer would release. Fixed by reading the current row on the same client after the rollback. The test that found it is the one `TODO.md` asked for: concurrent writes against a real Postgres, not a mock. A mocked pool would have passed.

@@ -26,6 +26,9 @@ import { Section } from "./controls/Field";
 import { NumberField } from "./controls/NumberField";
 import { Select } from "./controls/Select";
 import { TOOL_ORDER } from "./useKeyboardShortcuts";
+import { ProjectSwitcher } from "./ProjectSwitcher";
+import { TextField } from "./controls/TextField";
+import type { SyncStatus } from "@/sync/client";
 
 const toolIcons: Record<Tool, React.ReactNode> = {
   select: <MousePointer2 size={16} />,
@@ -51,9 +54,10 @@ const toolHint: Record<Tool, MessageKey> = {
   zone: "hint.zone",
 };
 
-export function LeftPanel() {
+export function LeftPanel({ syncStatus }: { syncStatus: SyncStatus | "local" }) {
   return (
     <aside className="flex h-full flex-col overflow-y-auto border-r border-border bg-panel">
+      <ProjectSwitcher status={syncStatus} />
       <StoreyList />
       <ToolPalette />
       <ZoneList />
@@ -276,9 +280,12 @@ function Settings() {
   const language = useEditorStore((s) => s.language);
   const setLanguage = useEditorStore((s) => s.setLanguage);
   const loadBuilding = useEditorStore((s) => s.loadBuilding);
+  const buildingName = useEditorStore((s) => s.building.name);
+  const renameBuilding = useEditorStore((s) => s.renameBuilding);
 
   return (
     <Section title={t("panel.settings")}>
+      <TextField label={t("building.name")} value={buildingName} onCommit={renameBuilding} />
       <NumberField
         label={t("settings.wallThickness")}
         value={wallThickness}

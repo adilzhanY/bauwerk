@@ -51,6 +51,16 @@ export interface EditorState {
   activeZoneId: Id | null;
   /** Energy panel shows the renovated scenario. UI state. */
   renovatedView: boolean;
+  /** Other people editing the same project, from the sync layer. UI state. */
+  presence: Presence[];
+  /** Project id on the server when sync is active. UI state. */
+  projectId: string | null;
+}
+
+export interface Presence {
+  actor: string;
+  color: string;
+  selection: Selection | null;
 }
 
 export interface EditorActions {
@@ -67,6 +77,7 @@ export interface EditorActions {
   setStoreyHeight: (storeyId: Id, height: number) => void;
   renameStorey: (storeyId: Id, name: string) => void;
   setWallThickness: (thickness: number) => void;
+  renameBuilding: (name: string) => void;
   addOpening: (storeyId: Id, opening: NewOpening) => Id;
   updateOpening: (storeyId: Id, openingId: Id, patch: Partial<Omit<Opening, "id">>) => void;
   removeOpening: (storeyId: Id, openingId: Id) => void;
@@ -87,6 +98,10 @@ export interface EditorActions {
   setHovered: (hovered: Selection | null) => void;
   setActiveZone: (zoneId: Id | null) => void;
   setRenovatedView: (on: boolean) => void;
+  setPresence: (presence: Presence[]) => void;
+  setProjectId: (projectId: string | null) => void;
+  /** Replaces the building with server state. Not recorded in history and clears the redo stack. */
+  applyRemoteBuilding: (building: Building) => void;
   setShowGrid: (show: boolean) => void;
   setTool: (tool: Tool) => void;
   setLanguage: (language: Language) => void;
@@ -171,6 +186,8 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           showGrid: initial?.showGrid ?? true,
           activeZoneId: initial?.activeZoneId ?? null,
           renovatedView: false,
+          presence: [],
+          projectId: null,
 
           setFootprintVertex: (index, position) => {
             set((state) => {
@@ -292,6 +309,12 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             set((state) => {
               const storey = findStorey(state.building, storeyId);
               if (storey) storey.name = name;
+            });
+          },
+
+          renameBuilding: (name) => {
+            set((state) => {
+              state.building.name = name;
             });
           },
 
@@ -486,6 +509,31 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             set((state) => {
               if (sameSelection(state.hovered, hovered)) return;
               state.hovered = hovered;
+            });
+          },
+
+          setPresence: (presence) => {
+            set((state) => {
+              state.presence = presence;
+            });
+          },
+
+          setProjectId: (projectId) => {
+            set((state) => {
+              state.projectId = projectId;
+            });
+          },
+
+          applyRemoteBuilding: (building) => {
+            // withoutHistory and future belong to the history slice wrapped around this initializer.
+            (get() as unknown as EditorStore).withoutHistory(() => {
+              set((state) => {
+                state.building = building;
+                if (!state.building.storeys.some((s) => s.id === state.activeStoreyId)) {
+                  state.activeStoreyId = state.building.storeys[0]?.id ?? null;
+                }
+                (state as unknown as { future: Building[] }).future = [];
+              });
             });
           },
 

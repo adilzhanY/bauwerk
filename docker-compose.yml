@@ -1,0 +1,39 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: bauwerk
+      POSTGRES_PASSWORD: bauwerk
+      POSTGRES_DB: bauwerk
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bauwerk"]
+      interval: 5s
+      retries: 10
+
+  server:
+    build:
+      context: .
+      dockerfile: server/Dockerfile.compose
+    environment:
+      DATABASE_URL: postgres://bauwerk:bauwerk@db:5432/bauwerk
+      PORT: 3000
+    ports:
+      - "3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  client:
+    build:
+      context: .
+      args:
+        VITE_API_URL: http://localhost:3000
+    ports:
+      - "8080:80"
+    depends_on:
+      - server
+
+volumes:
+  pgdata:

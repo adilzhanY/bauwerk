@@ -47,3 +47,25 @@ python -m venv .venv && .venv/bin/pip install ifcopenshell pytest
 ```
 
 Both files report zero issues and every product builds. A wall with three openings comes out with 68 triangles instead of the 12 of a plain box, so the holes are real.
+
+## Run with the server
+
+The client works on its own with localStorage. With a server, projects live in Postgres and every open tab of the same project sees the others' changes.
+
+```
+docker compose up --build        # Postgres, the NestJS server on :3000, the client on :8080
+```
+
+Or by hand:
+
+```
+cd server && npm install --legacy-peer-deps
+DATABASE_URL=postgres://user:pass@localhost:5432/bauwerk npm run dev
+cd .. && VITE_API_URL=http://localhost:3000 npm run dev
+```
+
+Open the app, create a project from the Project section, and open the same link in a second tab. Each accepted write carries the version it was based on; a stale write gets a 409 with the current state, the client takes it and puts its own change on top (last write wins). Presence and selections travel over a WebSocket room per project. The server tests run against a real Postgres and check that of twelve simultaneous writes on the same version exactly one wins.
+
+```
+cd server && DATABASE_URL=postgres://bauwerk@127.0.0.1:5499/bauwerk_test npm test
+```

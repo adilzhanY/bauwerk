@@ -28,6 +28,9 @@ export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
   );
   const selected = useEditorStore((s) => sameSelection(s.selection, target));
   const hovered = useEditorStore((s) => sameSelection(s.hovered, target));
+  const remoteColor = useEditorStore(
+    (s) => s.presence.find((p) => sameSelection(p.selection, target))?.color ?? null,
+  );
   const select = useEditorStore((s) => s.select);
   const tool = useEditorStore((s) => s.tool);
   const addOpening = useEditorStore((s) => s.addOpening);
@@ -59,7 +62,9 @@ export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
     }
   };
 
-  const color = selected ? colors.accent : hovered ? colors.wallHover : colors.wall;
+  const color = selected
+    ? colors.accent
+    : (remoteColor ?? (hovered ? colors.wallHover : colors.wall));
 
   return (
     <mesh
@@ -73,8 +78,8 @@ export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
     >
       <meshStandardMaterial
         color={color}
-        emissive={selected ? colors.accent : "#000000"}
-        emissiveIntensity={selected ? 0.35 : 0}
+        emissive={selected ? colors.accent : (remoteColor ?? "#000000")}
+        emissiveIntensity={selected ? 0.35 : remoteColor ? 0.25 : 0}
         roughness={0.9}
         transparent={!active}
         opacity={active ? 1 : INACTIVE_OPACITY}

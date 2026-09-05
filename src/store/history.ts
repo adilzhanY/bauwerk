@@ -8,6 +8,8 @@ export interface HistorySlice {
   future: Building[];
   undo: () => void;
   redo: () => void;
+  /** Runs `fn` without recording building changes. For applying remote state. */
+  withoutHistory: (fn: () => void) => void;
 }
 
 interface WithBuilding {
@@ -90,6 +92,15 @@ const historyImpl: HistoryImpl = (initializer) => (set, get, api) => {
     },
     redo: () => {
       restore("redo");
+    },
+    withoutHistory: (fn) => {
+      const previous = restoring;
+      restoring = true;
+      try {
+        fn();
+      } finally {
+        restoring = previous;
+      }
     },
   };
 };

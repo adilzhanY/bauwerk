@@ -36,8 +36,13 @@ function download(content: string, name: string, type: string) {
   URL.revokeObjectURL(url);
 }
 
-export function BottomBar() {
+interface Props {
+  actor: { actor: string; color: string } | null;
+}
+
+export function BottomBar({ actor }: Props) {
   const t = useT();
+  const presence = useEditorStore((s) => s.presence);
   const language = useEditorStore((s) => s.language);
   const building = useEditorStore((s) => s.building);
   const canUndo = useEditorStore(selectCanUndo);
@@ -111,6 +116,28 @@ export function BottomBar() {
         </span>
       )}
       <span className="flex-1" />
+      {actor && (
+        <div
+          className="flex items-center gap-1"
+          title={t("presence.title")}
+          aria-label={t("presence.title")}
+        >
+          <span
+            className="h-3 w-3 rounded-full ring-2 ring-fg"
+            style={{ background: actor.color }}
+            title={actor.actor}
+          />
+          {presence.map((p) => (
+            <span
+              key={p.actor}
+              className="h-3 w-3 rounded-full"
+              style={{ background: p.color }}
+              title={p.actor}
+            />
+          ))}
+          <span className="ml-1 font-mono text-xs text-muted">{actor.actor}</span>
+        </div>
+      )}
       <dl className="flex items-center gap-4 font-mono text-xs text-muted">
         <Stat label={t("status.storeys")} value={String(building.storeys.length)} />
         <Stat label={t("status.rooms")} value={String(roomCount)} />

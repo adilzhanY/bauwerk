@@ -7,6 +7,7 @@ import { RightPanel } from "@/ui/RightPanel";
 import { hasWebGL } from "@/lib/webgl";
 import { EmptyState, TooNarrow, WebGLMissing } from "@/ui/States";
 import { useKeyboardShortcuts } from "@/ui/useKeyboardShortcuts";
+import { useSync } from "@/sync/useSync";
 
 const MIN_WIDTH = 1024;
 
@@ -26,6 +27,7 @@ function useWindowWidth(): number {
 
 export function App() {
   useKeyboardShortcuts();
+  const sync = useSync();
   const width = useWindowWidth();
   const webgl = useMemo(() => hasWebGL(), []);
   const hasStoreys = useEditorStore((s) => s.building.storeys.length > 0);
@@ -39,13 +41,13 @@ export function App() {
 
   return (
     <div className="grid h-full grid-cols-[280px_1fr_300px] grid-rows-[1fr_40px]">
-      <LeftPanel />
+      <LeftPanel syncStatus={sync.status} />
       <main className="relative min-w-0 bg-bg">
         {!hasStoreys ? <EmptyState /> : webgl ? <Viewport /> : <WebGLMissing />}
       </main>
       <RightPanel />
       <div className="col-span-3">
-        <BottomBar />
+        <BottomBar actor={sync.status === "local" ? null : sync} />
       </div>
     </div>
   );

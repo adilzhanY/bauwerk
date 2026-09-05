@@ -151,18 +151,18 @@ Goal: a file that opens in a real IFC viewer with correct storeys, walls, openin
 
 Goal: two browser tabs edit the same building and see each other's changes, with a Postgres project store behind a NestJS API. The client keeps working alone with localStorage when no server is configured, so GitHub Pages still works.
 
-- [ ] `server/` folder, own `package.json`, NestJS 10, TypeScript strict, Prisma or plain `pg` (decide, record in `DECISIONS.md`), Vitest for unit tests, `docker-compose.yml` with Postgres 16. Same lint and format rules as the client.
-- [ ] Schema: `projects (id uuid pk, name text, building jsonb, version integer not null, updated_at timestamptz)`, `project_events (id bigserial pk, project_id uuid fk, version integer, actor text, patch jsonb, created_at)`. Migration checked in. The building JSON is validated on write with the same `validateBuilding` as the client (share `src/geometry` through a workspace or a build step, decide and record).
-- [ ] REST: `POST /projects` creates from a building, `GET /projects/:id` returns building and version, `PUT /projects/:id` takes `{ building, baseVersion }` and applies it in one transaction with `UPDATE ... WHERE version = baseVersion`; zero rows updated returns 409 with the current version and building. `GET /projects` lists id, name, updated_at.
-- [ ] Tests: concurrent PUTs against a real Postgres in a test container, only one wins, the loser gets 409, the version increases by exactly one per accepted write, the events table has one row per accepted write.
-- [ ] WebSocket gateway: clients join a project room, every accepted PUT broadcasts `{ version, building, actor }` to the room, presence list of connected actors with a colour.
-- [ ] Client: `src/sync/` module with a `SyncClient` that loads the project, sends each committed history entry as a PUT with the base version, applies incoming versions from other actors, and on 409 reloads and reapplies the local change on top (last write wins, document why CRDT was not done). Reconnect with backoff, offline queue of one pending write.
-- [ ] Undo and redo stay local: undo sends the previous building as a new write. Test that undo after a remote change does not undo the remote change (history middleware compares against the snapshot it stored).
-- [ ] Presence in the UI: coloured dots in the bottom bar with actor names, the remote actor's selection highlighted with their colour in the viewport.
-- [ ] Project switcher: open, create, rename projects; the URL carries the project id so a link opens the same project in another tab.
+- [x] `server/` folder, own `package.json`, NestJS 10, TypeScript strict, Prisma or plain `pg` (decided: plain `pg`, see `DECISIONS.md`), Vitest for unit tests, `docker-compose.yml` with Postgres 16. Same lint and format rules as the client.
+- [x] Schema: `projects (id uuid pk, name text, building jsonb, version integer not null, updated_at timestamptz)`, `project_events (id bigserial pk, project_id uuid fk, version integer, actor text, patch jsonb, created_at)`. Migration checked in. The building JSON is validated on write with the same `validateBuilding` as the client (shared through a tsconfig path alias to `../src/geometry`, copied into the image by the compose Dockerfile).
+- [x] REST: `POST /projects` creates from a building, `GET /projects/:id` returns building and version, `PUT /projects/:id` takes `{ building, baseVersion }` and applies it in one transaction with `UPDATE ... WHERE version = baseVersion`; zero rows updated returns 409 with the current version and building. `GET /projects` lists id, name, updated_at.
+- [x] Tests: concurrent PUTs against a real Postgres in a test container, only one wins, the loser gets 409, the version increases by exactly one per accepted write, the events table has one row per accepted write.
+- [x] WebSocket gateway: clients join a project room, every accepted PUT broadcasts `{ version, building, actor }` to the room, presence list of connected actors with a colour.
+- [x] Client: `src/sync/` module with a `SyncClient` that loads the project, sends each committed history entry as a PUT with the base version, applies incoming versions from other actors, and on 409 reloads and reapplies the local change on top (last write wins, document why CRDT was not done). Reconnect with backoff, offline queue of one pending write.
+- [x] Undo and redo stay local: undo sends the previous building as a new write. Test that undo after a remote change does not undo the remote change (history middleware compares against the snapshot it stored).
+- [x] Presence in the UI: coloured dots in the bottom bar with actor names, the remote actor's selection highlighted with their colour in the viewport.
+- [x] Project switcher: open, create, rename projects; the URL carries the project id so a link opens the same project in another tab.
 - [ ] Manual verification by Adilzhan: two tabs, add an opening in one, see it in the other within a second, drag the same opening in both at once, confirm the 409 path recovers without losing either change. Record what broke in `DECISIONS.md`.
-- [ ] `docker-compose up` starts Postgres, server and a static client build; README section "Run with the server".
-- [ ] CI: server tests run in `check.yml` with a Postgres service container.
+- [x] `docker-compose up` starts Postgres, server and a static client build; README section "Run with the server".
+- [x] CI: server tests run in `check.yml` with a Postgres service container.
 
 ## 14. Geo placement
 

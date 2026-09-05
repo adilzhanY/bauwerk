@@ -194,6 +194,16 @@ export const de: Messages = {
   "import.error.constructionInvalid":
     "Eine Konstruktion hat keinen Namen oder einen U-Wert von null bei {path}.",
 
+  "project.title": "Projekt",
+  "project.open": "Projekt öffnen",
+  "project.new": "Neues Projekt aus diesem Gebäude",
+  "project.local": "Nur lokal (dieser Browser)",
+  "project.status.local": "Nur lokal",
+  "project.status.connecting": "Verbinde",
+  "project.status.online": "Live, Änderungen werden geteilt",
+  "project.status.offline": "Offline, Änderungen werden später gesendet",
+  "project.status.error": "Serverfehler",
+  "presence.title": "Bearbeiten ebenfalls",
   "common.metres": "m",
   "common.squareMetres": "m²",
   "common.remove": "Entfernen",

@@ -32,6 +32,9 @@ export function Opening({ storeyId, wall, opening, thickness, elevation, active,
   );
   const selected = useEditorStore((s) => sameSelection(s.selection, target));
   const hovered = useEditorStore((s) => sameSelection(s.hovered, target));
+  const remoteColor = useEditorStore(
+    (s) => s.presence.find((p) => sameSelection(p.selection, target))?.color ?? null,
+  );
   const select = useEditorStore((s) => s.select);
   const tool = useEditorStore((s) => s.tool);
   const updateOpening = useEditorStore((s) => s.updateOpening);
@@ -86,7 +89,7 @@ export function Opening({ storeyId, wall, opening, thickness, elevation, active,
   };
 
   const base = opening.kind === "door" ? colors.door : colors.window;
-  const color = !valid ? colors.warning : selected ? colors.accent : base;
+  const color = !valid ? colors.warning : selected ? colors.accent : (remoteColor ?? base);
   const opacity = !active ? INACTIVE_OPACITY : opening.kind === "window" ? 0.55 : 1;
 
   return (
