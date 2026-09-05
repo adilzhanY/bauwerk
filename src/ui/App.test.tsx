@@ -120,6 +120,10 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Renovated" }));
     expect(screen.getByLabelText(/Energy efficiency class: (A\+|A|B|C|D|E|F|G)$/)).toBeTruthy();
     expect(screen.getByText("Saving")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "Scenarios" }));
+    fireEvent.click(screen.getByRole("button", { name: "New scenario" }));
+    expect(useEditorStore.getState().building.scenarios).toHaveLength(1);
+    expect(screen.getByRole("button", { name: "Remove scenario" })).toBeTruthy();
   });
 
   it("renders the print view as a plain document with German conventions", () => {

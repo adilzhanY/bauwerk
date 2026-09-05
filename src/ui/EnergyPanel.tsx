@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { bestInCategory } from "@/geometry/constructions";
 import { ENERGY_CLASS_COLORS, computeEnergy } from "@/geometry/energy";
+import { evaluateAll } from "@/geometry/scenarios";
 import type { EnergyClass, EnergySummary, Orientation } from "@/geometry/energy";
 import type { ConstructionCategory } from "@/geometry/types";
 import type { BridgeType } from "@/geometry/bridges";
@@ -21,12 +22,15 @@ export function EnergyPanel() {
   const t = useT();
   const language = useEditorStore((s) => s.language);
   const building = useEditorStore((s) => s.building);
-  const renovated = useEditorStore((s) => s.renovatedView);
-  const setRenovatedView = useEditorStore((s) => s.setRenovatedView);
+  const viewScenarioId = useEditorStore((s) => s.viewScenarioId);
+  const setViewScenario = useEditorStore((s) => s.setViewScenario);
 
   const current = useMemo(() => computeEnergy(building), [building]);
-  const after = useMemo(() => computeEnergy(building, { renovated: true }), [building]);
-  const shown = renovated ? after : current;
+  const variants = useMemo(() => evaluateAll(building), [building]);
+  const chosen = variants.find((v) => v.scenario.id === viewScenarioId);
+  const renovated = chosen !== undefined;
+  const after = chosen?.energy ?? current;
+  const shown = after;
   const saving = current.heatingDemand > 0 ? 1 - after.heatingDemand / current.heatingDemand : 0;
 
   const num = (v: number, digits = 1) => formatNumber(v, language, digits);
@@ -36,13 +40,17 @@ export function EnergyPanel() {
     <div className="flex flex-col gap-4">
       <CustomSegmented
         label={t("energy.title")}
-        value={renovated ? "renovated" : "current"}
+        value={viewScenarioId ?? "current"}
         options={[
           { value: "current", label: t("energy.scenario.current") },
-          { value: "renovated", label: t("energy.scenario.renovated") },
+          ...variants.map((v) => ({
+            value: v.scenario.id,
+            label:
+              v.scenario.id === "full-envelope" ? t("energy.scenario.renovated") : v.scenario.name,
+          })),
         ]}
         onChange={(v) => {
-          setRenovatedView(v === "renovated");
+          setViewScenario(v === "current" ? null : v);
         }}
       />
       <ClassBand value={shown.energyClass} />

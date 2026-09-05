@@ -22,6 +22,7 @@
 import { findConstruction } from "./constructions";
 import { effectiveWallThickness } from "./layers";
 import { buildRoof } from "./roof";
+import { evaluateAll } from "./scenarios";
 import { epsgForZone, northInPlan, toUtm } from "./geo";
 import { validateOpening } from "./openings";
 import { area, sub } from "./polygon";
@@ -550,6 +551,46 @@ export function toIfc(building: Building, options: IfcOptions = {}): string {
       [unit],
       [["NominalHeatingCapacity", typed("IFCPOWERMEASURE", real(pump.power * 1000))]],
     );
+  }
+
+  // Renovation scenarios as a property set on the building: demand and class per variant.
+  const scenarioResults = evaluateAll(building);
+  if (scenarioResults.length > 0) {
+    const props = scenarioResults.flatMap((r) => [
+      w.add("IFCPROPERTYSINGLEVALUE", [
+        str(`${r.scenario.name}: heating demand`),
+        NULL,
+        typed("IFCENERGYMEASURE", real(r.energy.heatingDemand * 3.6e6)),
+        NULL,
+      ]),
+      w.add("IFCPROPERTYSINGLEVALUE", [
+        str(`${r.scenario.name}: class`),
+        NULL,
+        typed("IFCLABEL", str(r.energy.energyClass)),
+        NULL,
+      ]),
+      w.add("IFCPROPERTYSINGLEVALUE", [
+        str(`${r.scenario.name}: investment EUR`),
+        NULL,
+        typed("IFCREAL", real(r.investment)),
+        NULL,
+      ]),
+    ]);
+    const pset = w.add("IFCPROPERTYSET", [
+      guid(`${building.id}/scenarios`),
+      NULL,
+      str("Bauwerk_RenovationScenarios"),
+      NULL,
+      list(props.map(ref)),
+    ]);
+    w.add("IFCRELDEFINESBYPROPERTIES", [
+      guid(`${building.id}/scenarios/rel`),
+      NULL,
+      NULL,
+      NULL,
+      list([ref(ifcBuilding)]),
+      ref(pset),
+    ]);
   }
 
   // Zones.

@@ -133,6 +133,16 @@ export interface Building {
   /** Roof over the top storey. Missing means a flat roof with a 0.3 m parapet. */
   roof?: Partial<Roof>;
   heatPumps?: HeatPump[];
+  /** Renovation variants as override sets, see geometry/scenarios.ts. */
+  scenarios?: Scenario[];
+}
+
+export interface Scenario {
+  id: Id;
+  name: string;
+  overrides: Partial<Record<ConstructionCategory, Id>>;
+  bridgeDetail?: "good" | "poor";
+  roof?: Partial<Roof>;
 }
 
 export interface Roof {

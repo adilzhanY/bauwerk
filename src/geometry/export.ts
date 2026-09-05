@@ -221,6 +221,16 @@ export function validateBuilding(b: Building): ImportError | null {
       return { code: "heatPumpInvalid", path: hp };
   }
 
+  for (const [si, sc] of (b.scenarios ?? []).entries()) {
+    const sp = `building.scenarios[${si}]`;
+    const d = seen(sc.id, sp);
+    if (d) return d;
+    for (const id of Object.values(sc.overrides) as (string | undefined)[]) {
+      if (id !== undefined && !constructionIds.has(id))
+        return { code: "unknownConstruction", path: sp };
+    }
+  }
+
   const wallLengths = edges(b.footprint).map((e) => e.length);
   const footprintArea = area(b.footprint);
 
@@ -438,6 +448,15 @@ function checkBuildingShape(v: unknown, path: string): ImportError | null {
   const fp = checkPolygon(b.footprint, `${path}.footprint`);
   if (fp) return fp;
   if (!Array.isArray(b.storeys) || !Array.isArray(b.zones)) return bad(path);
+  if (b.scenarios !== undefined) {
+    if (!Array.isArray(b.scenarios)) return bad(`${path}.scenarios`);
+    for (const [i, sc] of (b.scenarios as unknown[]).entries()) {
+      if (!isRecord(sc) || !isString(sc.id) || !isString(sc.name) || !isRecord(sc.overrides))
+        return bad(`${path}.scenarios[${i}]`);
+      if (!Object.values(sc.overrides).every((v) => v === undefined || isString(v)))
+        return bad(`${path}.scenarios[${i}].overrides`);
+    }
+  }
   if (b.heatPumps !== undefined) {
     if (!Array.isArray(b.heatPumps)) return bad(`${path}.heatPumps`);
     for (const [i, h] of (b.heatPumps as unknown[]).entries()) {

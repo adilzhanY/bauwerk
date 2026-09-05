@@ -191,7 +191,8 @@ describe("attribute typing", () => {
     // LongName is declared IfcLabel, so a typed IFCLABEL('..') wrapper is a schema error
     // (found by IfcOpenShell's validator, see DECISIONS.md).
     const text = toIfc(house());
-    expect(text).not.toContain("IFCLABEL(");
+    // Property values are SELECT types and do need the wrapper; entity attributes do not.
+    expect(text).not.toMatch(/IFCSPACE\([^\n]*IFCLABEL\(/);
     expect(text).toMatch(
       /IFCSPACE\('[^']+',\$,'K\\X2\\00FC\\X0\\che',\$,\$,#\d+,#\d+,'K\\X2\\00FC\\X0\\che',\.ELEMENT\.,\.INTERNAL\.,\$\)/,
     );

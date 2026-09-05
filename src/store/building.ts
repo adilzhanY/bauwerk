@@ -10,6 +10,7 @@ import type {
   Opening,
   Radiator,
   Roof,
+  Scenario,
   Segment,
   Storey,
   Vec2,
@@ -70,6 +71,8 @@ export interface EditorState {
   activeZoneId: Id | null;
   /** Energy panel shows the renovated scenario. UI state. */
   renovatedView: boolean;
+  /** Scenario shown in the Energy tab: null is the current state, "full-envelope" the built-in variant, else a saved id. UI state. */
+  viewScenarioId: string | null;
   /** Other people editing the same project, from the sync layer. UI state. */
   presence: Presence[];
   /** Project id on the server when sync is active. UI state. */
@@ -169,6 +172,10 @@ export interface EditorActions {
   setHovered: (hovered: Selection | null) => void;
   setActiveZone: (zoneId: Id | null) => void;
   setRenovatedView: (on: boolean) => void;
+  setViewScenario: (id: string | null) => void;
+  addScenario: (name: string, from?: Partial<Scenario>) => Id;
+  updateScenario: (id: Id, patch: Partial<Omit<Scenario, "id">>) => void;
+  removeScenario: (id: Id) => void;
   setPresence: (presence: Presence[]) => void;
   setProjectId: (projectId: string | null) => void;
   duplicateStorey: (storeyId: Id) => void;
@@ -271,6 +278,7 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           showGrid: initial?.showGrid ?? true,
           activeZoneId: initial?.activeZoneId ?? null,
           renovatedView: false,
+          viewScenarioId: null,
           presence: [],
           projectId: null,
           planView: false,
@@ -913,6 +921,48 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           setRenovatedView: (on) => {
             set((state) => {
               state.renovatedView = on;
+              state.viewScenarioId = on ? "full-envelope" : null;
+            });
+          },
+
+          setViewScenario: (id) => {
+            set((state) => {
+              state.viewScenarioId = id;
+              state.renovatedView = id === "full-envelope";
+            });
+          },
+
+          addScenario: (name, from) => {
+            const id = createId("scenario");
+            set((state) => {
+              state.building.scenarios ??= [];
+              state.building.scenarios.push({
+                id,
+                name,
+                overrides: { ...from?.overrides },
+                bridgeDetail: from?.bridgeDetail,
+                roof: from?.roof,
+              });
+            });
+            return id;
+          },
+
+          updateScenario: (id, patch) => {
+            set((state) => {
+              const s = state.building.scenarios?.find((x) => x.id === id);
+              if (!s) return;
+              if (patch.name !== undefined) s.name = patch.name;
+              if (patch.overrides !== undefined) s.overrides = { ...patch.overrides };
+              if ("bridgeDetail" in patch) s.bridgeDetail = patch.bridgeDetail;
+              if ("roof" in patch) s.roof = patch.roof;
+            });
+          },
+
+          removeScenario: (id) => {
+            set((state) => {
+              if (!state.building.scenarios) return;
+              state.building.scenarios = state.building.scenarios.filter((x) => x.id !== id);
+              if (state.viewScenarioId === id) state.viewScenarioId = null;
             });
           },
 

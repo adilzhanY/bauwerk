@@ -672,3 +672,21 @@ describe("heating elements", () => {
     expect(store.getState().building.heatPumps).toHaveLength(1);
   });
 });
+
+describe("scenarios", () => {
+  it("adds, edits, duplicates and removes scenarios, undoable, and the view follows", () => {
+    const id = store.getState().addScenario("Windows");
+    store.getState().updateScenario(id, { overrides: { window: "c_glazing_triple" } });
+    expect(store.getState().building.scenarios?.[0]?.overrides.window).toBe("c_glazing_triple");
+    store.getState().setViewScenario(id);
+    expect(store.getState().viewScenarioId).toBe(id);
+    const copy = store.getState().addScenario("Windows 2", store.getState().building.scenarios![0]);
+    expect(store.getState().building.scenarios?.[1]?.overrides.window).toBe("c_glazing_triple");
+    store.getState().removeScenario(id);
+    expect(store.getState().building.scenarios).toHaveLength(1);
+    expect(store.getState().viewScenarioId).toBeNull();
+    store.getState().undo();
+    expect(store.getState().building.scenarios).toHaveLength(2);
+    expect(copy).not.toBe(id);
+  });
+});

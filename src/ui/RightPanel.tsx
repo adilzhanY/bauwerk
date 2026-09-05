@@ -19,6 +19,7 @@ import { CustomSwatches } from "@/components/CustomSwatches";
 import { CustomTabPanel, CustomTabs } from "@/components/CustomTabs";
 import { CustomTextInput } from "@/components/CustomTextInput";
 import { ConstructionSelect, EnergyPanel } from "./EnergyPanel";
+import { ScenariosPanel } from "./ScenariosPanel";
 import { effectiveWallThickness } from "@/geometry/layers";
 import { buildRoof, roofOf } from "@/geometry/roof";
 import {
@@ -39,7 +40,7 @@ const openingErrorKey: Record<OpeningError, MessageKey> = {
   negativeSill: "opening.error.negativeSill",
 };
 
-type Tab = "properties" | "energy";
+type Tab = "properties" | "energy" | "scenarios";
 
 export function RightPanel() {
   const t = useT();
@@ -59,6 +60,7 @@ export function RightPanel() {
         tabs={[
           { value: "properties", label: t("tabs.properties") },
           { value: "energy", label: t("tabs.energy") },
+          { value: "scenarios", label: t("tabs.scenarios") },
         ]}
         onChange={setTab}
       />
@@ -73,10 +75,16 @@ export function RightPanel() {
               )}
             </CustomSection>
           </CustomTabPanel>
-        ) : (
+        ) : tab === "energy" ? (
           <CustomTabPanel value="energy">
             <CustomSection title={t("energy.title")} first>
               <EnergyPanel />
+            </CustomSection>
+          </CustomTabPanel>
+        ) : (
+          <CustomTabPanel value="scenarios">
+            <CustomSection title={t("scenarios.title")} first>
+              <ScenariosPanel />
             </CustomSection>
           </CustomTabPanel>
         )}

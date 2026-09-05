@@ -348,13 +348,13 @@ Goal: read an IFC file from another tool into Bauwerk. Answers export fidelity a
 
 Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 
-- [ ] Data model: `Scenario { id, name, constructionOverrides: Record<targetKey, constructionId>, bridgeSet, roof?, cost }` on the building; the current state is the baseline, variants are overrides only, so a change to the baseline flows into every variant.
-- [ ] Costs: a rough €/m² per construction preset (sourced from a public cost index, named in a comment), so each variant reports an investment; saving per year from the heating demand difference at a set energy price; payback in years.
-- [ ] Energy: `computeEnergy(building, { scenario })` applies the overrides; tests that the baseline variant equals the current result and that "windows only" changes only window terms.
-- [ ] Interface: a Scenarios tab with a table of variants (class, demand, saving, investment, payback), add, rename, duplicate, delete, and a per-variant construction picker. The old renovated switch becomes the built-in "full envelope" variant.
-- [ ] Print view: a Sanierungsfahrplan page with the variants as steps in order of payback, the way the iSFP shows them.
-- [ ] Export: scenarios in the JSON and, as IfcPropertySets on the building, in the IFC.
-- [ ] i18n: Sanierungsvariante, Investition, Einsparung pro Jahr, Amortisation, Maßnahmenpaket.
+- [x] Data model: `Scenario { id, name, constructionOverrides: Record<targetKey, constructionId>, bridgeSet, roof?, cost }` on the building; the current state is the baseline, variants are overrides only, so a change to the baseline flows into every variant.
+- [x] Costs: a rough €/m² per construction preset (sourced from a public cost index, named in a comment), so each variant reports an investment; saving per year from the heating demand difference at a set energy price; payback in years.
+- [x] Energy: `computeEnergy(building, { scenario })` applies the overrides; tests that the baseline variant equals the current result and that "windows only" changes only window terms.
+- [x] Interface: a Scenarios tab with a table of variants (class, demand, saving, investment, payback), add, rename, duplicate, delete, and a per-variant construction picker. The old renovated switch becomes the built-in "full envelope" variant.
+- [x] Print view: a Sanierungsfahrplan page with the variants as steps in order of payback, the way the iSFP shows them.
+- [x] Export: scenarios in the JSON and, as IfcPropertySets on the building, in the IFC.
+- [x] i18n: Sanierungsvariante, Investition, Einsparung pro Jahr, Amortisation, Maßnahmenpaket.
 
 ## 28. Section cut
 

@@ -9,6 +9,7 @@ import type { MessageKey } from "@/i18n";
 import { useEditorStore } from "@/store/building";
 import { LayerSection, LayerTable } from "./LayerSection";
 import { buildRoof, roofOf } from "@/geometry/roof";
+import { ENERGY_PRICE_PER_KWH, evaluateAll } from "@/geometry/scenarios";
 
 /*
   The report is a document, not an interface. It follows the conventions of
@@ -191,6 +192,14 @@ export function PrintView() {
       <div className="page">
         <h2>
           <span className="n">{4 + building.storeys.length}</span>
+          {t("scenarios.roadmap")}
+        </h2>
+        <Roadmap building={building} />
+      </div>
+
+      <div className="page">
+        <h2>
+          <span className="n">{5 + building.storeys.length}</span>
           {t("print.section.method")}
         </h2>
         <p className="small" style={{ marginTop: "6pt" }}>
@@ -205,6 +214,51 @@ export function PrintView() {
         </p>
       </div>
     </div>
+  );
+}
+
+/** Variants as steps in order of payback, the way the iSFP presents measure packages. */
+function Roadmap({ building }: { building: Building }) {
+  const t = useT();
+  const results = evaluateAll(building)
+    .filter((r) => r.demandSaved > 0)
+    .sort((a, b) => a.payback - b.payback);
+  return (
+    <>
+      <p className="small" style={{ marginTop: "6pt" }}>
+        {t("scenarios.costHint", { price: num(ENERGY_PRICE_PER_KWH, 2) })}
+      </p>
+      <table style={{ marginTop: "6pt" }}>
+        <thead>
+          <tr>
+            <th style={{ width: "8%" }}>{t("scenarios.step")}</th>
+            <th>{t("scenarios.measure")}</th>
+            <th className="r">{t("energy.energyClass")}</th>
+            <th className="r">kWh/(m²·a)</th>
+            <th className="r">{t("scenarios.demandSaved")} [kWh/a]</th>
+            <th className="r">{t("scenarios.investment")} [€]</th>
+            <th className="r">{t("scenarios.saving")} [€]</th>
+            <th className="r">{t("scenarios.payback")} [a]</th>
+          </tr>
+        </thead>
+        <tbody>
+          {results.map((r, i) => (
+            <tr key={r.scenario.id}>
+              <td>{i + 1}</td>
+              <td>{r.scenario.id === "full-envelope" ? t("scenarios.full") : r.scenario.name}</td>
+              <td className="r">{r.energy.energyClass}</td>
+              <td className="r">{num(r.energy.specificHeatingDemand, 0)}</td>
+              <td className="r">{num(r.demandSaved, 0)}</td>
+              <td className="r">{num(r.investment, 0)}</td>
+              <td className="r">{num(r.savingPerYear, 0)}</td>
+              <td className="r">
+                {Number.isFinite(r.payback) ? num(r.payback, 1) : t("scenarios.never")}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </>
   );
 }
 
