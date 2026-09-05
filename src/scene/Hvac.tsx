@@ -3,7 +3,7 @@ import { Line } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
 import { edges } from "@/geometry/polygon";
 import { effectiveWallThickness } from "@/geometry/layers";
-import type { Building, Storey } from "@/geometry/types";
+import type { Building, HeatPump, Storey } from "@/geometry/types";
 import { colors, INACTIVE_OPACITY } from "@/lib/colors";
 import { sameSelection, useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
@@ -14,6 +14,7 @@ import { useSceneColors } from "./useSceneColors";
 const RADIATOR_COLOR = "#e9e9e6";
 const PUMP_COLOR = "#9aa3ad";
 const RADIATOR_DEPTH = 0.1;
+const EMPTY_PUMPS: HeatPump[] = [];
 
 function useSelect(target: Selection, active: boolean) {
   const selected = useEditorStore((s) => sameSelection(s.selection, target));
@@ -150,7 +151,10 @@ function PipeLine(props: {
 
 /** Heat pumps stand on the ground outside the footprint. */
 export function HeatPumps() {
-  const pumps = useEditorStore((s) => s.building.heatPumps ?? []);
+  // Select the stored array itself; a `?? []` fallback inside the selector would make a new
+  // array on every read and send useSyncExternalStore into an endless re-render.
+  const stored = useEditorStore((s) => s.building.heatPumps);
+  const pumps = stored ?? EMPTY_PUMPS;
   return (
     <group>
       {pumps.map((p) => (
