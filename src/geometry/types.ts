@@ -1,0 +1,69 @@
+export type Id = string;
+
+export interface Vec2 {
+  x: number;
+  y: number;
+}
+
+export interface Segment {
+  a: Vec2;
+  b: Vec2;
+}
+
+export type OpeningKind = "window" | "door";
+
+export interface Opening {
+  id: Id;
+  /** Index into the footprint edges. Edge i runs from vertex i to vertex i + 1. */
+  wallIndex: number;
+  kind: OpeningKind;
+  /** Metres from the wall start to the opening's left edge. */
+  offset: number;
+  width: number;
+  height: number;
+  /** Metres above the floor. Always 0 for doors. */
+  sill: number;
+}
+
+export interface Room {
+  id: Id;
+  name: string;
+  /** Derived from the interior walls. */
+  polygon: Vec2[];
+  /** Derived, square metres. */
+  area: number;
+  zoneId?: Id;
+}
+
+export interface Zone {
+  id: Id;
+  name: string;
+  color: string;
+}
+
+export interface Storey {
+  id: Id;
+  name: string;
+  /** Metres. */
+  height: number;
+  openings: Opening[];
+  /** On the grid. Define the rooms. */
+  interiorWalls: Segment[];
+  rooms: Room[];
+}
+
+export interface Building {
+  id: Id;
+  name: string;
+  /** Closed simple polygon, counter-clockwise, metres. The closing edge is implicit. */
+  footprint: Vec2[];
+  /** Metres. */
+  wallThickness: number;
+  /** Index 0 is the ground floor. */
+  storeys: Storey[];
+  zones: Zone[];
+}
+
+export const GRID_SIZE = 0.5;
+export const DEFAULT_WALL_THICKNESS = 0.3;
+export const DEFAULT_STOREY_HEIGHT = 3;

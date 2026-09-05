@@ -16,12 +16,12 @@ Work top to bottom. Tick with `[x]`. A task is done when `npm run check` passes 
 
 ## 1. Data model and store
 
-- [ ] `src/geometry/types.ts` with the interfaces from `INFO.md`.
-- [ ] `src/lib/ids.ts`: short unique ids, deterministic in tests.
-- [ ] `src/store/building.ts`: Zustand store holding `building`, `activeStoreyId`, `selection`, `tool`, `language`. Default building: a 10 m by 8 m rectangle, one storey, no openings.
-- [ ] `src/store/history.ts`: undo and redo middleware. Every action that changes `building` pushes a snapshot. Cap history at 200 entries. UI state (selection, tool, language) is not part of history.
-- [ ] Actions: `setFootprintVertex`, `addStorey`, `removeStorey`, `setStoreyHeight`, `renameStorey`, `setWallThickness`, `addOpening`, `updateOpening`, `removeOpening`, `addInteriorWall`, `removeInteriorWall`, `renameRoom`, `assignRoomToZone`, `addZone`, `updateZone`, `removeZone`, `loadBuilding`, `undo`, `redo`, `select`, `clearSelection`, `setTool`, `setLanguage`.
-- [ ] Tests: undo then redo is identity for every action. History cap holds. UI state is untouched by undo.
+- [x] `src/geometry/types.ts` with the interfaces from `INFO.md`.
+- [x] `src/lib/ids.ts`: short unique ids, deterministic in tests.
+- [x] `src/store/building.ts`: Zustand store holding `building`, `activeStoreyId`, `selection`, `tool`, `language`. Default building: a 10 m by 8 m rectangle, one storey, no openings.
+- [x] `src/store/history.ts`: undo and redo middleware. Every action that changes `building` pushes a snapshot. Cap history at 200 entries. UI state (selection, tool, language) is not part of history.
+- [x] Actions: `setFootprintVertex`, `addStorey`, `removeStorey`, `setStoreyHeight`, `renameStorey`, `setWallThickness`, `addOpening`, `updateOpening`, `removeOpening`, `addInteriorWall`, `removeInteriorWall`, `renameRoom`, `assignRoomToZone`, `addZone`, `updateZone`, `removeZone`, `loadBuilding`, `undo`, `redo`, `select`, `clearSelection`, `setTool`, `setLanguage`.
+- [x] Tests: undo then redo is identity for every action. History cap holds. UI state is untouched by undo.
 
 ## 2. Geometry
 
