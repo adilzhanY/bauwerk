@@ -327,11 +327,11 @@ Goal: the element type the posting lists and the demo left out. Answers "new ele
 
 Goal: a real sun over the georeferenced model and solar gains in the energy balance. Answers physics and 3D.
 
-- [ ] `src/geometry/sun.ts`, pure: solar position (azimuth, elevation) from date, time and lat/lon using the NOAA algorithm; tests against published values for Berlin on 21 June noon and 21 December noon, sunrise and sunset within 2 minutes.
-- [ ] Scene: a directional light follows the sun, shadows on facades and ground, a date and time slider in the View section, a small sun path arc drawn over the model for the chosen day.
-- [ ] Solar gains: monthly irradiation on vertical surfaces per orientation for Berlin (DIN V 18599-10 table values, sourced), window area by orientation times g-value 0.6 times a frame factor 0.7 times a shading factor 0.9; annual gains subtracted from the heating demand with a utilisation factor of 0.95. Tests: a south window adds more than a north window; the demand never goes below zero.
-- [ ] Energy tab: gains as a separate line, before and after, and the class recomputed.
-- [ ] i18n: Sonnenstand, solare Gewinne, Einstrahlung, Uhrzeit.
+- [x] `src/geometry/sun.ts`, pure: solar position (azimuth, elevation) from date, time and lat/lon using the NOAA algorithm; tests against published values for Berlin on 21 June noon and 21 December noon, sunrise and sunset within 2 minutes.
+- [x] Scene: a directional light follows the sun, shadows on facades and ground, a date and time slider in the View section, a small sun path arc drawn over the model for the chosen day.
+- [x] Solar gains: monthly irradiation on vertical surfaces per orientation for Berlin (DIN V 18599-10 table values, sourced), window area by orientation times g-value 0.6 times a frame factor 0.7 times a shading factor 0.9; annual gains subtracted from the heating demand with a utilisation factor of 0.95. Tests: a south window adds more than a north window; the demand never goes below zero.
+- [x] Energy tab: gains as a separate line, before and after, and the class recomputed.
+- [x] i18n: Sonnenstand, solare Gewinne, Einstrahlung, Uhrzeit.
 
 ## 26. IFC import
 

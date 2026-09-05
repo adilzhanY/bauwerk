@@ -87,6 +87,8 @@ export interface EditorState {
   theme: Theme;
   /** Red lines for thermal bridges. UI state. */
   showBridges: boolean;
+  /** Sun simulation: a real sun over the model for a day of the year and a local time. UI state. */
+  sun: { enabled: boolean; dayOfYear: number; minutes: number };
   /** OpenStreetMap tiles on the ground when a location is set. UI state. */
   showMap: boolean;
   mapOpacity: number;
@@ -181,6 +183,7 @@ export interface EditorActions {
   setTheme: (theme: Theme) => void;
   setShowMap: (on: boolean) => void;
   setShowBridges: (on: boolean) => void;
+  setSun: (patch: Partial<{ enabled: boolean; dayOfYear: number; minutes: number }>) => void;
   setMapOpacity: (opacity: number) => void;
   /** Replaces the building with server state. Not recorded in history and clears the redo stack. */
   applyRemoteBuilding: (building: Building) => void;
@@ -278,6 +281,7 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           theme: initial?.theme ?? "system",
           showMap: true,
           showBridges: false,
+          sun: { enabled: false, dayOfYear: 172, minutes: 14 * 60 },
           mapOpacity: 0.85,
 
           setFootprintVertex: (index, position) => {
@@ -805,6 +809,12 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           setUnderlay: (underlay) => {
             set((state) => {
               state.underlay = underlay;
+            });
+          },
+
+          setSun: (patch) => {
+            set((state) => {
+              state.sun = { ...state.sun, ...patch };
             });
           },
 

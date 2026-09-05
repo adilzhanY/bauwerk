@@ -216,3 +216,17 @@ describe("roof shape in the energy balance", () => {
     expect(attic.heatedVolume).toBeCloseTo(240 + 0.5 * 8 * 4 * 10);
   });
 });
+
+describe("solar gains", () => {
+  it("a south window reduces the heating demand by its usable gains, never below zero", () => {
+    const none = computeEnergy(building());
+    expect(none.solarGains).toBe(0);
+    const south = computeEnergy(building([], [window()])); // wall 0 faces south
+    expect(south.solarGains).toBeCloseTo(1.68 * 0.6 * 0.7 * 0.9 * 270 * 0.95);
+    expect(south.heatingDemand).toBeCloseTo(
+      (south.transmissionLoss + south.ventilationLoss) * 84 - south.solarGains,
+    );
+    const north = computeEnergy(building([], [window({ wallIndex: 2, offset: 2 })]));
+    expect(north.solarGains).toBeLessThan(south.solarGains);
+  });
+});

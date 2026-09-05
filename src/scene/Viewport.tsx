@@ -9,6 +9,7 @@ import { ThermalBridges } from "./ThermalBridges";
 import { Roof } from "./Roof";
 import { ProposalOverlay } from "./ProposalOverlay";
 import { HeatPumps } from "./Hvac";
+import { Sun } from "./Sun";
 import { UValueBands } from "./UValueBand";
 import { useSceneColors } from "./useSceneColors";
 import { useEditorStore } from "@/store/building";
@@ -25,6 +26,7 @@ export function Viewport() {
   const activeStoreyId = useEditorStore((s) => s.activeStoreyId);
   const planView = useEditorStore((s) => s.planView);
   const scene = useSceneColors();
+  const sunEnabled = useEditorStore((s) => s.sun.enabled);
   const activeElevation = activeStoreyId ? storeyElevation(building, activeStoreyId) : 0;
   const plan = planCamera(
     bounds(building.footprint),
@@ -41,9 +43,10 @@ export function Viewport() {
       style={{ background: scene.bg }}
     >
       <hemisphereLight args={["#eef1f7", "#6b6f78", 0.9]} />
+      <Sun />
       <directionalLight
         position={[20, 30, 10]}
-        intensity={1.6}
+        intensity={sunEnabled ? 0.25 : 1.6}
         castShadow
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-40}

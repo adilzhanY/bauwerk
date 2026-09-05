@@ -2,6 +2,7 @@ import { bridgeDetailOf, summarizeBridges } from "./bridges";
 import type { BridgeSummary } from "./bridges";
 import { bestInCategory, findConstruction } from "./constructions";
 import { buildRoof, roofOf } from "./roof";
+import { solarGains } from "./sun";
 import { validateOpening } from "./openings";
 import { area, edges, pointInPolygon, pointOnSegment, sub, distance } from "./polygon";
 import type { Edge } from "./polygon";
@@ -78,6 +79,9 @@ export interface EnergySummary {
   bridges: BridgeSummary;
   specificTransmissionLoss: number;
   ventilationLoss: number;
+  /** Usable solar gains through windows over the heating period, kWh/a. */
+  solarGains: number;
+  /** Losses times degree hours minus usable solar gains, never below zero. */
   heatingDemand: number;
   specificHeatingDemand: number;
   energyClass: EnergyClass;
@@ -357,7 +361,15 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
     });
   }
   const ventilation = AIR_HEAT_CAPACITY * AIR_CHANGE_RATE * heatedVolume;
-  const heatingDemand = (transmission + ventilation) * HEATING_DEGREE_HOURS_BERLIN;
+  const windowsByOrientation = { N: 0, E: 0, S: 0, W: 0 };
+  for (const st of storeys)
+    for (const o of ["N", "E", "S", "W"] as const)
+      windowsByOrientation[o] += st.windowToWall[o].window;
+  const gains = solarGains(windowsByOrientation);
+  const heatingDemand = Math.max(
+    0,
+    (transmission + ventilation) * HEATING_DEGREE_HOURS_BERLIN - gains,
+  );
   const specific = heatedFloorArea > 0 ? heatingDemand / heatedFloorArea : 0;
 
   return {
@@ -374,6 +386,7 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
     bridges,
     specificTransmissionLoss: envelopeArea > 0 ? transmission / envelopeArea : 0,
     ventilationLoss: ventilation,
+    solarGains: gains,
     heatingDemand,
     specificHeatingDemand: specific,
     energyClass: energyClass(specific),

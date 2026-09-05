@@ -64,6 +64,10 @@ export function EnergyPanel() {
           label={t("energy.transmissionLoss")}
           value={`${num(shown.transmissionLoss)} W/K`}
         />
+        <CustomReadOnly
+          label={t("energy.solarGains")}
+          value={`${num(shown.solarGains, 0)} kWh/a`}
+        />
         <CustomReadOnly label={t("bridges.loss")} value={`${num(shown.bridgeLoss)} W/K`} />
         <CustomReadOnly
           label={t("bridges.share")}
