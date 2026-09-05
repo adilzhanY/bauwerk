@@ -36,7 +36,8 @@ export type ImportErrorCode =
   | "roomAreaMismatch"
   | "unknownZone"
   | "unknownConstruction"
-  | "constructionInvalid";
+  | "constructionInvalid"
+  | "originInvalid";
 
 export interface ImportError {
   code: ImportErrorCode;
@@ -346,6 +347,11 @@ function checkBuildingShape(v: unknown, path: string): ImportError | null {
   if (!isString(b.id)) return bad(`${path}.id`);
   if (!isString(b.name)) return bad(`${path}.name`);
   if (!isNumber(b.wallThickness)) return bad(`${path}.wallThickness`);
+  if (b.origin !== undefined) {
+    if (!isRecord(b.origin)) return bad(`${path}.origin`);
+    for (const k of ["lat", "lon", "rotation"])
+      if (!isNumber(b.origin[k])) return bad(`${path}.origin.${k}`);
+  }
   const fp = checkPolygon(b.footprint, `${path}.footprint`);
   if (fp) return fp;
   if (!Array.isArray(b.storeys) || !Array.isArray(b.zones)) return bad(path);

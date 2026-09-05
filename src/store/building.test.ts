@@ -468,3 +468,35 @@ describe("energy actions", () => {
     expect(store.getState().past.length).toBe(entries - 1);
   });
 });
+
+describe("geo placement", () => {
+  it("sets and clears the origin, undoable", () => {
+    store.getState().setOrigin({ lat: 52.5, lon: 13.4, rotation: 15 });
+    expect(store.getState().building.origin).toEqual({ lat: 52.5, lon: 13.4, rotation: 15 });
+    store.getState().setOrigin(undefined);
+    expect(store.getState().building.origin).toBeUndefined();
+    store.getState().undo();
+    expect(store.getState().building.origin?.rotation).toBe(15);
+  });
+
+  it("setFootprint replaces the footprint, drops openings and recomputes rooms", () => {
+    const sid = storeyId();
+    store
+      .getState()
+      .addOpening(sid, { wallIndex: 0, kind: "window", offset: 1, width: 1, height: 1, sill: 1 });
+    store.getState().setFootprint(
+      [
+        { x: 0, y: 0 },
+        { x: 0, y: 6 },
+        { x: 6, y: 6 },
+        { x: 6, y: 0 },
+      ],
+      { lat: 52.5, lon: 13.4, rotation: 0 },
+    );
+    const b = store.getState().building;
+    expect(b.footprint[1]).toEqual({ x: 6, y: 0 }); // reoriented counter-clockwise
+    expect(b.storeys[0]?.openings).toHaveLength(0);
+    expect(b.storeys[0]?.rooms[0]?.area).toBe(36);
+    expect(b.origin?.lat).toBe(52.5);
+  });
+});

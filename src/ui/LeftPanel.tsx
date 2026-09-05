@@ -27,6 +27,7 @@ import { NumberField } from "./controls/NumberField";
 import { Select } from "./controls/Select";
 import { TOOL_ORDER } from "./useKeyboardShortcuts";
 import { ProjectSwitcher } from "./ProjectSwitcher";
+import { LocationSection } from "./LocationSection";
 import { TextField } from "./controls/TextField";
 import type { SyncStatus } from "@/sync/client";
 
@@ -61,6 +62,7 @@ export function LeftPanel({ syncStatus }: { syncStatus: SyncStatus | "local" }) 
       <StoreyList />
       <ToolPalette />
       <ZoneList />
+      <LocationSection />
       <Settings />
     </aside>
   );

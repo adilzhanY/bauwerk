@@ -84,6 +84,15 @@ export interface Building {
   /** Used for newly placed openings. */
   windowConstructionId: Id;
   doorConstructionId: Id;
+  /** Where the plan origin sits on the earth. Optional. */
+  origin?: GeoOrigin;
+}
+
+export interface GeoOrigin {
+  lat: number;
+  lon: number;
+  /** Compass bearing of the plan's +y axis, degrees clockwise from north. */
+  rotation: number;
 }
 
 export const GRID_SIZE = 0.5;

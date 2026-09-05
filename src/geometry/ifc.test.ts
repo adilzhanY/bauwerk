@@ -194,3 +194,17 @@ describe("attribute typing", () => {
     );
   });
 });
+
+describe("georeferencing", () => {
+  it("writes IfcProjectedCRS and IfcMapConversion when an origin is set", () => {
+    const b = { ...house(), origin: { lat: 52.516275, lon: 13.377704, rotation: 30 } };
+    const text = toIfc(b);
+    expect(text).toContain("IFCPROJECTEDCRS('EPSG:25833'");
+    expect(text).toMatch(
+      /IFCMAPCONVERSION\(#\d+,#\d+,389918\.04\d*,5819699\.13\d*,0\.,0\.866025,0\.5,1\.\)/,
+    );
+    const { entities } = parse(text);
+    expect(count(entities, "IFCMAPCONVERSION")).toBe(1);
+    expect(toIfc(house())).not.toContain("IFCMAPCONVERSION");
+  });
+});

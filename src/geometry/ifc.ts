@@ -20,6 +20,7 @@
  * IsExternal and ThermalTransmittance; Pset_SpaceCommon with NetPlannedArea.
  */
 import { findConstruction } from "./constructions";
+import { epsgForZone, northInPlan, toUtm } from "./geo";
 import { validateOpening } from "./openings";
 import { area, sub } from "./polygon";
 import { NULL, DERIVED, StepWriter, bool, enm, ifcGuid, list, real, ref, str, typed } from "./step";
@@ -85,6 +86,35 @@ export function toIfc(building: Building, options: IfcOptions = {}): string {
     NULL,
   ]);
   const ctx: Context = { w, bodyContext, zUp, xAxis, origin3d };
+
+  // Georeferencing (IFC4 Add2): the model origin in a projected CRS plus the
+  // direction of the model's X axis, given as (XAxisAbscissa, XAxisOrdinate).
+  if (building.origin) {
+    const utm = toUtm(building.origin);
+    const crs = w.add("IFCPROJECTEDCRS", [
+      str(`EPSG:${epsgForZone(utm.zone)}`),
+      str(`ETRS89 / UTM zone ${utm.zone}N`),
+      str("ETRS89"),
+      NULL,
+      str("UTM"),
+      str(`Zone ${utm.zone}N`),
+      ref(lengthUnit),
+    ]);
+    // Model +y points to compass `rotation` degrees; model +x is 90 degrees clockwise of it.
+    const north = northInPlan(building.origin);
+    const xAbscissa = north.y; // cos(rotation)
+    const xOrdinate = -north.x; // sin(rotation), east component of model +x
+    w.add("IFCMAPCONVERSION", [
+      ref(modelContext),
+      ref(crs),
+      real(utm.easting),
+      real(utm.northing),
+      real(0),
+      real(xAbscissa),
+      real(xOrdinate),
+      real(1),
+    ]);
+  }
 
   // Spatial structure.
   const project = w.add("IFCPROJECT", [

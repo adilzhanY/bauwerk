@@ -7,6 +7,7 @@ import { Grid } from "./Grid";
 import { Storey } from "./Storey";
 import { Ground } from "./Ground";
 import { Tools } from "./tools/Tools";
+import { Compass } from "./Compass";
 import { storeyElevation } from "@/store/selectors";
 
 export function Viewport() {
@@ -43,6 +44,7 @@ export function Viewport() {
           active={storey.id === activeStoreyId}
         />
       ))}
+      <Compass />
       <Tools />
       <OrbitControls
         makeDefault

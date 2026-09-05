@@ -168,15 +168,15 @@ Goal: two browser tabs edit the same building and see each other's changes, with
 
 Goal: the footprint knows where it is on the earth, in the coordinate systems German planning uses.
 
-- [ ] Building gets `origin?: { lat, lon, rotation }` for the footprint origin in WGS84 and the rotation of the local x axis against east, in degrees.
-- [ ] `src/geometry/geo.ts`: WGS84 to UTM conversion (Krüger series, zone from longitude, EPSG 258xx for ETRS89 UTM, Berlin is EPSG 25833 zone 33) and back. Pure, no library.
-- [ ] Tests against known points: Brandenburger Tor 52.5163 N 13.3777 E is 33 U 389 xxx E 5 819 xxx N (look up the exact reference values, write them in the test with their source), round trip error under 1 mm, zone boundary at 12 °E handled.
-- [ ] Footprint to world: every footprint vertex to UTM and to WGS84 using origin and rotation. Wall orientations in section 11 use the true rotation.
-- [ ] GeoJSON export: a FeatureCollection with the footprint as a Polygon in WGS84 (right hand rule, closed ring), one feature per storey with height properties, the building properties from section 11 if present. Tests: valid GeoJSON structure, ring closed, coordinates in lon lat order.
-- [ ] Import: read a GeoJSON polygon as a new footprint, project to local metres around its centroid, snap to the grid, reject self-intersecting rings with the existing message.
-- [ ] IFC: IfcMapConversion and IfcProjectedCRS (EPSG:25833) in the IFC export when an origin is set.
-- [ ] UI: Location section in Settings with latitude, longitude, rotation inputs, a compass arrow in the viewport, north indicated on the grid.
-- [ ] i18n: Breitengrad, Längengrad, Ausrichtung, Norden.
+- [x] Building gets `origin?: { lat, lon, rotation }` for the footprint origin in WGS84 and the rotation of the local x axis against east, in degrees.
+- [x] `src/geometry/geo.ts`: WGS84 to UTM conversion (Krüger series, zone from longitude, EPSG 258xx for ETRS89 UTM, Berlin is EPSG 25833 zone 33) and back. Pure, no library.
+- [x] Tests against known points: Brandenburger Tor 52.516275 N 13.377704 E is 33N 389918.04 E 5819699.13 N (reference from pyproj, EPSG:25833, in the test), round trip error under 1 mm, zone boundary at 12 °E handled.
+- [x] Footprint to world: every footprint vertex to UTM and to WGS84 using origin and rotation. Wall orientations in section 11 use the true rotation.
+- [x] GeoJSON export: a FeatureCollection with the footprint as a Polygon in WGS84 (right hand rule, closed ring), one feature per storey with height properties, the building properties from section 11 if present. Tests: valid GeoJSON structure, ring closed, coordinates in lon lat order.
+- [x] Import: read a GeoJSON polygon as a new footprint, project to local metres around its centroid, snap to the grid, reject self-intersecting rings with the existing message.
+- [x] IFC: IfcMapConversion and IfcProjectedCRS (EPSG:25833) in the IFC export when an origin is set.
+- [x] UI: Location section in Settings with latitude, longitude, rotation inputs, a compass arrow in the viewport, north indicated on the grid.
+- [x] i18n: Breitengrad, Längengrad, Ausrichtung, Norden.
 
 ## 15. Editor polish for consultants
 

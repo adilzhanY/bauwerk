@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type {
   Building,
+  GeoOrigin,
   Construction,
   Id,
   Opening,
@@ -18,7 +19,12 @@ import {
   UNHEATED_TEMPERATURE,
 } from "@/geometry/types";
 import { DEFAULT_ASSIGNMENT, defaultConstructions } from "@/geometry/constructions";
-import { isCounterClockwise, isSimplePolygon, snapPoint } from "@/geometry/polygon";
+import {
+  ensureCounterClockwise,
+  isCounterClockwise,
+  isSimplePolygon,
+  snapPoint,
+} from "@/geometry/polygon";
 import { computeRooms } from "@/geometry/rooms";
 import { defaultRoomName, defaultStoreyName, detectLanguage } from "@/i18n";
 import { loadBuilding, loadLanguage } from "@/lib/storage";
@@ -78,6 +84,9 @@ export interface EditorActions {
   renameStorey: (storeyId: Id, name: string) => void;
   setWallThickness: (thickness: number) => void;
   renameBuilding: (name: string) => void;
+  setOrigin: (origin: GeoOrigin | undefined) => void;
+  /** Replaces the footprint, for a GeoJSON import. Rooms are recomputed. */
+  setFootprint: (footprint: Vec2[], origin?: GeoOrigin) => void;
   addOpening: (storeyId: Id, opening: NewOpening) => Id;
   updateOpening: (storeyId: Id, openingId: Id, patch: Partial<Omit<Opening, "id">>) => void;
   removeOpening: (storeyId: Id, openingId: Id) => void;
@@ -309,6 +318,24 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             set((state) => {
               const storey = findStorey(state.building, storeyId);
               if (storey) storey.name = name;
+            });
+          },
+
+          setOrigin: (origin) => {
+            set((state) => {
+              if (origin === undefined) delete state.building.origin;
+              else state.building.origin = { ...origin };
+            });
+          },
+
+          setFootprint: (footprint, origin) => {
+            set((state) => {
+              if (!isSimplePolygon(footprint)) return;
+              state.building.footprint = ensureCounterClockwise(footprint);
+              if (origin) state.building.origin = { ...origin };
+              for (const storey of state.building.storeys) storey.openings = [];
+              state.selection = null;
+              refreshAllRooms(state.building, state.language);
             });
           },
 

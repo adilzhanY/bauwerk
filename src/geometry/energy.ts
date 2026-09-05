@@ -211,7 +211,10 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
             siblings: onWall,
           }).length === 0,
       );
-      const orientation = orientationOf(edge.normal, options.rotationDegrees ?? 0);
+      const orientation = orientationOf(
+        edge.normal,
+        options.rotationDegrees ?? building.origin?.rotation ?? 0,
+      );
       const gross = edge.length * storey.height;
       env.wallGrossArea += gross;
       env.windowToWall[orientation].wall += gross;
