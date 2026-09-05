@@ -111,21 +111,21 @@ Everything below extends the demo toward the other three bullets of the posting:
 
 Goal: the model answers "what does this tell me about the building's energy?" Pure functions in `src/geometry/energy.ts`, no UI dependency, every number traceable to a formula in a comment.
 
-- [ ] Data model: `Construction { id, name, uValue }` presets for exterior walls, windows, doors, floor slab and roof. Default set: uninsulated brick wall 1.4, 1970s wall 1.0, insulated wall 0.25, single glazing 5.0, double glazing 2.8, triple glazing 0.8, old door 3.0, insulated door 1.3, uninsulated floor 1.0, insulated floor 0.35, uninsulated roof 1.3, insulated roof 0.2 W/(m²K). Values editable, presets stored in the building JSON.
-- [ ] Building gets `constructions: Construction[]`, `wallConstructionId`, `floorConstructionId`, `roofConstructionId`. Each opening gets `constructionId`. Existing JSON without these fields imports with the uninsulated defaults (migration in `export.ts`, test it).
-- [ ] Zones get `heated: boolean` and an indoor design temperature (default 20 °C heated, 10 °C unheated).
-- [ ] `envelope.ts`: for every storey compute exterior wall net area (gross minus openings), window area, door area, floor area on the ground storey, roof area on the top storey. Envelope area per storey and per building. Window-to-wall ratio per orientation (N, E, S, W from the wall normal).
-- [ ] Tests: rectangle with two windows gives gross minus opening areas exactly; L shape orientation buckets are right; a storey with no openings has ratio 0.
-- [ ] `heatLoss.ts`: transmission heat loss coefficient H_T = Σ U·A over the envelope of heated rooms, in W/K. Interior walls between a heated and an unheated room count with a fixed U of 1.0 (document the simplification). Ventilation loss H_V = 0.34 · n · V with n = 0.5 1/h and V the heated volume. Specific transmission loss H_T' = H_T / A_envelope.
-- [ ] Tests: hand-computed H_T for the default building with all presets uninsulated versus all insulated; swapping one window preset changes H_T by exactly U difference times area; unheated rooms contribute nothing.
-- [ ] Simple annual heating demand: Q_h = (H_T + H_V) · G_t with G_t = 84 kKh for Berlin (heating degree hours, DIN V 4108-6 style, document the source and that it ignores solar and internal gains). Output kWh/a and kWh/(m²a) over heated floor area.
-- [ ] Energy class band from kWh/(m²a) using the Energieausweis scale A+ to H. Pure lookup, tested at the boundaries.
-- [ ] Store actions: `setConstruction`, `assignConstruction`, `setZoneHeated`. Undoable, tests.
-- [ ] Energy panel in the right panel when nothing is selected, and an Energy tab: envelope area, window-to-wall ratio, H_T, H_T', heating demand, energy class with the coloured band. Per zone breakdown.
-- [ ] Before and after: a "Scenario" toggle that swaps every construction to its insulated counterpart without touching the model, shows both columns side by side, and the difference in percent. Not stored in history, it is a view.
-- [ ] Opening and wall properties show the construction select and the resulting U·A for that element.
-- [ ] Export JSON includes constructions and the computed energy summary block (marked derived).
-- [ ] i18n for every new string, German checked: Wärmedurchgangskoeffizient, Transmissionswärmeverlust, Lüftungswärmeverlust, Heizwärmebedarf, Hüllfläche, Fensterflächenanteil, Energieeffizienzklasse.
+- [x] Data model: `Construction { id, name, uValue }` presets for exterior walls, windows, doors, floor slab and roof. Default set: uninsulated brick wall 1.4, 1970s wall 1.0, insulated wall 0.25, single glazing 5.0, double glazing 2.8, triple glazing 0.8, old door 3.0, insulated door 1.3, uninsulated floor 1.0, insulated floor 0.35, uninsulated roof 1.3, insulated roof 0.2 W/(m²K). Values editable, presets stored in the building JSON.
+- [x] Building gets `constructions: Construction[]`, `wallConstructionId`, `floorConstructionId`, `roofConstructionId`. Each opening gets `constructionId`. Existing JSON without these fields imports with the uninsulated defaults (migration in `export.ts`, test it).
+- [x] Zones get `heated: boolean` and an indoor design temperature (default 20 °C heated, 10 °C unheated).
+- [x] `envelope.ts`: for every storey compute exterior wall net area (gross minus openings), window area, door area, floor area on the ground storey, roof area on the top storey. Envelope area per storey and per building. Window-to-wall ratio per orientation (N, E, S, W from the wall normal).
+- [x] Tests: rectangle with two windows gives gross minus opening areas exactly; L shape orientation buckets are right; a storey with no openings has ratio 0.
+- [x] `heatLoss.ts`: transmission heat loss coefficient H_T = Σ U·A over the envelope of heated rooms, in W/K. Interior walls between a heated and an unheated room count with a fixed U of 1.0 (document the simplification). Ventilation loss H_V = 0.34 · n · V with n = 0.5 1/h and V the heated volume. Specific transmission loss H_T' = H_T / A_envelope.
+- [x] Tests: hand-computed H_T for the default building with all presets uninsulated versus all insulated; swapping one window preset changes H_T by exactly U difference times area; unheated rooms contribute nothing.
+- [x] Simple annual heating demand: Q_h = (H_T + H_V) · G_t with G_t = 84 kKh for Berlin (heating degree hours, DIN V 4108-6 style, document the source and that it ignores solar and internal gains). Output kWh/a and kWh/(m²a) over heated floor area.
+- [x] Energy class band from kWh/(m²a) using the Energieausweis scale A+ to H. Pure lookup, tested at the boundaries.
+- [x] Store actions: `setConstruction`, `assignConstruction`, `setZoneHeated`. Undoable, tests.
+- [x] Energy panel in the right panel when nothing is selected, and an Energy tab: envelope area, window-to-wall ratio, H_T, H_T', heating demand, energy class with the coloured band. Per zone breakdown.
+- [x] Before and after: a "Scenario" toggle that swaps every construction to its insulated counterpart without touching the model, shows both columns side by side, and the difference in percent. Not stored in history, it is a view.
+- [x] Opening and wall properties show the construction select and the resulting U·A for that element.
+- [x] Export JSON includes constructions and the computed energy summary block (marked derived).
+- [x] i18n for every new string, German checked: Wärmedurchgangskoeffizient, Transmissionswärmeverlust, Lüftungswärmeverlust, Heizwärmebedarf, Hüllfläche, Fensterflächenanteil, Energieeffizienzklasse.
 
 ## 12. IFC export
 

@@ -12,6 +12,17 @@ export interface Segment {
 
 export type OpeningKind = "window" | "door";
 
+export type ConstructionCategory = "wall" | "window" | "door" | "floor" | "roof";
+
+/** A building component type with its thermal transmittance. */
+export interface Construction {
+  id: Id;
+  name: string;
+  category: ConstructionCategory;
+  /** U-value in W/(m²K). */
+  uValue: number;
+}
+
 export interface Opening {
   id: Id;
   /** Index into the footprint edges. Edge i runs from vertex i to vertex i + 1. */
@@ -23,6 +34,7 @@ export interface Opening {
   height: number;
   /** Metres above the floor. Always 0 for doors. */
   sill: number;
+  constructionId: Id;
 }
 
 export interface Room {
@@ -39,6 +51,9 @@ export interface Zone {
   id: Id;
   name: string;
   color: string;
+  heated: boolean;
+  /** Indoor design temperature in °C. */
+  temperature: number;
 }
 
 export interface Storey {
@@ -62,8 +77,17 @@ export interface Building {
   /** Index 0 is the ground floor. */
   storeys: Storey[];
   zones: Zone[];
+  constructions: Construction[];
+  wallConstructionId: Id;
+  floorConstructionId: Id;
+  roofConstructionId: Id;
+  /** Used for newly placed openings. */
+  windowConstructionId: Id;
+  doorConstructionId: Id;
 }
 
 export const GRID_SIZE = 0.5;
 export const DEFAULT_WALL_THICKNESS = 0.3;
 export const DEFAULT_STOREY_HEIGHT = 3;
+export const HEATED_TEMPERATURE = 20;
+export const UNHEATED_TEMPERATURE = 10;

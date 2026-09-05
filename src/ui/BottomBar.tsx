@@ -51,7 +51,7 @@ export function BottomBar() {
   };
 
   const onImportFile = async (file: File) => {
-    const result = fromJson(await file.text());
+    const result = fromJson(await file.text(), language);
     if (result.ok) {
       setError(null);
       loadBuilding(result.building);

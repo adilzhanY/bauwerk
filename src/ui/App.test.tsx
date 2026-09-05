@@ -86,6 +86,15 @@ describe("App", () => {
     expect(screen.getByText("No storeys")).toBeTruthy();
   });
 
+  it("shows the energy panel with a class band and the renovated scenario", () => {
+    render(<App />);
+    expect(screen.getByRole("heading", { name: "Energy" })).toBeTruthy();
+    expect(screen.getByLabelText(/Energy efficiency class: H/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "Renovated" }));
+    expect(screen.getByLabelText(/Energy efficiency class: (A\+|A|B|C|D|E|F|G)$/)).toBeTruthy();
+    expect(screen.getByText("Saving")).toBeTruthy();
+  });
+
   it("opens the shortcut sheet", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));

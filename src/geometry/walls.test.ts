@@ -73,6 +73,7 @@ describe("wallSolids", () => {
     width: 1.2,
     height: 1.4,
     sill: 0.9,
+    constructionId: "c_glazing_double",
   };
   const doorOpening: Opening = {
     id: "d",
@@ -82,6 +83,7 @@ describe("wallSolids", () => {
     width: 1,
     height: 2.1,
     sill: 0,
+    constructionId: "c_door_old",
   };
   const volume = (prisms: readonly WallPrism[]) =>
     prisms.reduce((sum, p) => sum + area(p.plan) * (p.top - p.bottom), 0);

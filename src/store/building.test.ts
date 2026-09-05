@@ -427,3 +427,44 @@ describe("footprint editing and deleteSelection", () => {
     expect(store.getState().building.storeys.map((s) => s.id)).toEqual([first, second]);
   });
 });
+
+describe("energy actions", () => {
+  it("assigns constructions, edits U-values and toggles zone heating, all undoable", () => {
+    const sid = storeyId();
+    store.getState().assignConstruction({ kind: "wall" }, "c_wall_insulated");
+    expect(store.getState().building.wallConstructionId).toBe("c_wall_insulated");
+    store.getState().assignConstruction({ kind: "wall" }, "missing");
+    expect(store.getState().building.wallConstructionId).toBe("c_wall_insulated");
+
+    const id = store.getState().addOpening(sid, {
+      wallIndex: 0,
+      kind: "window",
+      offset: 1,
+      width: 1,
+      height: 1,
+      sill: 1,
+    });
+    expect(store.getState().building.storeys[0]?.openings[0]?.constructionId).toBe(
+      "c_glazing_double",
+    );
+    store.getState().assignConstruction({ kind: "opening", storeyId: sid, id }, "c_glazing_triple");
+    expect(store.getState().building.storeys[0]?.openings[0]?.constructionId).toBe(
+      "c_glazing_triple",
+    );
+
+    store.getState().updateConstruction("c_wall_insulated", { uValue: 0.2 });
+    expect(
+      store.getState().building.constructions.find((c) => c.id === "c_wall_insulated")?.uValue,
+    ).toBe(0.2);
+
+    const zoneId = store.getState().addZone("Cellar", "#000", false);
+    expect(store.getState().building.zones[0]?.temperature).toBe(10);
+    store.getState().setZoneHeated(zoneId, true);
+    expect(store.getState().building.zones[0]?.temperature).toBe(20);
+
+    const entries = store.getState().past.length;
+    store.getState().undo();
+    expect(store.getState().building.zones[0]?.heated).toBe(false);
+    expect(store.getState().past.length).toBe(entries - 1);
+  });
+});

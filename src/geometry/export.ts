@@ -1,6 +1,10 @@
+import { DEFAULT_ASSIGNMENT, defaultConstructions } from "./constructions";
+import { computeEnergy } from "./energy";
+import type { EnergySummary } from "./energy";
 import { validateOpening } from "./openings";
 import { area, isCounterClockwise, isSimplePolygon, pointInPolygon, edges } from "./polygon";
-import type { Building, Opening, Room, Storey, Zone } from "./types";
+import type { Building, Construction, Opening, Room, Storey, Zone } from "./types";
+import { HEATED_TEMPERATURE } from "./types";
 
 export const EXPORT_VERSION = 1;
 
@@ -8,6 +12,8 @@ export interface ExportFile {
   format: "bauwerk";
   version: number;
   building: Building;
+  /** Computed from the building on export. Ignored on import and recomputed. */
+  derived?: { energy: Omit<EnergySummary, "elements"> };
 }
 
 export type ImportErrorCode =
@@ -28,7 +34,9 @@ export type ImportErrorCode =
   | "openingTooSmall"
   | "roomOutsideFootprint"
   | "roomAreaMismatch"
-  | "unknownZone";
+  | "unknownZone"
+  | "unknownConstruction"
+  | "constructionInvalid";
 
 export interface ImportError {
   code: ImportErrorCode;
@@ -40,11 +48,19 @@ export type ImportResult = { ok: true; building: Building } | { ok: false; error
 
 /** Pretty JSON, always with a dot as decimal separator, in metres. */
 export function toJson(building: Building): string {
-  const file: ExportFile = { format: "bauwerk", version: EXPORT_VERSION, building };
+  const summary = computeEnergy(building);
+  const energy = { ...summary, elements: undefined };
+  delete energy.elements;
+  const file: ExportFile = {
+    format: "bauwerk",
+    version: EXPORT_VERSION,
+    building,
+    derived: { energy },
+  };
   return JSON.stringify(file, null, 2);
 }
 
-export function fromJson(text: string): ImportResult {
+export function fromJson(text: string, language: "en" | "de" = "en"): ImportResult {
   let raw: unknown;
   try {
     raw = JSON.parse(text);
@@ -59,10 +75,79 @@ export function fromJson(text: string): ImportResult {
   }
   const structural = checkBuildingShape(raw.building, "building");
   if (structural) return { ok: false, error: structural };
-  const building = raw.building as Building;
+  const building = migrate(raw.building as LegacyBuilding, language);
   const invariant = validateBuilding(building);
   if (invariant) return { ok: false, error: invariant };
   return { ok: true, building };
+}
+
+/** A building written before the energy layer: the energy fields may be missing. */
+type LegacyBuilding = Omit<
+  Building,
+  | "constructions"
+  | "wallConstructionId"
+  | "floorConstructionId"
+  | "roofConstructionId"
+  | "windowConstructionId"
+  | "doorConstructionId"
+  | "zones"
+  | "storeys"
+> &
+  Partial<
+    Pick<
+      Building,
+      | "constructions"
+      | "wallConstructionId"
+      | "floorConstructionId"
+      | "roofConstructionId"
+      | "windowConstructionId"
+      | "doorConstructionId"
+    >
+  > & {
+    zones: (Omit<Zone, "heated" | "temperature"> & Partial<Pick<Zone, "heated" | "temperature">>)[];
+    storeys: (Omit<Storey, "openings"> & {
+      openings: (Omit<Opening, "constructionId"> & Partial<Pick<Opening, "constructionId">>)[];
+    })[];
+  };
+
+/**
+ * Fills in energy fields for files written before they existed: the uninsulated
+ * preset stock, every zone heated, every opening on the default glazing or door.
+ * A file that already has the fields passes through unchanged.
+ */
+export function migrate(b: LegacyBuilding, language: "en" | "de"): Building {
+  const constructions = b.constructions ?? defaultConstructions(language);
+  const assignment = {
+    wallConstructionId: b.wallConstructionId ?? DEFAULT_ASSIGNMENT.wallConstructionId,
+    floorConstructionId: b.floorConstructionId ?? DEFAULT_ASSIGNMENT.floorConstructionId,
+    roofConstructionId: b.roofConstructionId ?? DEFAULT_ASSIGNMENT.roofConstructionId,
+    windowConstructionId: b.windowConstructionId ?? DEFAULT_ASSIGNMENT.windowConstructionId,
+    doorConstructionId: b.doorConstructionId ?? DEFAULT_ASSIGNMENT.doorConstructionId,
+  };
+  const complete =
+    b.constructions !== undefined &&
+    b.zones.every((z) => z.heated !== undefined && z.temperature !== undefined) &&
+    b.storeys.every((s) => s.openings.every((o) => o.constructionId !== undefined));
+  if (complete && b.wallConstructionId !== undefined) return b as Building;
+  return {
+    ...b,
+    ...assignment,
+    constructions,
+    zones: b.zones.map((z) => ({
+      ...z,
+      heated: z.heated ?? true,
+      temperature: z.temperature ?? HEATED_TEMPERATURE,
+    })),
+    storeys: b.storeys.map((s) => ({
+      ...s,
+      openings: s.openings.map((o) => ({
+        ...o,
+        constructionId:
+          o.constructionId ??
+          (o.kind === "door" ? assignment.doorConstructionId : assignment.windowConstructionId),
+      })),
+    })),
+  };
 }
 
 /** Checks every invariant from INFO.md. Returns the first violation or null. */
@@ -89,6 +174,25 @@ export function validateBuilding(b: Building): ImportError | null {
     if (d) return d;
   }
 
+  const constructionIds = new Set<string>();
+  for (const [ci, c] of b.constructions.entries()) {
+    const cp = `building.constructions[${ci}]`;
+    const d = seen(c.id, cp);
+    if (d) return d;
+    if (!(c.uValue > 0) || !c.name) return { code: "constructionInvalid", path: cp };
+    constructionIds.add(c.id);
+  }
+  for (const key of [
+    "wallConstructionId",
+    "floorConstructionId",
+    "roofConstructionId",
+    "windowConstructionId",
+    "doorConstructionId",
+  ] as const) {
+    if (!constructionIds.has(b[key]))
+      return { code: "unknownConstruction", path: `building.${key}` };
+  }
+
   const wallLengths = edges(b.footprint).map((e) => e.length);
   const footprintArea = area(b.footprint);
 
@@ -104,6 +208,7 @@ export function validateBuilding(b: Building): ImportError | null {
       if (d2) return d2;
       const wallLength = wallLengths[o.wallIndex];
       if (wallLength === undefined) return { code: "wallIndexOutOfRange", path: op };
+      if (!constructionIds.has(o.constructionId)) return { code: "unknownConstruction", path: op };
       const errors = validateOpening(o, {
         wallLength,
         storeyHeight: s.height,
@@ -187,6 +292,8 @@ function checkOpening(v: unknown, path: string): ImportError | null {
   for (const k of ["offset", "width", "height", "sill"] as const) {
     if (!isNumber(o[k])) return bad(`${path}.${k}`);
   }
+  if (o.constructionId !== undefined && !isString(o.constructionId))
+    return bad(`${path}.constructionId`);
   return null;
 }
 
@@ -228,6 +335,8 @@ function checkZone(v: unknown, path: string): ImportError | null {
   if (!isRecord(v)) return bad(path);
   const z = v as Partial<Record<keyof Zone, unknown>>;
   if (!isString(z.id) || !isString(z.name) || !isString(z.color)) return bad(path);
+  if (z.heated !== undefined && typeof z.heated !== "boolean") return bad(`${path}.heated`);
+  if (z.temperature !== undefined && !isNumber(z.temperature)) return bad(`${path}.temperature`);
   return null;
 }
 
@@ -248,5 +357,31 @@ function checkBuildingShape(v: unknown, path: string): ImportError | null {
     const e = checkZone(z, `${path}.zones[${i}]`);
     if (e) return e;
   }
+  if (b.constructions !== undefined) {
+    if (!Array.isArray(b.constructions)) return bad(`${path}.constructions`);
+    for (const [i, c] of (b.constructions as unknown[]).entries()) {
+      const e = checkConstruction(c, `${path}.constructions[${i}]`);
+      if (e) return e;
+    }
+  }
+  for (const key of [
+    "wallConstructionId",
+    "floorConstructionId",
+    "roofConstructionId",
+    "windowConstructionId",
+    "doorConstructionId",
+  ] as const) {
+    if (b[key] !== undefined && !isString(b[key])) return bad(`${path}.${key}`);
+  }
+  return null;
+}
+
+function checkConstruction(v: unknown, path: string): ImportError | null {
+  if (!isRecord(v)) return bad(path);
+  const c = v as Partial<Record<keyof Construction, unknown>>;
+  if (!isString(c.id) || !isString(c.name)) return bad(path);
+  if (!["wall", "window", "door", "floor", "roof"].includes(c.category as string))
+    return bad(`${path}.category`);
+  if (!isNumber(c.uValue)) return bad(`${path}.uValue`);
   return null;
 }

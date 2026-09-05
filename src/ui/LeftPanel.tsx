@@ -254,6 +254,9 @@ function ZoneList() {
                   style={{ background: zone.color }}
                 />
                 <span className="flex-1 truncate text-fg">{zone.name}</span>
+                <span className="text-xs text-muted">
+                  {t(zone.heated ? "zone.heated" : "zone.unheated")}
+                </span>
                 {active && <span className="text-xs text-accent">{t("zone.active")}</span>}
               </button>
             </li>

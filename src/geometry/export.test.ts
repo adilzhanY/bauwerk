@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { DEFAULT_ASSIGNMENT, PRESET_IDS, defaultConstructions } from "./constructions";
 import { fromJson, toJson, validateBuilding } from "./export";
 import { rect } from "./fixtures";
 import { computeRooms } from "./rooms";
@@ -13,15 +14,35 @@ function sample(): Building {
     name: "Haus",
     footprint: rect,
     wallThickness: 0.3,
-    zones: [{ id: "z1", name: "Heated", color: "#ff0000" }],
+    zones: [{ id: "z1", name: "Heated", color: "#ff0000", heated: true, temperature: 20 }],
+    constructions: defaultConstructions("en"),
+    ...DEFAULT_ASSIGNMENT,
     storeys: [
       {
         id: "s1",
         name: "Ground floor",
         height: 3,
         openings: [
-          { id: "o1", wallIndex: 0, kind: "door", offset: 1, width: 1, height: 2.1, sill: 0 },
-          { id: "o2", wallIndex: 0, kind: "window", offset: 3, width: 1.2, height: 1.4, sill: 0.9 },
+          {
+            id: "o1",
+            wallIndex: 0,
+            kind: "door",
+            offset: 1,
+            width: 1,
+            height: 2.1,
+            sill: 0,
+            constructionId: PRESET_IDS.doorOld,
+          },
+          {
+            id: "o2",
+            wallIndex: 0,
+            kind: "window",
+            offset: 3,
+            width: 1.2,
+            height: 1.4,
+            sill: 0.9,
+            constructionId: PRESET_IDS.glazingDouble,
+          },
         ],
         interiorWalls: walls,
         rooms: computeRooms(rect, walls, [], factory).map((r, i) =>
@@ -40,6 +61,14 @@ describe("toJson and fromJson", () => {
     const result = fromJson(text);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.building).toEqual(b);
+  });
+
+  it("writes a derived energy block that import ignores", () => {
+    const text = toJson(sample());
+    const raw = JSON.parse(text) as { derived: { energy: { transmissionLoss: number } } };
+    expect(raw.derived.energy.transmissionLoss).toBeGreaterThan(0);
+    const result = fromJson(text);
+    expect(result.ok).toBe(true);
   });
 
   it("uses a dot as the decimal separator regardless of locale", () => {
@@ -112,7 +141,7 @@ describe("validateBuilding", () => {
 
   it("rejects duplicate ids, unknown zones, bad rooms and bad sizes", () => {
     const dup = sample();
-    dup.zones.push({ id: "s1", name: "Clash", color: "#000" });
+    dup.zones.push({ id: "s1", name: "Clash", color: "#000", heated: true, temperature: 20 });
     expect(validateBuilding(dup)?.code).toBe("duplicateId");
 
     const zone = sample();
@@ -135,5 +164,56 @@ describe("validateBuilding", () => {
     const h = sample();
     h.storeys[1]!.height = -1;
     expect(validateBuilding(h)?.code).toBe("storeyHeightInvalid");
+  });
+});
+
+describe("migration of files without energy data", () => {
+  it("fills constructions, zone heating and opening constructions", () => {
+    const b = sample();
+    const raw = JSON.parse(toJson(b)) as {
+      building: Record<string, unknown> & {
+        zones: Record<string, unknown>[];
+        storeys: { openings: Record<string, unknown>[] }[];
+      };
+    };
+    const stripped = Object.fromEntries(
+      Object.entries(raw.building).filter(
+        ([key]) =>
+          ![
+            "constructions",
+            "wallConstructionId",
+            "floorConstructionId",
+            "roofConstructionId",
+            "windowConstructionId",
+            "doorConstructionId",
+          ].includes(key),
+      ),
+    ) as typeof raw.building;
+    raw.building = stripped;
+    for (const z of raw.building.zones) {
+      delete z.heated;
+      delete z.temperature;
+    }
+    for (const s of raw.building.storeys) for (const o of s.openings) delete o.constructionId;
+    const result = fromJson(JSON.stringify(raw), "de");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.building.constructions.map((c) => c.id)).toContain(PRESET_IDS.wallBrick);
+    expect(result.building.constructions.find((c) => c.id === PRESET_IDS.wallBrick)?.name).toBe(
+      "Ziegelwand, ungedämmt",
+    );
+    expect(result.building.wallConstructionId).toBe(PRESET_IDS.wallBrick);
+    expect(result.building.zones[0]?.heated).toBe(true);
+    expect(result.building.storeys[0]?.openings[0]?.constructionId).toBe(PRESET_IDS.doorOld);
+    expect(result.building.storeys[0]?.openings[1]?.constructionId).toBe(PRESET_IDS.glazingDouble);
+  });
+
+  it("rejects an opening that points to a missing construction", () => {
+    const b = sample();
+    b.storeys[0]!.openings[0]!.constructionId = "nope";
+    expect(validateBuilding(b)?.code).toBe("unknownConstruction");
+    expect(validateBuilding({ ...b, wallConstructionId: "nope" })?.code).toBe(
+      "unknownConstruction",
+    );
   });
 });

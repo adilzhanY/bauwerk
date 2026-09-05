@@ -124,7 +124,7 @@ export function wallProfile(
 
 export function defaultOpening(
   kind: Opening["kind"],
-): Omit<Opening, "id" | "wallIndex" | "offset"> {
+): Omit<Opening, "id" | "wallIndex" | "offset" | "constructionId"> {
   return kind === "door"
     ? { kind, width: 1.0, height: 2.1, sill: 0 }
     : { kind, width: 1.2, height: 1.4, sill: 0.9 };

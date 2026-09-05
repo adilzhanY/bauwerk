@@ -19,6 +19,7 @@ const window = (patch: Partial<Opening> = {}): Opening => ({
   width: 1.2,
   height: 1.4,
   sill: 0.9,
+  constructionId: "c_glazing_double",
   ...patch,
 });
 
@@ -30,6 +31,7 @@ const door = (patch: Partial<Opening> = {}): Opening => ({
   width: 1,
   height: 2.1,
   sill: 0,
+  constructionId: "c_door_old",
   ...patch,
 });
 

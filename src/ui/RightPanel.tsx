@@ -5,7 +5,7 @@ import { distance, edges } from "@/geometry/polygon";
 import type { Opening, Room, Storey, Zone } from "@/geometry/types";
 import { useT } from "@/i18n/useT";
 import type { MessageKey } from "@/i18n";
-import { formatArea, formatMetres } from "@/lib/format";
+import { formatArea, formatMetres, formatNumber } from "@/lib/format";
 import { useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
 import { Button } from "./controls/Button";
@@ -14,6 +14,7 @@ import { ReadOnly, Section } from "./controls/Field";
 import { NumberField } from "./controls/NumberField";
 import { Select } from "./controls/Select";
 import { TextField } from "./controls/TextField";
+import { ConstructionSelect, EnergyPanel } from "./EnergyPanel";
 
 const openingErrorKey: Record<OpeningError, MessageKey> = {
   outsideWallStart: "opening.error.outsideWallStart",
@@ -30,13 +31,20 @@ export function RightPanel() {
   const selection = useEditorStore((s) => s.selection);
   return (
     <aside className="flex h-full flex-col overflow-y-auto border-l border-border bg-panel">
-      <Section title={t("panel.properties")}>
-        {selection ? (
+      {selection ? (
+        <Section title={t("panel.properties")}>
           <Properties selection={selection} />
-        ) : (
-          <p className="text-sm text-muted">{t("properties.empty")}</p>
-        )}
-      </Section>
+        </Section>
+      ) : (
+        <>
+          <Section title={t("panel.properties")}>
+            <p className="text-sm text-muted">{t("properties.empty")}</p>
+          </Section>
+          <Section title={t("energy.title")}>
+            <EnergyPanel />
+          </Section>
+        </>
+      )}
     </aside>
   );
 }
@@ -120,16 +128,25 @@ function WallProperties({ storeyId, wallIndex }: { storeyId: string; wallIndex: 
   const language = useEditorStore((s) => s.language);
   const footprint = useEditorStore((s) => s.building.footprint);
   const thickness = useEditorStore((s) => s.building.wallThickness);
+  const wallConstructionId = useEditorStore((s) => s.building.wallConstructionId);
   const storey = useStorey(storeyId);
   const edge = edges(footprint)[wallIndex];
   if (!edge || !storey) return null;
-  const count = storey.openings.filter((o) => o.wallIndex === wallIndex).length;
+  const onWall = storey.openings.filter((o) => o.wallIndex === wallIndex);
+  const count = onWall.length;
+  const netArea = edge.length * storey.height - onWall.reduce((a, o) => a + o.width * o.height, 0);
   return (
     <>
       <Title>{t("wall.title", { n: wallIndex + 1 })}</Title>
       <ReadOnly label={t("wall.length")} value={formatMetres(edge.length, language)} />
       <ReadOnly label={t("wall.thickness")} value={formatMetres(thickness, language)} />
       <ReadOnly label={t("wall.openings")} value={String(count)} />
+      <ConstructionSelect
+        category="wall"
+        value={wallConstructionId}
+        area={Math.max(0, netArea)}
+        target={{ kind: "wall" }}
+      />
       <p className="text-xs leading-relaxed text-muted">{t("wall.hint")}</p>
     </>
   );
@@ -141,6 +158,8 @@ function OpeningProperties({ storeyId, openingId }: { storeyId: string; openingI
   const storey = useStorey(storeyId);
   const updateOpening = useEditorStore((s) => s.updateOpening);
   const removeOpening = useEditorStore((s) => s.removeOpening);
+  const windowConstructionId = useEditorStore((s) => s.building.windowConstructionId);
+  const doorConstructionId = useEditorStore((s) => s.building.doorConstructionId);
   const opening = storey?.openings.find((o) => o.id === openingId);
   const edge = opening ? edges(footprint)[opening.wallIndex] : undefined;
   if (!storey || !opening || !edge) return null;
@@ -178,7 +197,8 @@ function OpeningProperties({ storeyId, openingId }: { storeyId: string; openingI
           { value: "door", label: t("opening.door") },
         ]}
         onChange={(kind) => {
-          patch(kind === "door" ? { kind, sill: 0 } : { kind });
+          const constructionId = kind === "door" ? doorConstructionId : windowConstructionId;
+          patch(kind === "door" ? { kind, sill: 0, constructionId } : { kind, constructionId });
         }}
       />
       <NumberField
@@ -360,6 +380,8 @@ function ZoneProperties({ zoneId }: { zoneId: string }) {
   );
   const updateZone = useEditorStore((s) => s.updateZone);
   const removeZone = useEditorStore((s) => s.removeZone);
+  const setZoneHeated = useEditorStore((s) => s.setZoneHeated);
+  const language = useEditorStore((s) => s.language);
   if (!zone) return null;
   return (
     <>
@@ -377,6 +399,21 @@ function ZoneProperties({ zoneId }: { zoneId: string }) {
         onChange={(color) => {
           updateZone(zoneId, { color });
         }}
+      />
+      <label className="flex items-center gap-2 text-sm text-fg">
+        <input
+          type="checkbox"
+          checked={zone.heated}
+          onChange={(e) => {
+            setZoneHeated(zoneId, e.target.checked);
+          }}
+          className="accent-accent"
+        />
+        {t(zone.heated ? "zone.heated" : "zone.unheated")}
+      </label>
+      <ReadOnly
+        label={t("zone.temperature")}
+        value={`${formatNumber(zone.temperature, language, 0)} °C`}
       />
       <ReadOnly label={t("zone.rooms")} value={String(roomCount)} />
       <Button

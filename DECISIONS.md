@@ -39,3 +39,7 @@ Rooms are derived from interior walls, but the user names them and assigns zones
 ## 2026-09-05 Number inputs commit on blur, sliders on release
 
 The first draft of the properties panel wrote to the store on every keystroke and every slider tick. That works, but it makes undo useless: typing "2.4" left three history entries and dragging a slider left dozens. Changed so text inputs commit on blur or Enter and sliders commit on pointer release, with a local draft in between. One edit is one undo step. Inputs also accept both comma and dot, since the German locale writes 0,3 and the exported JSON must still write 0.3. Verified in `App.test.tsx` (comma input commits 0.4) and by the store tests that count history entries.
+
+## 2026-09-05 Energy numbers are simplified and say so
+
+The building physics layer computes transmission loss as a plain sum of U times A over the heated envelope, ventilation loss with a fixed 0.5 air changes, and heating demand from 84 kKh Berlin degree hours. It ignores solar and internal gains, thermal bridges and the ground reduction factor, and treats rooms without a zone as heated. A DIN V 18599 calculation was not attempted: it would take longer than the demo allows and the point of the layer is that every number on screen can be traced to a formula in a comment and a hand-computed test. The assumptions are printed at the bottom of the Energy panel so nobody mistakes the result for a certificate. `energy.test.ts` checks the default building against numbers computed by hand: 335.2 W/K uninsulated, 71 W/K renovated.

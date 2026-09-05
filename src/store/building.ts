@@ -1,7 +1,23 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
-import type { Building, Id, Opening, Segment, Storey, Vec2, Zone } from "@/geometry/types";
-import { DEFAULT_STOREY_HEIGHT, DEFAULT_WALL_THICKNESS, GRID_SIZE } from "@/geometry/types";
+import type {
+  Building,
+  Construction,
+  Id,
+  Opening,
+  Segment,
+  Storey,
+  Vec2,
+  Zone,
+} from "@/geometry/types";
+import {
+  DEFAULT_STOREY_HEIGHT,
+  DEFAULT_WALL_THICKNESS,
+  GRID_SIZE,
+  HEATED_TEMPERATURE,
+  UNHEATED_TEMPERATURE,
+} from "@/geometry/types";
+import { DEFAULT_ASSIGNMENT, defaultConstructions } from "@/geometry/constructions";
 import { isCounterClockwise, isSimplePolygon, snapPoint } from "@/geometry/polygon";
 import { computeRooms } from "@/geometry/rooms";
 import { defaultRoomName, defaultStoreyName, detectLanguage } from "@/i18n";
@@ -33,6 +49,8 @@ export interface EditorState {
   showGrid: boolean;
   /** Zone the zone tool paints with. UI state. */
   activeZoneId: Id | null;
+  /** Energy panel shows the renovated scenario. UI state. */
+  renovatedView: boolean;
 }
 
 export interface EditorActions {
@@ -49,14 +67,17 @@ export interface EditorActions {
   setStoreyHeight: (storeyId: Id, height: number) => void;
   renameStorey: (storeyId: Id, name: string) => void;
   setWallThickness: (thickness: number) => void;
-  addOpening: (storeyId: Id, opening: Omit<Opening, "id">) => Id;
+  addOpening: (storeyId: Id, opening: NewOpening) => Id;
   updateOpening: (storeyId: Id, openingId: Id, patch: Partial<Omit<Opening, "id">>) => void;
   removeOpening: (storeyId: Id, openingId: Id) => void;
   addInteriorWall: (storeyId: Id, segment: Segment) => void;
   removeInteriorWall: (storeyId: Id, index: number) => void;
   renameRoom: (storeyId: Id, roomId: Id, name: string) => void;
   assignRoomToZone: (storeyId: Id, roomId: Id, zoneId: Id | undefined) => void;
-  addZone: (name: string, color: string) => Id;
+  addZone: (name: string, color: string, heated?: boolean) => Id;
+  setZoneHeated: (zoneId: Id, heated: boolean) => void;
+  updateConstruction: (constructionId: Id, patch: Partial<Omit<Construction, "id">>) => void;
+  assignConstruction: (target: ConstructionTarget, constructionId: Id) => void;
   updateZone: (zoneId: Id, patch: Partial<Omit<Zone, "id">>) => void;
   removeZone: (zoneId: Id) => void;
   loadBuilding: (building: Building) => void;
@@ -65,10 +86,18 @@ export interface EditorActions {
   clearSelection: () => void;
   setHovered: (hovered: Selection | null) => void;
   setActiveZone: (zoneId: Id | null) => void;
+  setRenovatedView: (on: boolean) => void;
   setShowGrid: (show: boolean) => void;
   setTool: (tool: Tool) => void;
   setLanguage: (language: Language) => void;
 }
+
+/** The construction defaults to the building's window or door construction. */
+export type NewOpening = Omit<Opening, "id" | "constructionId"> & { constructionId?: Id };
+
+export type ConstructionTarget =
+  | { kind: "wall" | "floor" | "roof" | "window" | "door" }
+  | { kind: "opening"; storeyId: Id; id: Id };
 
 export type EditorStore = EditorState & EditorActions & HistorySlice;
 
@@ -97,6 +126,8 @@ export function createDefaultBuilding(language: Language = "en"): Building {
     wallThickness: DEFAULT_WALL_THICKNESS,
     storeys: [createStorey(0, language)],
     zones: [],
+    constructions: defaultConstructions(language),
+    ...DEFAULT_ASSIGNMENT,
   };
   refreshAllRooms(building, language);
   return building;
@@ -139,6 +170,7 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           language,
           showGrid: initial?.showGrid ?? true,
           activeZoneId: initial?.activeZoneId ?? null,
+          renovatedView: false,
 
           setFootprintVertex: (index, position) => {
             set((state) => {
@@ -273,7 +305,13 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             const id = createId("opening");
             set((state) => {
               const storey = findStorey(state.building, storeyId);
-              if (storey) storey.openings.push({ ...opening, id });
+              if (!storey) return;
+              const constructionId =
+                opening.constructionId ??
+                (opening.kind === "door"
+                  ? state.building.doorConstructionId
+                  : state.building.windowConstructionId);
+              storey.openings.push({ ...opening, constructionId, id });
             });
             return id;
           },
@@ -335,12 +373,65 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             });
           },
 
-          addZone: (name, color) => {
+          addZone: (name, color, heated = true) => {
             const id = createId("zone");
             set((state) => {
-              state.building.zones.push({ id, name, color });
+              state.building.zones.push({
+                id,
+                name,
+                color,
+                heated,
+                temperature: heated ? HEATED_TEMPERATURE : UNHEATED_TEMPERATURE,
+              });
             });
             return id;
+          },
+
+          setZoneHeated: (zoneId, heated) => {
+            set((state) => {
+              const zone = state.building.zones.find((z) => z.id === zoneId);
+              if (!zone || zone.heated === heated) return;
+              zone.heated = heated;
+              zone.temperature = heated ? HEATED_TEMPERATURE : UNHEATED_TEMPERATURE;
+            });
+          },
+
+          updateConstruction: (constructionId, patch) => {
+            set((state) => {
+              const c = state.building.constructions.find((x) => x.id === constructionId);
+              if (c) Object.assign(c, patch);
+            });
+          },
+
+          assignConstruction: (target, constructionId) => {
+            set((state) => {
+              const b = state.building;
+              if (!b.constructions.some((c) => c.id === constructionId)) return;
+              switch (target.kind) {
+                case "wall":
+                  b.wallConstructionId = constructionId;
+                  break;
+                case "floor":
+                  b.floorConstructionId = constructionId;
+                  break;
+                case "roof":
+                  b.roofConstructionId = constructionId;
+                  break;
+                case "window":
+                  b.windowConstructionId = constructionId;
+                  break;
+                case "door":
+                  b.doorConstructionId = constructionId;
+                  break;
+                case "opening": {
+                  const o = findStorey(b, target.storeyId)?.openings.find(
+                    (x) => x.id === target.id,
+                  );
+                  if (o) o.constructionId = constructionId;
+                  break;
+                }
+              }
+            });
           },
 
           updateZone: (zoneId, patch) => {
@@ -395,6 +486,12 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             set((state) => {
               if (sameSelection(state.hovered, hovered)) return;
               state.hovered = hovered;
+            });
+          },
+
+          setRenovatedView: (on) => {
+            set((state) => {
+              state.renovatedView = on;
             });
           },
 

@@ -1,6 +1,7 @@
 import { computeRooms } from "@/geometry/rooms";
 import type { Building, Segment, Storey, Vec2 } from "@/geometry/types";
-import { DEFAULT_WALL_THICKNESS } from "@/geometry/types";
+import { DEFAULT_WALL_THICKNESS, HEATED_TEMPERATURE, UNHEATED_TEMPERATURE } from "@/geometry/types";
+import { DEFAULT_ASSIGNMENT, PRESET_IDS, defaultConstructions } from "@/geometry/constructions";
 import { defaultRoomName, defaultStoreyName } from "@/i18n";
 import type { Language } from "@/i18n";
 import { createId } from "./ids";
@@ -12,7 +13,7 @@ function storey(
   language: Language,
   footprint: Vec2[],
   height: number,
-  openings: Omit<Storey["openings"][number], "id">[],
+  openings: Omit<Storey["openings"][number], "id" | "constructionId">[],
   interiorWalls: Segment[],
   roomNames: Record<number, string> = {},
   roomZones: Record<number, string> = {},
@@ -31,7 +32,11 @@ function storey(
     id: createId("storey"),
     name: defaultStoreyName(index, language),
     height,
-    openings: openings.map((o) => ({ ...o, id: createId("opening") })),
+    openings: openings.map((o) => ({
+      ...o,
+      id: createId("opening"),
+      constructionId: o.kind === "door" ? PRESET_IDS.doorOld : PRESET_IDS.glazingDouble,
+    })),
     interiorWalls,
     rooms,
   };
@@ -54,9 +59,23 @@ export function exampleHouse(language: Language): Building {
     footprint,
     wallThickness: DEFAULT_WALL_THICKNESS,
     zones: [
-      { id: heated, name: de ? "Beheizt" : "Heated", color: "#e76f51" },
-      { id: unheated, name: de ? "Unbeheizt" : "Unheated", color: "#6c8ef5" },
+      {
+        id: heated,
+        name: de ? "Beheizt" : "Heated",
+        color: "#e76f51",
+        heated: true,
+        temperature: HEATED_TEMPERATURE,
+      },
+      {
+        id: unheated,
+        name: de ? "Unbeheizt" : "Unheated",
+        color: "#6c8ef5",
+        heated: false,
+        temperature: UNHEATED_TEMPERATURE,
+      },
     ],
+    constructions: defaultConstructions(language),
+    ...DEFAULT_ASSIGNMENT,
     storeys: [
       storey(
         0,
@@ -151,7 +170,18 @@ export function exampleBlock(language: Language): Building {
     name: de ? "Bürogebäude" : "Office block",
     footprint,
     wallThickness: 0.4,
-    zones: [{ id: heated, name: de ? "Beheizt" : "Heated", color: "#2a9d8f" }],
+    zones: [
+      {
+        id: heated,
+        name: de ? "Beheizt" : "Heated",
+        color: "#2a9d8f",
+        heated: true,
+        temperature: HEATED_TEMPERATURE,
+      },
+    ],
+    constructions: defaultConstructions(language),
+    ...DEFAULT_ASSIGNMENT,
+    wallConstructionId: PRESET_IDS.wall1970,
     storeys: [level(0, true), level(1, false), level(2, false)],
   };
 }
