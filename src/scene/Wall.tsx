@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import { defaultOpening, snapOffset } from "@/geometry/openings";
 import { dot, sub } from "@/geometry/polygon";
@@ -44,8 +44,23 @@ export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hash]);
 
-  const onClick = (e: ThreeEvent<MouseEvent>) => {
-    if (e.delta > 6) return;
+  // Place on pointer up after a short pointer down on the same wall. R3F's synthetic
+  // click only fires for objects hit at pointer down and can be lost to a stale
+  // pointer capture, so the wall keeps its own bookkeeping.
+  const down = useRef<{ x: number; y: number } | null>(null);
+  const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
+    if (e.button !== 0) return;
+    down.current = { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY };
+  };
+  const onPointerUp = (e: ThreeEvent<PointerEvent>) => {
+    const start = down.current;
+    down.current = null;
+    if (!start || e.button !== 0) return;
+    const moved = Math.hypot(e.nativeEvent.clientX - start.x, e.nativeEvent.clientY - start.y);
+    if (moved > 6) return;
+    act(e);
+  };
+  const act = (e: ThreeEvent<PointerEvent>) => {
     // A click on another storey's wall makes that storey active first, so placing
     // an opening on the ground floor works while the first floor is active.
     if (!active) setActiveStorey(storeyId);
@@ -78,7 +93,8 @@ export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
     <mesh
       geometry={geometry}
       position={[0, elevation, 0]}
-      onClick={onClick}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
       castShadow
       receiveShadow
       {...hover}

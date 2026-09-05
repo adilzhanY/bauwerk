@@ -81,8 +81,12 @@ export function Opening({ storeyId, wall, opening, thickness, elevation, active,
   };
 
   const onPointerUp = (e: ThreeEvent<PointerEvent>) => {
+    try {
+      (e.target as Element).releasePointerCapture(e.pointerId);
+    } catch {
+      /* capture may already be gone */
+    }
     if (dragOffset === null) return;
-    (e.target as Element).releasePointerCapture(e.pointerId);
     lock(false);
     if (dragOffset !== opening.offset) updateOpening(storeyId, opening.id, { offset: dragOffset });
     setDragOffset(null);
@@ -100,6 +104,7 @@ export function Opening({ storeyId, wall, opening, thickness, elevation, active,
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
       {...hover}
     >
       {opening.kind === "door" ? (

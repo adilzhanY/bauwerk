@@ -64,8 +64,12 @@ export function FootprintTool() {
   };
 
   const onUp = (e: ThreeEvent<PointerEvent>) => {
+    try {
+      (e.target as Element).releasePointerCapture(e.pointerId);
+    } catch {
+      /* capture may already be gone */
+    }
     if (!drag) return;
-    (e.target as Element).releasePointerCapture(e.pointerId);
     lock(false);
     const moved = drag.preview[drag.index];
     const original = footprint[drag.index];
