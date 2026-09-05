@@ -92,6 +92,7 @@ export const en = {
   "bar.undo": "Undo",
   "bar.redo": "Redo",
   "bar.export": "Export JSON",
+  "bar.exportIfc": "Export IFC",
   "bar.import": "Import JSON",
   "bar.shortcuts": "Keyboard shortcuts",
   "status.storeys": "Storeys",

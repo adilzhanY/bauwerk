@@ -34,3 +34,16 @@ About three minutes, from an empty browser tab.
 7. Press Ctrl+Z four times and watch the zone assignments and the last wall disappear. Press Ctrl+Shift+Z four times to bring them back.
 8. Click Export JSON in the bottom bar. Open the file: storeys, walls, openings, rooms and zones, in metres.
 9. Switch the language to Deutsch in Settings. Every label, hint and error message changes.
+
+## IFC export
+
+The IFC button writes an IFC4 STEP file by hand, without a library, so the schema knowledge is in the code (`src/geometry/ifc.ts` and `src/geometry/step.ts`). It contains the spatial tree (project, site, building, storeys with elevations), exterior walls as extruded mitred quads, interior walls, floor and roof slabs, one opening element per window or door that voids its wall and is filled by an IfcWindow or IfcDoor, rooms as IfcSpace with their floor area, zones as IfcZone, and U-values in the common property sets. Left out: material layers, curtain walls, and georeferencing until the geo section lands.
+
+The two example buildings are exported in `docs/` and validated with IfcOpenShell, which checks the schema and EXPRESS rules and rebuilds every solid:
+
+```
+python -m venv .venv && .venv/bin/pip install ifcopenshell pytest
+.venv/bin/python scripts/validate-ifc.py docs/example-house.ifc docs/example-block.ifc
+```
+
+Both files report zero issues and every product builds. A wall with three openings comes out with 68 triangles instead of the 12 of a plain box, so the holes are real.

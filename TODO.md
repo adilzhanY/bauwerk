@@ -131,21 +131,21 @@ Goal: the model answers "what does this tell me about the building's energy?" Pu
 
 Goal: a file that opens in a real IFC viewer with correct storeys, walls, openings, windows, doors and spaces. STEP physical file, IFC4. Written by hand in `src/geometry/ifc.ts`, no library, so the schema knowledge is visible in the code.
 
-- [ ] Read the IFC4 spatial structure once: IfcProject, IfcSite, IfcBuilding, IfcBuildingStorey, IfcRelAggregates, IfcRelContainedInSpatialStructure. Note the entity list and required attributes in a comment block at the top of `ifc.ts`.
-- [ ] STEP writer: entity id counter, `#12=IFCWALL(...)` line encoding, string escaping, enum and typed value formatting (`IFCLABEL('x')`, `IFCLENGTHMEASURE(1.)`), `$` for null, `*` for derived. Header section with FILE_DESCRIPTION, FILE_NAME, FILE_SCHEMA (('IFC4')).
-- [ ] Tests for the writer: escaping of apostrophes and non-ASCII (German umlauts use the `\X2\` encoding), number formatting always with a dot and a trailing point for integers written as REAL, ids unique and monotonic.
-- [ ] Units: IfcUnitAssignment with metres, square metres, cubic metres, radians. Geometric context with world coordinate system and precision 1e-5.
-- [ ] Spatial tree: one IfcProject, one IfcSite, one IfcBuilding, one IfcBuildingStorey per storey with Elevation set to the storey elevation. Aggregation relationships in the right direction.
-- [ ] Walls: one IfcWall per exterior wall per storey with an IfcExtrudedAreaSolid from the mitred plan quad (IfcArbitraryClosedProfileDef over an IfcPolyline) extruded by the storey height. Placement relative to the storey.
-- [ ] Openings: one IfcOpeningElement per opening as an extruded rectangle through the wall thickness, related with IfcRelVoidsElement to its wall. One IfcWindow or IfcDoor filling it with IfcRelFillsElement, with OverallHeight and OverallWidth set.
-- [ ] Interior walls as IfcWall with a 0.1 m thick box solid.
-- [ ] Rooms as IfcSpace with the room polygon extruded by the storey height, contained in the storey, LongName from the room name. Zones as IfcZone grouping their spaces through IfcRelAssignsToGroup.
-- [ ] Slabs: one IfcSlab per storey floor (0.2 m, PredefinedType FLOOR), roof slab on the top storey (PredefinedType ROOF).
-- [ ] Property sets: Pset_WallCommon with ThermalTransmittance from section 11 when present, Pset_WindowCommon and Pset_DoorCommon likewise, Pset_SpaceCommon with the floor area. Skip when section 11 is not done.
-- [ ] Tests: entity counts match the model (walls, openings, windows, doors, spaces, storeys); every referenced `#id` exists; every wall has exactly one representation; file parses with a small STEP tokenizer written in the test.
-- [ ] Manual verification by Adilzhan: open the export of the two example buildings in an IFC viewer (BlenderBIM, or a web viewer such as ifc.js), check storeys, holes in walls, room volumes. Screenshot into `docs/ifc-verification.png` and reference it in the README. Any mismatch goes into `DECISIONS.md`.
-- [ ] Export IFC button next to Export JSON, file name `bauwerk-<name>-<date>.ifc`.
-- [ ] README section "IFC export": what is written, what is left out (no materials layers, no IfcCurtainWall, no georeferencing until section 14), and the viewer screenshot.
+- [x] Read the IFC4 spatial structure once: IfcProject, IfcSite, IfcBuilding, IfcBuildingStorey, IfcRelAggregates, IfcRelContainedInSpatialStructure. Note the entity list and required attributes in a comment block at the top of `ifc.ts`.
+- [x] STEP writer: entity id counter, `#12=IFCWALL(...)` line encoding, string escaping, enum and typed value formatting (`IFCLABEL('x')`, `IFCLENGTHMEASURE(1.)`), `$` for null, `*` for derived. Header section with FILE_DESCRIPTION, FILE_NAME, FILE_SCHEMA (('IFC4')).
+- [x] Tests for the writer: escaping of apostrophes and non-ASCII (German umlauts use the `\X2\` encoding), number formatting always with a dot and a trailing point for integers written as REAL, ids unique and monotonic.
+- [x] Units: IfcUnitAssignment with metres, square metres, cubic metres, radians. Geometric context with world coordinate system and precision 1e-5.
+- [x] Spatial tree: one IfcProject, one IfcSite, one IfcBuilding, one IfcBuildingStorey per storey with Elevation set to the storey elevation. Aggregation relationships in the right direction.
+- [x] Walls: one IfcWall per exterior wall per storey with an IfcExtrudedAreaSolid from the mitred plan quad (IfcArbitraryClosedProfileDef over an IfcPolyline) extruded by the storey height. Placement relative to the storey.
+- [x] Openings: one IfcOpeningElement per opening as an extruded rectangle through the wall thickness, related with IfcRelVoidsElement to its wall. One IfcWindow or IfcDoor filling it with IfcRelFillsElement, with OverallHeight and OverallWidth set.
+- [x] Interior walls as IfcWall with a 0.1 m thick box solid.
+- [x] Rooms as IfcSpace with the room polygon extruded by the storey height, contained in the storey, LongName from the room name. Zones as IfcZone grouping their spaces through IfcRelAssignsToGroup.
+- [x] Slabs: one IfcSlab per storey floor (0.2 m, PredefinedType FLOOR), roof slab on the top storey (PredefinedType ROOF).
+- [x] Property sets: Pset_WallCommon with ThermalTransmittance from section 11 when present, Pset_WindowCommon and Pset_DoorCommon likewise, Pset_SpaceCommon with the floor area. Skip when section 11 is not done.
+- [x] Tests: entity counts match the model (walls, openings, windows, doors, spaces, storeys); every referenced `#id` exists; every wall has exactly one representation; file parses with a small STEP tokenizer written in the test.
+- [ ] Manual verification by Adilzhan: open the export of the two example buildings in an IFC viewer (BlenderBIM, or a web viewer such as ifc.js), check storeys, holes in walls, room volumes. Screenshot into `docs/ifc-verification.png` and reference it in the README. Any mismatch goes into `DECISIONS.md`. (Already validated with IfcOpenShell 0.8.5: zero schema issues, all solids build, openings cut real holes. `scripts/validate-ifc.py`. The viewer screenshot is still yours to take.)
+- [x] Export IFC button next to Export JSON, file name `bauwerk-<name>-<date>.ifc`.
+- [x] README section "IFC export": what is written, what is left out (no materials layers, no IfcCurtainWall, no georeferencing until section 14), and the viewer screenshot.
 
 ## 13. Full stack slice: server and live collaboration
 

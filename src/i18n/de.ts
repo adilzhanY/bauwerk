@@ -96,6 +96,7 @@ export const de: Messages = {
   "bar.undo": "Rückgängig",
   "bar.redo": "Wiederholen",
   "bar.export": "JSON exportieren",
+  "bar.exportIfc": "IFC exportieren",
   "bar.import": "JSON importieren",
   "bar.shortcuts": "Tastenkürzel",
   "status.storeys": "Geschosse",

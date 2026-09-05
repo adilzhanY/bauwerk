@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
-import { Download, Keyboard, Redo2, Undo2, Upload } from "lucide-react";
+import { Download, FileBox, Keyboard, Redo2, Undo2, Upload } from "lucide-react";
 import { fromJson, toJson } from "@/geometry/export";
+import { toIfc } from "@/geometry/ifc";
 import type { ImportError } from "@/geometry/export";
 import { useT } from "@/i18n/useT";
 import type { MessageKey } from "@/i18n";
@@ -15,14 +16,24 @@ import {
 import { Button, IconButton } from "./controls/Button";
 import { ShortcutSheet } from "./ShortcutSheet";
 
-function fileName(name: string): string {
+function fileName(name: string, extension: string): string {
   const slug =
     name
       .toLowerCase()
       .replace(/[^a-z0-9äöüß]+/g, "-")
       .replace(/^-|-$/g, "") || "building";
   const date = new Date().toISOString().slice(0, 10);
-  return `bauwerk-${slug}-${date}.json`;
+  return `bauwerk-${slug}-${date}.${extension}`;
+}
+
+function download(content: string, name: string, type: string) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = name;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export function BottomBar() {
@@ -41,13 +52,11 @@ export function BottomBar() {
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const onExport = () => {
-    const blob = new Blob([toJson(building)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = fileName(building.name);
-    a.click();
-    URL.revokeObjectURL(url);
+    download(toJson(building), fileName(building.name, "json"), "application/json");
+  };
+  const onExportIfc = () => {
+    const name = fileName(building.name, "ifc");
+    download(toIfc(building, { fileName: name }), name, "application/x-step");
   };
 
   const onImportFile = async (file: File) => {
@@ -71,6 +80,9 @@ export function BottomBar() {
       <span className="mx-1 h-5 w-px bg-border" />
       <Button variant="ghost" icon={<Download size={14} />} onClick={onExport}>
         {t("bar.export")}
+      </Button>
+      <Button variant="ghost" icon={<FileBox size={14} />} onClick={onExportIfc}>
+        {t("bar.exportIfc")}
       </Button>
       <Button
         variant="ghost"
