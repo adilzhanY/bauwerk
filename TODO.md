@@ -337,12 +337,12 @@ Goal: a real sun over the georeferenced model and solar gains in the energy bala
 
 Goal: read an IFC file from another tool into Bauwerk. Answers export fidelity and reverse engineering.
 
-- [ ] `src/geometry/step-parse.ts`: STEP tokenizer and entity parser (ids, types, attributes, typed values, lists, X2 strings), tested on the files the exporter writes and on hand-written edge cases.
-- [ ] `src/geometry/ifc-import.ts`: walk IfcProject to storeys, read IfcBuildingStorey elevations, walls with IfcExtrudedAreaSolid over polyline profiles, openings via IfcRelVoidsElement, windows and doors via IfcRelFillsElement with OverallWidth and OverallHeight, spaces as rooms, zones via IfcRelAssignsToGroup, Pset ThermalTransmittance into constructions, IfcMapConversion into the origin.
-- [ ] Reduction to the editor's model: the footprint is the union outline of exterior walls (outer faces), interior walls become centre lines, room polygons are recomputed by the editor rather than trusted. Everything the model cannot hold (curved walls, sloped walls, non-rectangular openings) is listed in an import report shown to the user, not silently dropped.
-- [ ] Tests: export then import of the two example buildings gives an equal building up to ids; a file with a curved wall imports the rest and reports the wall; a file from another tool (a small sample checked into `docs/`) imports its storeys and walls.
-- [ ] Import button accepts `.ifc`, shows the report, loads on confirm.
-- [ ] `DECISIONS.md` entry on what was reduced and why.
+- [x] `src/geometry/step-parse.ts`: STEP tokenizer and entity parser (ids, types, attributes, typed values, lists, X2 strings), tested on the files the exporter writes and on hand-written edge cases.
+- [x] `src/geometry/ifc-import.ts`: walk IfcProject to storeys, read IfcBuildingStorey elevations, walls with IfcExtrudedAreaSolid over polyline profiles, openings via IfcRelVoidsElement, windows and doors via IfcRelFillsElement with OverallWidth and OverallHeight, spaces as rooms, zones via IfcRelAssignsToGroup, Pset ThermalTransmittance into constructions, IfcMapConversion into the origin.
+- [x] Reduction to the editor's model: the footprint is the union outline of exterior walls (outer faces), interior walls become centre lines, room polygons are recomputed by the editor rather than trusted. Everything the model cannot hold (curved walls, sloped walls, non-rectangular openings) is listed in an import report shown to the user, not silently dropped.
+- [x] Tests: export then import of the two example buildings gives an equal building up to ids; a file with a curved wall imports the rest and reports the wall; a file from another tool (a small sample checked into `docs/`) imports its storeys and walls.
+- [x] Import button accepts `.ifc`, shows the report, loads on confirm.
+- [x] `DECISIONS.md` entry on what was reduced and why.
 
 ## 27. Renovation scenarios as saved variants
 

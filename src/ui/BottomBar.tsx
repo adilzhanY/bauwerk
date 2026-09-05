@@ -3,6 +3,9 @@ import { Download, FileBox, Keyboard, Redo2, Undo2, Upload } from "lucide-react"
 import { fromJson, toJson } from "@/geometry/export";
 import type { ImportError } from "@/geometry/export";
 import { toIfc } from "@/geometry/ifc";
+import { importIfc } from "@/geometry/ifc-import";
+import type { IfcImportResult } from "@/geometry/ifc-import";
+import { CustomDialog } from "@/components/CustomDialog";
 import { useT } from "@/i18n/useT";
 import type { MessageKey } from "@/i18n";
 import { formatArea } from "@/lib/format";
@@ -58,8 +61,21 @@ export function BottomBar({ actor }: Props) {
   const [error, setError] = useState<ImportError | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
+  const [ifcResult, setIfcResult] = useState<IfcImportResult | null>(null);
+
   const onImportFile = async (file: File) => {
-    const result = fromJson(await file.text(), language);
+    const text = await file.text();
+    if (/\.ifc$/i.test(file.name) || text.startsWith("ISO-10303-21")) {
+      const result = importIfc(text, language);
+      if (result.ok) {
+        setError(null);
+        setIfcResult(result);
+      } else {
+        setIfcError(t("ifcImport.failed", { message: result.message }));
+      }
+      return;
+    }
+    const result = fromJson(text, language);
     if (result.ok) {
       setError(null);
       loadBuilding(result.building);
@@ -67,6 +83,7 @@ export function BottomBar({ actor }: Props) {
       setError(result.error);
     }
   };
+  const [ifcError, setIfcError] = useState<string | null>(null);
 
   return (
     <footer className="pointer-events-auto flex h-12 items-center gap-1 rounded-pill border border-line bg-panel px-3 text-sm shadow-float">
@@ -108,7 +125,7 @@ export function BottomBar({ actor }: Props) {
       <input
         ref={fileInput}
         type="file"
-        accept="application/json,.json"
+        accept="application/json,.json,.ifc"
         className="hidden"
         aria-label={t("bar.import")}
         onChange={(e) => {
@@ -121,6 +138,61 @@ export function BottomBar({ actor }: Props) {
         <span role="alert" className="truncate font-sans text-xs text-mark">
           {t(`import.error.${error.code}` as MessageKey, { path: error.path ?? "" })}
         </span>
+      )}
+      {ifcError && (
+        <span role="alert" className="truncate font-sans text-xs text-mark">
+          {ifcError}
+        </span>
+      )}
+      {ifcResult && (
+        <CustomDialog
+          title={t("ifcImport.title")}
+          closeLabel={t("ifcImport.cancel")}
+          onClose={() => {
+            setIfcResult(null);
+          }}
+        >
+          <div className="flex flex-col gap-3 font-sans text-sm">
+            <p className="text-ink">{t("ifcImport.summary", ifcResult.stats)}</p>
+            {ifcResult.report.length === 0 ? (
+              <p className="text-muted">{t("ifcImport.clean")}</p>
+            ) : (
+              <>
+                <p className="text-muted">{t("ifcImport.reduced")}</p>
+                <ul className="max-h-48 list-disc overflow-y-auto pl-5 text-xs text-ink">
+                  {ifcResult.report.map((r, i) => (
+                    <li key={i}>
+                      {t(`ifcImport.code.${r.code}` as MessageKey)}{" "}
+                      <span className="font-num text-muted">
+                        {r.entity}
+                        {r.detail ? ` (${r.detail})` : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+            <div className="flex gap-2">
+              <CustomButton
+                variant="primary"
+                onClick={() => {
+                  loadBuilding(ifcResult.building);
+                  setIfcResult(null);
+                }}
+              >
+                {t("ifcImport.load")}
+              </CustomButton>
+              <CustomButton
+                variant="quiet"
+                onClick={() => {
+                  setIfcResult(null);
+                }}
+              >
+                {t("ifcImport.cancel")}
+              </CustomButton>
+            </div>
+          </div>
+        </CustomDialog>
       )}
       <span className="flex-1" />
       {actor && (
