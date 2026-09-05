@@ -92,7 +92,7 @@ Work top to bottom. Tick with `[x]`. A task is done when `npm run check` passes 
 
 - [x] `.github/workflows/check.yml`: on push and pull request, install, `npm run check`, build.
 - [x] `.github/workflows/deploy.yml`: on push to `main`, build with the Pages base path and deploy with `actions/deploy-pages`, gated behind a GitHub environment that requires manual approval.
-- [ ] Create the GitHub repository `adilzhanY/bauwerk`, public, push. Do not enable Pages until local testing is signed off by Adilzhan.
+- [x] Create the GitHub repository `adilzhanY/bauwerk`, public, push. Do not enable Pages until local testing is signed off by Adilzhan.
 - [ ] After sign-off: enable Pages, approve the deployment, verify the live URL, add it to `README.md`.
 
 ## 10. Interview preparation
