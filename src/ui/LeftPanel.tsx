@@ -11,6 +11,9 @@ import {
   Plus,
   Trash2,
   Ruler,
+  RulerDimensionLine,
+  Copy,
+  Printer,
 } from "lucide-react";
 import type { Id } from "@/geometry/types";
 import { useT } from "@/i18n/useT";
@@ -18,7 +21,9 @@ import type { MessageKey } from "@/i18n";
 import { LANGUAGES } from "@/i18n";
 import { example } from "@/lib/examples";
 import type { ExampleId } from "@/lib/examples";
-import { formatMetres } from "@/lib/format";
+import { formatArea, formatMetres } from "@/lib/format";
+import { selectActiveStorey } from "@/store/selectors";
+import { UnderlaySection } from "./UnderlaySection";
 import { useEditorStore } from "@/store/building";
 import type { Tool } from "@/store/building";
 import { Button, IconButton } from "./controls/Button";
@@ -37,6 +42,7 @@ const toolIcons: Record<Tool, React.ReactNode> = {
   opening: <DoorOpen size={16} />,
   interiorWall: <Ruler size={16} />,
   zone: <Layers size={16} />,
+  measure: <RulerDimensionLine size={16} />,
 };
 
 const toolLabel: Record<Tool, MessageKey> = {
@@ -45,6 +51,7 @@ const toolLabel: Record<Tool, MessageKey> = {
   opening: "tool.opening",
   interiorWall: "tool.interiorWall",
   zone: "tool.zone",
+  measure: "tool.measure",
 };
 
 const toolHint: Record<Tool, MessageKey> = {
@@ -53,6 +60,7 @@ const toolHint: Record<Tool, MessageKey> = {
   opening: "hint.opening",
   interiorWall: "hint.interiorWall",
   zone: "hint.zone",
+  measure: "hint.measure",
 };
 
 export function LeftPanel({ syncStatus }: { syncStatus: SyncStatus | "local" }) {
@@ -60,9 +68,11 @@ export function LeftPanel({ syncStatus }: { syncStatus: SyncStatus | "local" }) 
     <aside className="flex h-full flex-col overflow-y-auto border-r border-border bg-panel">
       <ProjectSwitcher status={syncStatus} />
       <StoreyList />
+      <RoomList />
       <ToolPalette />
       <ZoneList />
       <LocationSection />
+      <UnderlaySection />
       <Settings />
     </aside>
   );
@@ -78,6 +88,7 @@ function StoreyList() {
   const addStorey = useEditorStore((s) => s.addStorey);
   const removeStorey = useEditorStore((s) => s.removeStorey);
   const moveStorey = useEditorStore((s) => s.moveStorey);
+  const duplicateStorey = useEditorStore((s) => s.duplicateStorey);
   const [dragging, setDragging] = useState<Id | null>(null);
 
   const onDrop = (targetId: Id) => (e: DragEvent) => {
@@ -159,6 +170,14 @@ function StoreyList() {
                 <ArrowDown size={14} />
               </IconButton>
               <IconButton
+                label={t("storey.duplicate")}
+                onClick={() => {
+                  duplicateStorey(storey.id);
+                }}
+              >
+                <Copy size={14} />
+              </IconButton>
+              <IconButton
                 label={t("storey.remove")}
                 onClick={() => {
                   removeStorey(storey.id);
@@ -174,13 +193,58 @@ function StoreyList() {
   );
 }
 
+function RoomList() {
+  const t = useT();
+  const language = useEditorStore((s) => s.language);
+  const storey = useEditorStore(selectActiveStorey);
+  const zones = useEditorStore((s) => s.building.zones);
+  const selection = useEditorStore((s) => s.selection);
+  const select = useEditorStore((s) => s.select);
+  if (!storey || storey.rooms.length === 0) return null;
+  return (
+    <Section title={t("rooms.title")}>
+      <ul className="flex flex-col gap-0.5">
+        {storey.rooms.map((room) => {
+          const zone = zones.find((z) => z.id === room.zoneId);
+          const selected = selection?.kind === "room" && selection.id === room.id;
+          return (
+            <li key={room.id}>
+              <button
+                type="button"
+                onClick={() => {
+                  select({ kind: "room", storeyId: storey.id, id: room.id });
+                }}
+                className={`flex w-full items-center gap-2 rounded border px-2 py-1 text-left text-sm ${
+                  selected ? "border-accent bg-accent/10" : "border-transparent hover:bg-border/40"
+                }`}
+              >
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{
+                    background: zone?.color ?? "transparent",
+                    outline: zone ? "none" : "1px solid #8b93a5",
+                  }}
+                />
+                <span className="flex-1 truncate text-fg">{room.name}</span>
+                <span className="font-mono text-xs text-muted">
+                  {formatArea(room.area, language)}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </Section>
+  );
+}
+
 function ToolPalette() {
   const t = useT();
   const tool = useEditorStore((s) => s.tool);
   const setTool = useEditorStore((s) => s.setTool);
   return (
     <Section title={t("panel.tools")}>
-      <div role="radiogroup" aria-label={t("panel.tools")} className="grid grid-cols-5 gap-1">
+      <div role="radiogroup" aria-label={t("panel.tools")} className="grid grid-cols-3 gap-1">
         {TOOL_ORDER.map((id, i) => (
           <button
             key={id}
@@ -284,6 +348,10 @@ function Settings() {
   const loadBuilding = useEditorStore((s) => s.loadBuilding);
   const buildingName = useEditorStore((s) => s.building.name);
   const renameBuilding = useEditorStore((s) => s.renameBuilding);
+  const planView = useEditorStore((s) => s.planView);
+  const setPlanView = useEditorStore((s) => s.setPlanView);
+  const showUValueBands = useEditorStore((s) => s.showUValueBands);
+  const setShowUValueBands = useEditorStore((s) => s.setShowUValueBands);
 
   return (
     <Section title={t("panel.settings")}>
@@ -309,6 +377,40 @@ function Settings() {
         <Grid3x3 size={14} className="text-muted" />
         {t("settings.grid")}
       </label>
+      <label className="flex items-center gap-2 text-sm text-fg">
+        <input
+          type="checkbox"
+          checked={planView}
+          onChange={(e) => {
+            setPlanView(e.target.checked);
+          }}
+          className="accent-accent"
+        />
+        {t("view.plan")}
+      </label>
+      <label className="flex items-center gap-2 text-sm text-fg">
+        <input
+          type="checkbox"
+          checked={showUValueBands}
+          onChange={(e) => {
+            setShowUValueBands(e.target.checked);
+          }}
+          className="accent-accent"
+        />
+        {t("view.uValueBands")}
+      </label>
+      <Button
+        variant="ghost"
+        className="justify-start"
+        icon={<Printer size={14} />}
+        onClick={() => {
+          const url = new URL(window.location.href);
+          url.searchParams.set("print", "1");
+          window.open(url.toString(), "_blank");
+        }}
+      >
+        {t("print.open")}
+      </Button>
       <Select
         label={t("settings.language")}
         value={language}

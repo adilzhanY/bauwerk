@@ -501,3 +501,27 @@ describe("geo placement", () => {
     expect(b.origin?.lat).toBe(52.5);
   });
 });
+
+describe("duplicateStorey", () => {
+  it("copies openings, walls and rooms with fresh ids above the source, undoable", () => {
+    const sid = storeyId();
+    store
+      .getState()
+      .addOpening(sid, { wallIndex: 0, kind: "window", offset: 1, width: 1, height: 1, sill: 1 });
+    store.getState().addInteriorWall(sid, { a: { x: 4, y: 0 }, b: { x: 4, y: 8 } });
+    store
+      .getState()
+      .renameRoom(sid, store.getState().building.storeys[0]?.rooms[0]?.id ?? "", "Kitchen");
+    store.getState().duplicateStorey(sid);
+    const [source, copy] = store.getState().building.storeys;
+    expect(copy?.name).toBe("1st floor");
+    expect(copy?.openings).toHaveLength(1);
+    expect(copy?.openings[0]?.id).not.toBe(source?.openings[0]?.id);
+    expect(copy?.interiorWalls).toEqual(source?.interiorWalls);
+    expect(copy?.rooms.map((r) => r.name)).toEqual(source?.rooms.map((r) => r.name));
+    expect(copy?.rooms[0]?.id).not.toBe(source?.rooms[0]?.id);
+    expect(store.getState().activeStoreyId).toBe(copy?.id);
+    store.getState().undo();
+    expect(store.getState().building.storeys).toHaveLength(1);
+  });
+});

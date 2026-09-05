@@ -33,7 +33,7 @@ import { createId } from "@/lib/ids";
 import { history } from "./history";
 import type { HistorySlice } from "./history";
 
-export type Tool = "select" | "footprint" | "opening" | "interiorWall" | "zone";
+export type Tool = "select" | "footprint" | "opening" | "interiorWall" | "zone" | "measure";
 
 export type Selection =
   | { kind: "vertex"; index: number }
@@ -61,6 +61,26 @@ export interface EditorState {
   presence: Presence[];
   /** Project id on the server when sync is active. UI state. */
   projectId: string | null;
+  /** Orthographic top-down view of the active storey. UI state. */
+  planView: boolean;
+  /** Colour band on wall tops keyed to the construction U-value. UI state. */
+  showUValueBands: boolean;
+  /** Floor plan image on the ground. Local to this browser, never exported. UI state. */
+  underlay: Underlay | null;
+  /** Result of the measure tool. UI state. */
+  measurement: { a: Vec2; b: Vec2 } | null;
+}
+
+export interface Underlay {
+  url: string;
+  /** Image width in metres on the ground. */
+  widthMetres: number;
+  /** Image aspect ratio height / width. */
+  aspect: number;
+  /** Plan position of the image centre. */
+  x: number;
+  y: number;
+  opacity: number;
 }
 
 export interface Presence {
@@ -109,6 +129,11 @@ export interface EditorActions {
   setRenovatedView: (on: boolean) => void;
   setPresence: (presence: Presence[]) => void;
   setProjectId: (projectId: string | null) => void;
+  duplicateStorey: (storeyId: Id) => void;
+  setPlanView: (on: boolean) => void;
+  setShowUValueBands: (on: boolean) => void;
+  setUnderlay: (underlay: Underlay | null) => void;
+  setMeasurement: (measurement: { a: Vec2; b: Vec2 } | null) => void;
   /** Replaces the building with server state. Not recorded in history and clears the redo stack. */
   applyRemoteBuilding: (building: Building) => void;
   setShowGrid: (show: boolean) => void;
@@ -197,6 +222,10 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           renovatedView: false,
           presence: [],
           projectId: null,
+          planView: false,
+          showUValueBands: false,
+          underlay: null,
+          measurement: null,
 
           setFootprintVertex: (index, position) => {
             set((state) => {
@@ -536,6 +565,52 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             set((state) => {
               if (sameSelection(state.hovered, hovered)) return;
               state.hovered = hovered;
+            });
+          },
+
+          duplicateStorey: (storeyId) => {
+            set((state) => {
+              const index = state.building.storeys.findIndex((s) => s.id === storeyId);
+              const source = state.building.storeys[index];
+              if (!source) return;
+              const copy: Storey = {
+                id: createId("storey"),
+                name: defaultStoreyName(index + 1, state.language),
+                height: source.height,
+                openings: source.openings.map((o) => ({ ...o, id: createId("opening") })),
+                interiorWalls: source.interiorWalls.map((w) => ({ a: { ...w.a }, b: { ...w.b } })),
+                rooms: source.rooms.map((r) => ({
+                  ...r,
+                  id: createId("room"),
+                  polygon: r.polygon.map((p) => ({ ...p })),
+                })),
+              };
+              state.building.storeys.splice(index + 1, 0, copy);
+              state.activeStoreyId = copy.id;
+            });
+          },
+
+          setPlanView: (on) => {
+            set((state) => {
+              state.planView = on;
+            });
+          },
+
+          setShowUValueBands: (on) => {
+            set((state) => {
+              state.showUValueBands = on;
+            });
+          },
+
+          setUnderlay: (underlay) => {
+            set((state) => {
+              state.underlay = underlay;
+            });
+          },
+
+          setMeasurement: (measurement) => {
+            set((state) => {
+              state.measurement = measurement;
             });
           },
 

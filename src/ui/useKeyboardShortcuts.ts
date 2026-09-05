@@ -2,7 +2,14 @@ import { useEffect } from "react";
 import { useEditorStore } from "@/store/building";
 import type { Tool } from "@/store/building";
 
-export const TOOL_ORDER: Tool[] = ["select", "footprint", "opening", "interiorWall", "zone"];
+export const TOOL_ORDER: Tool[] = [
+  "select",
+  "footprint",
+  "opening",
+  "interiorWall",
+  "zone",
+  "measure",
+];
 
 function inTextField(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
@@ -38,11 +45,12 @@ export function useKeyboardShortcuts() {
       }
       if (e.key === "Escape") {
         s.clearSelection();
+        s.setMeasurement(null);
         return;
       }
       const toolIndex = Number(e.key) - 1;
       const tool = TOOL_ORDER[toolIndex];
-      if (!mod && e.key >= "1" && e.key <= "5" && tool) {
+      if (!mod && e.key >= "1" && e.key <= "6" && tool) {
         s.setTool(tool);
         return;
       }

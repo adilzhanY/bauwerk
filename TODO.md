@@ -182,12 +182,12 @@ Goal: the footprint knows where it is on the earth, in the coordinate systems Ge
 
 Only what an energy consultant needs on a site visit. No decoration.
 
-- [ ] Dimension lines: length labels on every exterior wall and every interior wall, in the footprint and interior wall tools, in the locale's number format.
-- [ ] 2D plan view: a toggle that switches to an orthographic top-down camera on the active storey with the other storeys hidden, same tools work. Test the projection math for picking with a unit test on the camera setup.
-- [ ] Wall construction shown in the viewport: a thin coloured band along the top of each wall keyed to its construction's U-value (cold red to good green), toggle in Settings.
-- [ ] Room list in the left panel per storey: name, area, zone, click to select and focus the camera.
-- [ ] Measure tool (key 6): click two points, see the distance; Escape clears. Pure distance, snapped to grid.
-- [ ] Storey duplication: copy a storey with its openings and walls above itself, useful for repeated floors. Undoable, ids regenerated, tested.
-- [ ] Photo underlay: drop an image of a floor plan onto the ground plane, scale it by marking a known distance, trace the footprint over it. Image stays local, not exported.
-- [ ] Print view: a static page with plan per storey, the energy summary and the room table, for the customer meeting. Uses the browser's print to PDF.
+- [x] Dimension lines: length labels on every exterior wall and every interior wall, in the footprint and interior wall tools, in the locale's number format.
+- [x] 2D plan view: a toggle that switches to an orthographic top-down camera on the active storey with the other storeys hidden, same tools work. Test the projection math for picking with a unit test on the camera setup.
+- [x] Wall construction shown in the viewport: a thin coloured band along the top of each wall keyed to its construction's U-value (cold red to good green), toggle in Settings.
+- [x] Room list in the left panel per storey: name, area, zone, click to select and focus the camera.
+- [x] Measure tool (key 6): click two points, see the distance; Escape clears. Pure distance, snapped to grid.
+- [x] Storey duplication: copy a storey with its openings and walls above itself, useful for repeated floors. Undoable, ids regenerated, tested.
+- [x] Photo underlay: drop an image of a floor plan onto the ground plane, scale it by marking a known distance, trace the footprint over it. Image stays local, not exported.
+- [x] Print view: a static page with plan per storey, the energy summary and the room table, for the customer meeting. Uses the browser's print to PDF.
 - [ ] Performance check after all of the above: the five storey, twenty openings per storey model still above 60 fps on the RTX 5070; measure with the browser's frame counter and write the number here.

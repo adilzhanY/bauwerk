@@ -8,6 +8,7 @@ import { hasWebGL } from "@/lib/webgl";
 import { EmptyState, TooNarrow, WebGLMissing } from "@/ui/States";
 import { useKeyboardShortcuts } from "@/ui/useKeyboardShortcuts";
 import { useSync } from "@/sync/useSync";
+import { PrintView } from "@/ui/PrintView";
 
 const MIN_WIDTH = 1024;
 
@@ -37,6 +38,7 @@ export function App() {
     document.documentElement.lang = language;
   }, [language]);
 
+  if (new URLSearchParams(window.location.search).get("print") === "1") return <PrintView />;
   if (width < MIN_WIDTH) return <TooNarrow />;
 
   return (

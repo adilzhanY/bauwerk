@@ -95,6 +95,24 @@ describe("App", () => {
     expect(screen.getByText("Saving")).toBeTruthy();
   });
 
+  it("renders the print view when the URL asks for it", () => {
+    window.history.replaceState(null, "", "/?print=1");
+    render(<App />);
+    expect(screen.getByText("Building report")).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Ground floor" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Print" })).toBeTruthy();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("has six tools including measure, switchable by key", () => {
+    render(<App />);
+    const palette = screen.getByRole("radiogroup", { name: "Tools" });
+    expect(within(palette).getAllByRole("radio")).toHaveLength(6);
+    fireEvent.keyDown(window, { key: "6" });
+    expect(useEditorStore.getState().tool).toBe("measure");
+    expect(screen.getByText(/read the distance/)).toBeTruthy();
+  });
+
   it("opens the shortcut sheet", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: "Keyboard shortcuts" }));

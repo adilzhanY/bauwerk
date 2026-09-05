@@ -21,6 +21,14 @@ The `--legacy-peer-deps` flag works around an npm 10 crash while resolving Vites
 - `src/scene/` turns geometry output into meshes. Openings do not use CSG: each wall is split into prisms around its openings and the prisms are merged into one mesh.
 - `src/ui/` holds the panels. Every string goes through `src/i18n/`, where a missing German key is a type error.
 
+## Beyond the editor
+
+- **Energy**: every wall, window, door, floor and roof has a construction with a U-value. The Energy panel shows envelope area, window-to-wall ratio by orientation, transmission and ventilation heat loss, heating demand and the Energieausweis class, with a renovated scenario next to the current state. The formulas and their simplifications are documented in `src/geometry/energy.ts` and checked against hand-computed values.
+- **IFC**: an IFC4 export written by hand and validated with IfcOpenShell, see below.
+- **Server and live editing**: a NestJS and Postgres backend with optimistic concurrency and WebSocket rooms, see below.
+- **Geo**: place the footprint on the earth, see the UTM easting and northing (EPSG 258xx), export GeoJSON, import a GeoJSON footprint. The projection is checked against PROJ to 1 mm.
+- **Consultant tools**: dimension labels, a 2D plan view, walls coloured by U-value, a room list, a measure tool, storey duplication, a floor plan image underlay for tracing, and a print view with plans, the room table and the energy summary.
+
 ## Demo path
 
 About three minutes, from an empty browser tab.

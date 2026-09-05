@@ -1,5 +1,10 @@
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, OrthographicCamera } from "@react-three/drei";
+import { bounds } from "@/geometry/polygon";
+import { planCamera } from "./planView";
+import { Dimensions } from "./Dimensions";
+import { Underlay } from "./Underlay";
+import { UValueBands } from "./UValueBand";
 import { colors } from "@/lib/colors";
 import { useEditorStore } from "@/store/building";
 import { Camera } from "./Camera";
@@ -13,6 +18,13 @@ import { storeyElevation } from "@/store/selectors";
 export function Viewport() {
   const building = useEditorStore((s) => s.building);
   const activeStoreyId = useEditorStore((s) => s.activeStoreyId);
+  const planView = useEditorStore((s) => s.planView);
+  const activeElevation = activeStoreyId ? storeyElevation(building, activeStoreyId) : 0;
+  const plan = planCamera(
+    bounds(building.footprint),
+    { width: 1000, height: 700 },
+    activeElevation,
+  );
 
   return (
     <Canvas
@@ -35,19 +47,36 @@ export function Viewport() {
       />
       <Ground />
       <Grid />
-      {building.storeys.map((storey) => (
-        <Storey
-          key={storey.id}
-          building={building}
-          storey={storey}
-          elevation={storeyElevation(building, storey.id)}
-          active={storey.id === activeStoreyId}
+      <Underlay />
+      <UValueBands />
+      <Dimensions />
+      {planView && (
+        <OrthographicCamera
+          makeDefault
+          position={plan.position}
+          zoom={plan.zoom}
+          up={[0, 0, -1]}
+          near={0.1}
+          far={200}
         />
-      ))}
+      )}
+      {building.storeys
+        .filter((storey) => !planView || storey.id === activeStoreyId)
+        .map((storey) => (
+          <Storey
+            key={storey.id}
+            building={building}
+            storey={storey}
+            elevation={storeyElevation(building, storey.id)}
+            active={storey.id === activeStoreyId}
+          />
+        ))}
       <Compass />
       <Tools />
       <OrbitControls
         makeDefault
+        enableRotate={!planView}
+        target={planView ? plan.target : undefined}
         enableDamping
         dampingFactor={0.12}
         minDistance={2}

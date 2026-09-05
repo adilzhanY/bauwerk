@@ -23,6 +23,7 @@ export function Camera() {
   const camera = useThree((s) => s.camera);
   const building = useEditorStore((s) => s.building);
   const activeStoreyId = useEditorStore((s) => s.activeStoreyId);
+  const planView = useEditorStore((s) => s.planView);
   const tween = useRef<Tween | null>(null);
   const fitted = useRef(false);
 
@@ -44,14 +45,14 @@ export function Camera() {
   }, [controls, camera, building]);
 
   useEffect(() => {
-    if (!controls || activeStoreyId === null) return;
+    if (!controls || activeStoreyId === null || planView) return;
     const storey = building.storeys.find((s) => s.id === activeStoreyId);
     if (!storey) return;
     const y = storeyElevation(building, activeStoreyId) + storey.height / 2;
     const to = controls.target.clone().setY(y);
     if (Math.abs(to.y - controls.target.y) < 1e-6) return;
     tween.current = { from: controls.target.clone(), to, start: performance.now() };
-  }, [controls, building, activeStoreyId]);
+  }, [controls, building, activeStoreyId, planView]);
 
   useFrame(() => {
     const t = tween.current;
