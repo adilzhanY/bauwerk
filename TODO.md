@@ -276,13 +276,13 @@ Goal: a wall is no longer one U-value but a stack of layers, the way an energy c
 
 Goal: the extra heat loss at edges and corners, computed from lengths the geometry already knows. Answers building physics.
 
-- [ ] `src/geometry/bridges.ts`, pure: extracts linear thermal bridges per storey: outer corners (footprint vertices), window and door perimeters (2 × (w + h) per opening), floor slab edge on the ground storey (footprint perimeter), roof edge on the top storey (perimeter), intermediate floor edges between storeys (perimeter per joint), interior wall to exterior wall junctions (one per interior wall end touching the footprint). Each with a type, a length and the world segment to draw.
-- [ ] Psi values per type with a source comment: the DIN 4108 Beiblatt 2 reference values as the "good detail" set (corner 0.05, window 0.04, slab edge 0.10, roof edge 0.10, intermediate floor 0.05, junction 0.03 W/(m·K)) and a "poor detail" set for uninsulated stock (0.15, 0.20, 0.50, 0.30, 0.20, 0.10). The set is a building setting; the renovated scenario switches to the good set.
-- [ ] Tests: the default rectangle has 4 corners of 3 m, a perimeter of 36 m for slab and roof, and each window adds exactly 2(w + h); a two storey building adds one intermediate floor joint; an interior wall touching two exterior walls adds two junctions; total ΔH_T = Σ ψ × l matches a hand-computed value.
-- [ ] Energy: H_T gains the bridge term Σ ψ × l, shown as its own line and as a share of the total in the Energy tab and in the print view.
-- [ ] Scene: bridges drawn as thin red lines on the model when a "Thermal bridges" view switch is on, line width by ψ × l, hover shows type and W/K in a label.
-- [ ] Bauteile table in the print view gets a Wärmebrücken block with type, length, ψ and ψ × l.
-- [ ] i18n: Wärmebrücke, längenbezogener Wärmedurchgangskoeffizient, Gebäudeecke, Fensteranschluss, Sockel, Traufe, Geschossdecke.
+- [x] `src/geometry/bridges.ts`, pure: extracts linear thermal bridges per storey: outer corners (footprint vertices), window and door perimeters (2 × (w + h) per opening), floor slab edge on the ground storey (footprint perimeter), roof edge on the top storey (perimeter), intermediate floor edges between storeys (perimeter per joint), interior wall to exterior wall junctions (one per interior wall end touching the footprint). Each with a type, a length and the world segment to draw.
+- [x] Psi values per type with a source comment: the DIN 4108 Beiblatt 2 reference values as the "good detail" set (corner 0.05, window 0.04, slab edge 0.10, roof edge 0.10, intermediate floor 0.05, junction 0.03 W/(m·K)) and a "poor detail" set for uninsulated stock (0.15, 0.20, 0.50, 0.30, 0.20, 0.10). The set is a building setting; the renovated scenario switches to the good set.
+- [x] Tests: the default rectangle has 4 corners of 3 m, a perimeter of 36 m for slab and roof, and each window adds exactly 2(w + h); a two storey building adds one intermediate floor joint; an interior wall touching two exterior walls adds two junctions; total ΔH_T = Σ ψ × l matches a hand-computed value.
+- [x] Energy: H_T gains the bridge term Σ ψ × l, shown as its own line and as a share of the total in the Energy tab and in the print view.
+- [x] Scene: bridges drawn as thin red lines on the model when a "Thermal bridges" view switch is on, line width by ψ × l, hover shows type and W/K in a label.
+- [x] Bauteile table in the print view gets a Wärmebrücken block with type, length, ψ and ψ × l.
+- [x] i18n: Wärmebrücke, längenbezogener Wärmedurchgangskoeffizient, Gebäudeecke, Fensteranschluss, Sockel, Traufe, Geschossdecke.
 
 ## 22. Roof shapes
 

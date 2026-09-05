@@ -3,6 +3,7 @@ import { bestInCategory } from "@/geometry/constructions";
 import { ENERGY_CLASS_COLORS, computeEnergy } from "@/geometry/energy";
 import type { EnergyClass, EnergySummary, Orientation } from "@/geometry/energy";
 import type { ConstructionCategory } from "@/geometry/types";
+import type { BridgeType } from "@/geometry/bridges";
 import { useT } from "@/i18n/useT";
 import type { MessageKey } from "@/i18n";
 import { formatArea, formatNumber } from "@/lib/format";
@@ -62,6 +63,13 @@ export function EnergyPanel() {
           label={t("energy.transmissionLoss")}
           value={`${num(shown.transmissionLoss)} W/K`}
         />
+        <CustomReadOnly label={t("bridges.loss")} value={`${num(shown.bridgeLoss)} W/K`} />
+        <CustomReadOnly
+          label={t("bridges.share")}
+          value={
+            shown.transmissionLoss > 0 ? pct(shown.bridgeLoss / shown.transmissionLoss) : "0 %"
+          }
+        />
         <CustomReadOnly
           label={t("energy.specificTransmissionLoss")}
           value={`${num(shown.specificTransmissionLoss, 2)} W/(m²K)`}
@@ -91,6 +99,7 @@ export function EnergyPanel() {
         <CustomReadOnly label={t("energy.heatedVolume")} value={`${num(shown.heatedVolume)} m³`} />
       </div>
 
+      <Bridges summary={shown} />
       <Orientations summary={shown} />
       <Zones summary={shown} />
       <Assignments />
@@ -126,6 +135,46 @@ function Big({ label, value, unit }: { label: string; value: string; unit: strin
       <div className="text-xs text-muted">{label}</div>
       <div className="font-display text-xl font-semibold text-ink">{value}</div>
       <div className="font-num text-xs text-muted">{unit}</div>
+    </div>
+  );
+}
+
+const bridgeTypeKey: Record<BridgeType, MessageKey> = {
+  corner: "bridges.type.corner",
+  opening: "bridges.type.opening",
+  slabEdge: "bridges.type.slabEdge",
+  roofEdge: "bridges.type.roofEdge",
+  floorJoint: "bridges.type.floorJoint",
+  junction: "bridges.type.junction",
+};
+
+function Bridges({ summary }: { summary: EnergySummary }) {
+  const t = useT();
+  const language = useEditorStore((s) => s.language);
+  const detail = useEditorStore((s) => s.building.bridgeDetail ?? "poor");
+  const setBridgeDetail = useEditorStore((s) => s.setBridgeDetail);
+  const types = (Object.keys(summary.bridges.lengths) as BridgeType[]).filter(
+    (k) => summary.bridges.lengths[k] > 0,
+  );
+  return (
+    <div className="flex flex-col gap-2 border-t border-line pt-3">
+      <span className="text-xs font-medium text-muted">{t("bridges.title")}</span>
+      <CustomSegmented
+        label={t("bridges.detail")}
+        value={detail}
+        options={[
+          { value: "poor", label: t("bridges.poor") },
+          { value: "good", label: t("bridges.good") },
+        ]}
+        onChange={setBridgeDetail}
+      />
+      {types.map((k) => (
+        <CustomReadOnly
+          key={k}
+          label={t(bridgeTypeKey[k])}
+          value={`${formatNumber(summary.bridges.lengths[k], language, 1)} m · ${formatNumber(summary.bridges.losses[k], language, 1)} W/K`}
+        />
+      ))}
     </div>
   );
 }

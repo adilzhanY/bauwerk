@@ -133,6 +133,7 @@ export function PrintView() {
         </h2>
         <ElementsTable energy={energy} />
         <ConstructionLayers building={building} />
+        <BridgesTable energy={energy} />
       </div>
 
       {building.storeys.map((storey, i) => (
@@ -202,6 +203,65 @@ export function PrintView() {
           {t("print.generated", { date: dateTime(now) })}
         </p>
       </div>
+    </div>
+  );
+}
+
+function BridgesTable({ energy }: { energy: EnergySummary }) {
+  const t = useT();
+  const keys: Record<string, MessageKey> = {
+    corner: "bridges.type.corner",
+    opening: "bridges.type.opening",
+    slabEdge: "bridges.type.slabEdge",
+    roofEdge: "bridges.type.roofEdge",
+    floorJoint: "bridges.type.floorJoint",
+    junction: "bridges.type.junction",
+  };
+  const detail = energy.bridges;
+  const rows = (Object.entries(detail.lengths) as [keyof typeof detail.lengths, number][]).filter(
+    ([, l]) => l > 0,
+  );
+  if (rows.length === 0) return null;
+  return (
+    <div style={{ marginTop: "10pt" }}>
+      <div
+        style={{
+          fontSize: "10pt",
+          fontWeight: "bold",
+          borderBottom: "1px solid #000",
+          padding: "2pt 0",
+        }}
+      >
+        {t("bridges.title")}
+      </div>
+      <table style={{ marginTop: "4pt" }}>
+        <thead>
+          <tr>
+            <th>{t("print.element")}</th>
+            <th className="r">l [m]</th>
+            <th className="r">ψ [W/(m·K)]</th>
+            <th className="r">ψ·l [W/K]</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map(([k, l]) => (
+            <tr key={k}>
+              <td>{t(keys[k] ?? "bridges.title")}</td>
+              <td className="r">{num(l, 1)}</td>
+              <td className="r">{num(detail.losses[k] / l, 2)}</td>
+              <td className="r">{num(detail.losses[k], 1)}</td>
+            </tr>
+          ))}
+          <tr>
+            <td style={{ fontWeight: "bold" }}>{t("print.total")}</td>
+            <td />
+            <td />
+            <td className="r" style={{ fontWeight: "bold" }}>
+              {num(detail.total, 1)}
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -417,6 +477,7 @@ function ElementsTable({ energy }: { energy: EnergySummary }) {
     floor: "category.floor",
     roof: "category.roof",
     interiorWall: "category.interiorWall",
+    bridge: "category.bridge",
   };
   // Aggregate by category and U-value so the table stays short.
   const groups = new Map<
