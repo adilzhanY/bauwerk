@@ -5,7 +5,9 @@ import { dot, sub } from "@/geometry/polygon";
 import { wallSolids } from "@/geometry/walls";
 import type { Wall as WallData } from "@/geometry/walls";
 import type { Id, Opening } from "@/geometry/types";
-import { colors, INACTIVE_OPACITY } from "@/lib/colors";
+import { colors } from "@/lib/colors";
+import { Outline } from "./Outline";
+import type { StoreyDisplay } from "./display";
 import { sameSelection, useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
 import { useHover } from "./hover";
@@ -18,9 +20,19 @@ interface Props {
   openings: readonly Opening[];
   elevation: number;
   active: boolean;
+  display: StoreyDisplay;
+  ghostOpacity: number;
 }
 
-export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
+export function Wall({
+  storeyId,
+  wall,
+  openings,
+  elevation,
+  active,
+  display,
+  ghostOpacity,
+}: Props) {
   const target: Selection = useMemo(
     () => ({ kind: "wall", storeyId, wallIndex: wall.index }),
     [storeyId, wall.index],
@@ -89,6 +101,7 @@ export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
     ? colors.accent
     : (remoteColor ?? (hovered ? colors.wallHover : colors.wall));
 
+  if (display === "outline") return <Outline geometry={geometry} position={[0, elevation, 0]} />;
   return (
     <mesh
       geometry={geometry}
@@ -104,9 +117,9 @@ export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
         emissive={selected ? colors.accent : (remoteColor ?? "#000000")}
         emissiveIntensity={selected ? 0.35 : remoteColor ? 0.25 : 0}
         roughness={0.9}
-        transparent={!active}
-        opacity={active ? 1 : INACTIVE_OPACITY}
-        depthWrite={active}
+        transparent={display === "ghost"}
+        opacity={display === "ghost" ? ghostOpacity : 1}
+        depthWrite={display !== "ghost"}
       />
     </mesh>
   );

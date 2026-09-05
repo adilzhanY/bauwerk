@@ -139,3 +139,7 @@ Adilzhan found the sequence: openings work, switch storey, nothing works anywher
 ## 2026-09-05 Cross gable for L shapes, spotted by Adilzhan in the viewport
 
 The gable over a non rectangular footprint was a folded plate: one ridge through the bounding box, every point lifted by its distance to that ridge. On an L shape the narrow wing then floated above its own wall, which Adilzhan saw at once and diagnosed correctly: split the rectangles. The roof now decomposes a rectilinear footprint into maximal rectangles along the ridge axis and builds one gable per rectangle, each with its own ridge, so every eave meets its wall and the print plan shows every ridge. The roof planes of the wings intersect at a valley; the small overlap there slightly overstates the roof area, which the code notes. Non rectilinear footprints keep the folded plate.
+
+## 2026-09-05: Inactive storeys hid the floor being edited
+
+With two or more storeys and a lower one active, the agent's fixed 25 % opacity for other storeys still covered rooms and windows. The user rejected the single constant and proposed a slider, hiding, or outlines. A web check of how Revit (halftone underlay), ArchiCAD (ghost story) and SketchUp (X-ray) handle it led to separate settings for storeys above and below the active one, with hidden / outline / ghost / solid modes and a ghost opacity slider. Default above is outline, default below is ghost at 15 %.

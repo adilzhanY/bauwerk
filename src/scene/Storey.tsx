@@ -3,12 +3,14 @@ import { validateOpening } from "@/geometry/openings";
 import { buildWalls } from "@/geometry/walls";
 import { effectiveWallThickness } from "@/geometry/layers";
 import type { Building, Storey as StoreyData } from "@/geometry/types";
-import { colors, INACTIVE_OPACITY } from "@/lib/colors";
+import { colors } from "@/lib/colors";
 import { Opening } from "./Opening";
 import { Room } from "./Room";
 import { Wall } from "./Wall";
 import { InteriorWall } from "./InteriorWall";
 import { prismGeometry } from "./three";
+import { Outline } from "./Outline";
+import type { StoreyDisplay } from "./display";
 import { StoreyHvac } from "./Hvac";
 
 interface Props {
@@ -16,11 +18,13 @@ interface Props {
   storey: StoreyData;
   elevation: number;
   active: boolean;
+  display: StoreyDisplay;
+  ghostOpacity: number;
 }
 
 const SLAB = 0.2;
 
-export function Storey({ building, storey, elevation, active }: Props) {
+export function Storey({ building, storey, elevation, active, display, ghostOpacity }: Props) {
   const thickness = effectiveWallThickness(building);
   const walls = useMemo(
     () => buildWalls(building.footprint, thickness, storey.height),
@@ -34,15 +38,19 @@ export function Storey({ building, storey, elevation, active }: Props) {
 
   return (
     <group>
-      <mesh geometry={slab} receiveShadow raycast={() => null}>
-        <meshStandardMaterial
-          color={colors.floor}
-          roughness={1}
-          transparent={!active}
-          opacity={active ? 1 : INACTIVE_OPACITY}
-          depthWrite={active}
-        />
-      </mesh>
+      {display === "outline" ? (
+        <Outline geometry={slab} />
+      ) : (
+        <mesh geometry={slab} receiveShadow raycast={() => null}>
+          <meshStandardMaterial
+            color={colors.floor}
+            roughness={1}
+            transparent={display === "ghost"}
+            opacity={display === "ghost" ? ghostOpacity : 1}
+            depthWrite={display !== "ghost"}
+          />
+        </mesh>
+      )}
       {walls.map((wall) => {
         const onWall = storey.openings.filter((o) => o.wallIndex === wall.index);
         return (
@@ -53,6 +61,8 @@ export function Storey({ building, storey, elevation, active }: Props) {
               openings={onWall}
               elevation={elevation}
               active={active}
+              display={display}
+              ghostOpacity={ghostOpacity}
             />
             {onWall.map((opening) => (
               <Opening
@@ -63,6 +73,8 @@ export function Storey({ building, storey, elevation, active }: Props) {
                 thickness={thickness}
                 elevation={elevation}
                 active={active}
+                display={display}
+                ghostOpacity={ghostOpacity}
                 valid={
                   validateOpening(opening, {
                     wallLength: wall.length,
@@ -84,6 +96,8 @@ export function Storey({ building, storey, elevation, active }: Props) {
           height={storey.height}
           elevation={elevation}
           active={active}
+          display={display}
+          ghostOpacity={ghostOpacity}
         />
       ))}
       <StoreyHvac building={building} storey={storey} elevation={elevation} active={active} />
@@ -95,6 +109,7 @@ export function Storey({ building, storey, elevation, active }: Props) {
           zone={room.zoneId === undefined ? undefined : zones.get(room.zoneId)}
           elevation={elevation}
           active={active}
+          display={display}
         />
       ))}
     </group>

@@ -5,6 +5,7 @@ import type { ThreeEvent } from "@react-three/fiber";
 import { centroid } from "@/geometry/polygon";
 import type { Id, Room as RoomData, Zone } from "@/geometry/types";
 import { colors, INACTIVE_OPACITY } from "@/lib/colors";
+import type { StoreyDisplay } from "./display";
 import { formatArea } from "@/lib/format";
 import { sameSelection, useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
@@ -17,6 +18,7 @@ interface Props {
   zone: Zone | undefined;
   elevation: number;
   active: boolean;
+  display: StoreyDisplay;
 }
 
 // Passing `undefined` to switch the override off writes undefined onto the mesh and every
@@ -28,7 +30,7 @@ const meshRaycast: Mesh["raycast"] = function raycast(this: Mesh, raycaster, int
 const noRaycast = () => null;
 
 /** Flat fill on the floor, coloured by zone, with a label facing the camera. */
-export function Room({ storeyId, room, zone, elevation, active }: Props) {
+export function Room({ storeyId, room, zone, elevation, active, display }: Props) {
   const target: Selection = useMemo(
     () => ({ kind: "room", storeyId, id: room.id }),
     [storeyId, room.id],
@@ -68,6 +70,7 @@ export function Room({ storeyId, room, zone, elevation, active }: Props) {
       : baseOpacity
     : INACTIVE_OPACITY * (zone ? 1 : 0);
 
+  if (display === "outline") return null;
   return (
     <group>
       <mesh

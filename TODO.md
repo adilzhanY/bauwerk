@@ -379,3 +379,12 @@ Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 - [x] A benchmark route `?bench=1` that loads a fifty storey, twenty openings per storey building, shows a frame time graph over ten seconds, draw calls and triangle count from the renderer info, and a paragraph on the memoisation strategy (geometry per element by input hash, merged prisms per wall, throttled hover).
 - [ ] Instanced interior walls and merged room fills per storey if the benchmark falls below 60 fps on the RTX 5070 or 30 fps on integrated graphics.
 - [ ] The numbers from Adilzhan's machine written into the README.
+
+## 32. Other storeys display
+
+- [x] View setting for storeys above the active one: hidden, outline, ghost (default outline, the Revit halftone underlay / ArchiCAD ghost story idea)
+- [x] View setting for storeys below: outline, ghost, solid (default ghost)
+- [x] Ghost opacity slider, default 15 % instead of the fixed 25 %
+- [x] Outline mode draws wall and slab edges only, no fills, no raycast
+- [x] Pure helper `storeyDisplay` with tests, UI strings in both languages
+- [ ] Manual check: two storeys, ground floor active, rooms and windows readable

@@ -74,6 +74,64 @@ function CutControls() {
   );
 }
 
+function OtherStoreysControls() {
+  const t = useT();
+  const s = useEditorStore();
+  const o = s.otherStoreys;
+  const showOpacity = o.above === "ghost" || o.below === "ghost";
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-muted">{t("view.storeysAbove")}</span>
+        <CustomSegmented
+          label={t("view.storeysAbove")}
+          value={o.above}
+          options={[
+            { value: "hidden", label: t("view.storeysHidden") },
+            { value: "outline", label: t("view.storeysOutline") },
+            { value: "ghost", label: t("view.storeysGhost") },
+          ]}
+          onChange={(above) => {
+            s.setOtherStoreys({ above });
+          }}
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-muted">{t("view.storeysBelow")}</span>
+        <CustomSegmented
+          label={t("view.storeysBelow")}
+          value={o.below}
+          options={[
+            { value: "outline", label: t("view.storeysOutline") },
+            { value: "ghost", label: t("view.storeysGhost") },
+            { value: "solid", label: t("view.storeysSolid") },
+          ]}
+          onChange={(below) => {
+            s.setOtherStoreys({ below });
+          }}
+        />
+      </div>
+      {showOpacity && (
+        <CustomField
+          label={`${t("view.ghostOpacity")}: ${formatNumber(Math.round(o.ghostOpacity * 100), s.language)} %`}
+        >
+          <CustomSlider
+            label={t("view.ghostOpacity")}
+            value={Math.round(o.ghostOpacity * 100)}
+            min={5}
+            max={60}
+            step={5}
+            onChange={(pct) => {
+              s.setOtherStoreys({ ghostOpacity: pct / 100 });
+            }}
+            format={(pct) => `${formatNumber(pct, s.language)} %`}
+          />
+        </CustomField>
+      )}
+    </div>
+  );
+}
+
 function SunControls() {
   const t = useT();
   const s = useEditorStore();
@@ -176,6 +234,7 @@ export function SettingsSection() {
           checked={s.showBridges}
           onChange={s.setShowBridges}
         />
+        <OtherStoreysControls />
         <SunControls />
         <CutControls />
         <CustomCheckbox

@@ -3,7 +3,8 @@ import { Mesh } from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import { distance, normalize, sub } from "@/geometry/polygon";
 import type { Id, Segment } from "@/geometry/types";
-import { colors, INACTIVE_OPACITY } from "@/lib/colors";
+import { colors } from "@/lib/colors";
+import type { StoreyDisplay } from "./display";
 import { sameSelection, useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
 import { useHover } from "./hover";
@@ -16,6 +17,8 @@ interface Props {
   height: number;
   elevation: number;
   active: boolean;
+  display: StoreyDisplay;
+  ghostOpacity: number;
 }
 
 export const INTERIOR_WALL_THICKNESS = 0.1;
@@ -27,7 +30,16 @@ const meshRaycast: Mesh["raycast"] = function raycast(this: Mesh, raycaster, int
 };
 const noRaycast = () => null;
 
-export function InteriorWall({ storeyId, index, segment, height, elevation, active }: Props) {
+export function InteriorWall({
+  storeyId,
+  index,
+  segment,
+  height,
+  elevation,
+  active,
+  display,
+  ghostOpacity,
+}: Props) {
   const target: Selection = useMemo(
     () => ({ kind: "interiorWall", storeyId, index }),
     [storeyId, index],
@@ -49,6 +61,7 @@ export function InteriorWall({ storeyId, index, segment, height, elevation, acti
     select(target);
   };
 
+  if (display === "outline") return null;
   return (
     <mesh
       position={[cx, elevation + height / 2, cz]}
@@ -64,9 +77,9 @@ export function InteriorWall({ storeyId, index, segment, height, elevation, acti
         emissive={selected ? colors.accent : "#000000"}
         emissiveIntensity={selected ? 0.35 : 0}
         roughness={0.9}
-        transparent={!active}
-        opacity={active ? 1 : INACTIVE_OPACITY}
-        depthWrite={active}
+        transparent={display === "ghost"}
+        opacity={display === "ghost" ? ghostOpacity : 1}
+        depthWrite={display !== "ghost"}
       />
     </mesh>
   );

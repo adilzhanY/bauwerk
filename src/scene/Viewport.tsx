@@ -13,6 +13,7 @@ import { Sun } from "./Sun";
 import { SectionCut } from "./SectionCut";
 import { Walkthrough } from "./Walkthrough";
 import { FrameProbe } from "./FrameProbe";
+import { storeyDisplay } from "./display";
 import type { RenderSample } from "./FrameProbe";
 import { UValueBands } from "./UValueBand";
 import { useSceneColors } from "./useSceneColors";
@@ -32,6 +33,7 @@ export function Viewport({ onSample }: { onSample?: (s: RenderSample) => void } 
   const scene = useSceneColors();
   const sunEnabled = useEditorStore((s) => s.sun.enabled);
   const walking = useEditorStore((s) => s.walkthrough);
+  const otherStoreys = useEditorStore((s) => s.otherStoreys);
   const activeElevation = activeStoreyId ? storeyElevation(building, activeStoreyId) : 0;
   const plan = planCamera(
     bounds(building.footprint),
@@ -83,6 +85,9 @@ export function Viewport({ onSample }: { onSample?: (s: RenderSample) => void } 
       )}
       {building.storeys
         .filter((storey) => !planView || storey.id === activeStoreyId)
+        .filter(
+          (storey) => storeyDisplay(building, storey.id, activeStoreyId, otherStoreys) !== "hidden",
+        )
         .map((storey) => (
           <Storey
             key={storey.id}
@@ -90,6 +95,8 @@ export function Viewport({ onSample }: { onSample?: (s: RenderSample) => void } 
             storey={storey}
             elevation={storeyElevation(building, storey.id)}
             active={storey.id === activeStoreyId}
+            display={storeyDisplay(building, storey.id, activeStoreyId, otherStoreys)}
+            ghostOpacity={otherStoreys.ghostOpacity}
           />
         ))}
       <Compass />

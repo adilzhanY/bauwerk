@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import type { Wall } from "@/geometry/walls";
 import type { Id, Opening as OpeningData } from "@/geometry/types";
-import { colors, INACTIVE_OPACITY } from "@/lib/colors";
+import { colors } from "@/lib/colors";
+import type { StoreyDisplay } from "./display";
 import { sameSelection, useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
 import { useHover } from "./hover";
@@ -19,11 +20,23 @@ interface Props {
   thickness: number;
   elevation: number;
   active: boolean;
+  display: StoreyDisplay;
+  ghostOpacity: number;
   valid: boolean;
 }
 
 /** A translucent pane for windows and a slab for doors, sitting inside the wall hole. */
-export function Opening({ storeyId, wall, opening, thickness, elevation, active, valid }: Props) {
+export function Opening({
+  storeyId,
+  wall,
+  opening,
+  thickness,
+  elevation,
+  active,
+  display,
+  ghostOpacity,
+  valid,
+}: Props) {
   const target: Selection = useMemo(
     () => ({ kind: "opening", storeyId, id: opening.id }),
     [storeyId, opening.id],
@@ -94,7 +107,8 @@ export function Opening({ storeyId, wall, opening, thickness, elevation, active,
 
   const base = opening.kind === "door" ? colors.door : colors.window;
   const color = !valid ? colors.warning : selected ? colors.accent : (remoteColor ?? base);
-  const opacity = !active ? INACTIVE_OPACITY : opening.kind === "window" ? 0.55 : 1;
+  const opacity = display === "ghost" ? ghostOpacity : opening.kind === "window" ? 0.55 : 1;
+  if (display === "outline") return null;
 
   return (
     <mesh

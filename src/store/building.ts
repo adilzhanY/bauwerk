@@ -58,6 +58,13 @@ export type Selection =
   | { kind: "heatPump"; id: Id }
   | { kind: "pipe"; storeyId: Id; id: Id };
 
+/** Display of storeys that are not being edited. */
+export interface OtherStoreys {
+  above: "hidden" | "outline" | "ghost";
+  below: "outline" | "ghost" | "solid";
+  ghostOpacity: number;
+}
+
 export interface EditorState {
   building: Building;
   activeStoreyId: Id | null;
@@ -90,6 +97,8 @@ export interface EditorState {
   theme: Theme;
   /** Red lines for thermal bridges. UI state. */
   showBridges: boolean;
+  /** How storeys other than the active one are drawn. UI state. */
+  otherStoreys: OtherStoreys;
   /** Section cut through the model. UI state. */
   sectionCut: { enabled: boolean; axis: "horizontal" | "x" | "y"; value: number };
   /** First person walkthrough. UI state. */
@@ -195,6 +204,7 @@ export interface EditorActions {
   setShowMap: (on: boolean) => void;
   setShowBridges: (on: boolean) => void;
   setSun: (patch: Partial<{ enabled: boolean; dayOfYear: number; minutes: number }>) => void;
+  setOtherStoreys: (patch: Partial<OtherStoreys>) => void;
   setSectionCut: (
     patch: Partial<{ enabled: boolean; axis: "horizontal" | "x" | "y"; value: number }>,
   ) => void;
@@ -299,6 +309,7 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           showBridges: false,
           sun: { enabled: false, dayOfYear: 172, minutes: 14 * 60 },
           sectionCut: { enabled: false, axis: "horizontal", value: 1.5 },
+          otherStoreys: { above: "outline", below: "ghost", ghostOpacity: 0.15 },
           walkthrough: false,
           mapOpacity: 0.85,
 
@@ -827,6 +838,12 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           setUnderlay: (underlay) => {
             set((state) => {
               state.underlay = underlay;
+            });
+          },
+
+          setOtherStoreys: (patch) => {
+            set((state) => {
+              state.otherStoreys = { ...state.otherStoreys, ...patch };
             });
           },
 
