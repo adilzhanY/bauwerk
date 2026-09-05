@@ -1,6 +1,20 @@
 import { useState } from "react";
 import type { DragEvent } from "react";
-import { ArrowDown, ArrowUp, Copy, Plus, Trash2 } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  Building2,
+  Copy,
+  Image as ImageIcon,
+  MapPin,
+  Palette,
+  Plus,
+  Settings2,
+  Trash2,
+} from "lucide-react";
+import type { ReactNode } from "react";
+import type { MessageKey } from "@/i18n";
+import { CustomSegmented } from "@/components/CustomSegmented";
 import type { Id } from "@/geometry/types";
 import { useT } from "@/i18n/useT";
 import { formatArea, formatMetres } from "@/lib/format";
@@ -17,21 +31,62 @@ import { SettingsSection } from "./SettingsSection";
 import { toolHint } from "./tools";
 import { UnderlaySection } from "./UnderlaySection";
 
+type SectionId = "storeys" | "zones" | "location" | "underlay" | "settings";
+
+const sectionIcons: Record<SectionId, ReactNode> = {
+  storeys: <Building2 size={20} />,
+  zones: <Palette size={20} />,
+  location: <MapPin size={20} />,
+  underlay: <ImageIcon size={20} />,
+  settings: <Settings2 size={20} />,
+};
+
+const sectionLabel: Record<SectionId, MessageKey> = {
+  storeys: "panel.storeys",
+  zones: "panel.zones",
+  location: "location.title",
+  underlay: "underlay.title",
+  settings: "panel.settings",
+};
+
+/** Floating panel with an icon strip that shows one section at a time. */
 export function LeftPanel({ syncStatus }: { syncStatus: SyncStatus | "local" }) {
   const t = useT();
   const tool = useEditorStore((s) => s.tool);
+  const [section, setSection] = useState<SectionId>("storeys");
+  const ids: SectionId[] = ["storeys", "zones", "location", "underlay", "settings"];
   return (
-    <aside className="flex h-full min-h-0 flex-col overflow-y-auto border-r border-line bg-panel">
-      <div className="border-b border-line bg-panel-2 px-3 py-2 text-xs leading-relaxed text-muted">
-        {t(toolHint[tool])}
+    <aside className="pointer-events-auto flex h-full min-h-0 rounded-card border border-line bg-panel shadow-float">
+      <div className="flex flex-col items-center border-r border-line p-2">
+        <CustomSegmented
+          label={t("panel.view")}
+          value={section}
+          vertical
+          iconsOnly
+          options={ids.map((id) => ({
+            value: id,
+            label: t(sectionLabel[id]),
+            icon: sectionIcons[id],
+          }))}
+          onChange={setSection}
+        />
       </div>
-      <ProjectSwitcher status={syncStatus} />
-      <StoreyList />
-      <RoomList />
-      <ZoneList />
-      <LocationSection />
-      <UnderlaySection />
-      <SettingsSection />
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-y-auto">
+        <div className="border-b border-line px-4 py-3 text-sm leading-relaxed text-muted">
+          {t(toolHint[tool])}
+        </div>
+        {section === "storeys" && (
+          <>
+            <ProjectSwitcher status={syncStatus} />
+            <StoreyList />
+            <RoomList />
+          </>
+        )}
+        {section === "zones" && <ZoneList />}
+        {section === "location" && <LocationSection />}
+        {section === "underlay" && <UnderlaySection />}
+        {section === "settings" && <SettingsSection />}
+      </div>
     </aside>
   );
 }
@@ -116,7 +171,7 @@ function StoreyList() {
                 >
                   {storey.name}
                 </span>
-                <span className="font-mono text-xs text-muted">
+                <span className="font-num text-xs text-muted">
                   {formatMetres(storey.height, language)} · {storey.rooms.length}{" "}
                   {t("storey.rooms").toLowerCase()}
                 </span>
@@ -205,7 +260,7 @@ function RoomList() {
                   style={{ background: zone?.color ?? "transparent" }}
                 />
                 <span className="flex-1 truncate text-ink">{room.name}</span>
-                <span className="font-mono text-xs text-muted">
+                <span className="font-num text-xs text-muted">
                   {formatArea(room.area, language)}
                 </span>
               </button>
@@ -270,11 +325,11 @@ function ZoneList() {
                   style={{ background: zone.color }}
                 />
                 <span className="flex-1 truncate text-ink">{zone.name}</span>
-                <span className="font-mono text-xs text-muted">
+                <span className="font-num text-xs text-muted">
                   {t(zone.heated ? "zone.heated" : "zone.unheated")}
                 </span>
                 {active && (
-                  <span className="rounded-sm bg-select-soft px-1 font-mono text-[10px] text-select uppercase">
+                  <span className="rounded-pill bg-select-soft px-1 font-num text-xs text-select">
                     {t("zone.active")}
                   </span>
                 )}

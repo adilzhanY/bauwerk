@@ -45,7 +45,7 @@ export function CustomSwatches({ label, value, onChange, colors = ZONE_COLORS }:
                 onChange(color);
               }}
               className={cx(
-                "flex h-7 w-7 items-center justify-center rounded-full border-2 transition-transform hover:scale-110",
+                "flex h-9 w-7 items-center justify-center rounded-full border-2 transition-transform hover:scale-110",
                 selected ? "border-ink" : "border-transparent",
               )}
               style={{ background: color }}

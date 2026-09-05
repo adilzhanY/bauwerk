@@ -118,7 +118,7 @@ function ClassBand({ value }: { value: EnergyClass }) {
         {CLASSES.map((c) => (
           <div
             key={c}
-            className={`flex h-7 flex-1 items-center justify-center rounded-sm font-mono text-xs ${c === value ? "ring-2 ring-ink ring-offset-1 ring-offset-panel" : "opacity-40"}`}
+            className={`flex h-9 flex-1 items-center justify-center rounded-pill font-num text-xs ${c === value ? "ring-2 ring-ink ring-offset-1 ring-offset-panel" : "opacity-40"}`}
             style={{ background: ENERGY_CLASS_COLORS[c], color: "#1b1d20" }}
           >
             {c}
@@ -131,10 +131,10 @@ function ClassBand({ value }: { value: EnergyClass }) {
 
 function Big({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <div className="rounded-sm border border-line bg-paper p-2">
+    <div className="rounded-pill border border-line bg-paper p-2">
       <div className="text-xs text-muted">{label}</div>
       <div className="font-display text-xl font-semibold text-ink">{value}</div>
-      <div className="font-mono text-xs text-muted">{unit}</div>
+      <div className="font-num text-xs text-muted">{unit}</div>
     </div>
   );
 }
@@ -197,7 +197,7 @@ function Zones({ summary }: { summary: EnergySummary }) {
               )}
               {zone?.name ?? t("zone.none")}
             </span>
-            <span className="font-mono text-ink">
+            <span className="font-num text-ink">
               {formatArea(z.floorArea, language)} · {formatNumber(z.transmissionLoss, language, 1)}{" "}
               W/K
             </span>

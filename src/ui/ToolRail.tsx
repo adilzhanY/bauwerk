@@ -4,7 +4,7 @@ import { CustomSegmented } from "@/components/CustomSegmented";
 import { toolIcons, toolLabel } from "./tools";
 import { TOOL_ORDER } from "./useKeyboardShortcuts";
 
-/** Vertical strip of tools on the far left, with key hints. */
+/** Floating toolbar centred at the bottom of the viewport, like Figma. */
 export function ToolRail() {
   const t = useT();
   const tool = useEditorStore((s) => s.tool);
@@ -12,15 +12,11 @@ export function ToolRail() {
   return (
     <nav
       aria-label={t("panel.tools")}
-      className="flex flex-col items-center gap-3 border-r border-line bg-panel px-1.5 py-3"
+      className="pointer-events-auto rounded-pill border border-line bg-panel p-1.5 shadow-float"
     >
-      <span className="font-display text-[11px] font-semibold tracking-wide text-muted uppercase">
-        {t("app.title")}
-      </span>
       <CustomSegmented
         label={t("panel.tools")}
         value={tool}
-        vertical
         iconsOnly
         options={TOOL_ORDER.map((id, i) => ({
           value: id,

@@ -29,7 +29,7 @@ export function PrintView() {
           onClick={() => {
             window.print();
           }}
-          className="rounded-sm border border-black px-3 py-1 font-sans text-sm"
+          className="rounded-pill border border-black px-3 py-1 font-sans text-sm"
         >
           {t("print.print")}
         </button>
@@ -80,7 +80,7 @@ export function PrintView() {
                     <td className="py-1">
                       {building.zones.find((z) => z.id === r.zoneId)?.name ?? ""}
                     </td>
-                    <td className="py-1 text-right font-mono">{formatArea(r.area, language)}</td>
+                    <td className="py-1 text-right font-num">{formatArea(r.area, language)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -96,9 +96,9 @@ export function PrintView() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded border border-neutral-300 p-2">
+    <div className="rounded-pill border border-neutral-300 p-2">
       <div className="text-xs text-neutral-600">{label}</div>
-      <div className="font-mono">{value}</div>
+      <div className="font-num">{value}</div>
     </div>
   );
 }

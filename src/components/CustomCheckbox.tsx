@@ -49,7 +49,7 @@ export function CustomCheckbox({
                 checked ? "border-ink bg-ink" : "border-line-strong bg-panel-2",
               )
             : cx(
-                "h-4 w-4 justify-center rounded-sm border",
+                "h-4 w-4 justify-center rounded-pill border",
                 checked ? "border-ink bg-ink text-paper" : "border-line-strong bg-paper",
               ),
           disabled && "cursor-not-allowed",

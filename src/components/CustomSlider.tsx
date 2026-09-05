@@ -121,7 +121,7 @@ export function CustomSlider({
   };
 
   return (
-    <div className="relative flex h-8 min-w-0 flex-1 items-center">
+    <div className="relative flex h-10 min-w-0 flex-1 items-center">
       <div
         ref={track}
         id={id}
@@ -142,7 +142,7 @@ export function CustomSlider({
         onKeyUp={end}
         onBlur={end}
         className={cx(
-          "group relative h-8 w-full cursor-pointer touch-none rounded-sm select-none",
+          "group relative h-10 w-full cursor-pointer touch-none rounded-pill select-none",
           disabled && "cursor-not-allowed opacity-40",
         )}
       >
@@ -163,7 +163,7 @@ export function CustomSlider({
         {active && (
           <div
             aria-hidden
-            className="absolute -top-6 -translate-x-1/2 rounded-sm bg-ink px-1.5 py-0.5 font-mono text-xs text-paper"
+            className="absolute -top-6 -translate-x-1/2 rounded-pill bg-ink px-1.5 py-0.5 font-num text-xs text-paper"
             style={{ left: `${ratio * 100}%` }}
           >
             {format ? format(value) : value}

@@ -167,7 +167,7 @@ export function CustomSelect<V extends string>({
           }}
           onKeyDown={onKeyDown}
           className={cx(
-            "flex h-8 w-full items-center gap-2 rounded-sm border bg-paper px-2 text-left text-sm text-ink transition-colors",
+            "flex h-10 w-full items-center gap-2 rounded-pill border bg-paper px-2 text-left text-sm text-ink transition-colors",
             open ? "border-select" : "border-line hover:border-line-strong",
             "disabled:cursor-not-allowed disabled:opacity-40",
           )}
@@ -180,9 +180,7 @@ export function CustomSelect<V extends string>({
             />
           )}
           <span className="flex-1 truncate">{current?.label ?? ""}</span>
-          {current?.detail && (
-            <span className="font-mono text-xs text-muted">{current.detail}</span>
-          )}
+          {current?.detail && <span className="font-num text-xs text-muted">{current.detail}</span>}
           <ChevronDown
             size={14}
             className={cx("shrink-0 text-muted transition-transform", open && "rotate-180")}
@@ -193,7 +191,7 @@ export function CustomSelect<V extends string>({
             id={listId}
             role="listbox"
             aria-label={label}
-            className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-sm border border-line bg-paper py-1 shadow-lg"
+            className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-pill border border-line bg-paper py-1 shadow-lg"
           >
             {options.map((o, i) => {
               const selected = o.value === value;
@@ -224,7 +222,7 @@ export function CustomSelect<V extends string>({
                     />
                   )}
                   <span className="flex-1 truncate text-ink">{o.label}</span>
-                  {o.detail && <span className="font-mono text-xs text-muted">{o.detail}</span>}
+                  {o.detail && <span className="font-num text-xs text-muted">{o.detail}</span>}
                   {selected && <Check size={14} className="text-select" />}
                 </li>
               );

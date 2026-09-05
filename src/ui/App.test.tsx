@@ -49,8 +49,10 @@ describe("App", () => {
 
   it("switches the whole UI to German", () => {
     render(<App />);
+    fireEvent.click(screen.getByRole("radio", { name: "Settings" }));
     fireEvent.click(screen.getByRole("combobox", { name: "Language" }));
     fireEvent.click(screen.getByRole("option", { name: "Deutsch" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Geschosse" }));
     expect(screen.getByRole("heading", { name: "Geschosse" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Eigenschaften" })).toBeTruthy();
     expect(screen.getByText("WebGL ist nicht verfügbar")).toBeTruthy();
@@ -79,6 +81,7 @@ describe("App", () => {
 
   it("commits a number typed with a comma live, as one undo step", () => {
     render(<App />);
+    fireEvent.click(screen.getByRole("radio", { name: "Settings" }));
     const input = screen.getByLabelText("Wall thickness", { selector: "input" });
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: "0,4" } });
@@ -91,6 +94,7 @@ describe("App", () => {
 
   it("the slider updates the model on every tick and undoes as one step", () => {
     render(<App />);
+    fireEvent.click(screen.getByRole("radio", { name: "Settings" }));
     const slider = screen.getByRole("slider", { name: "Wall thickness" });
     fireEvent.keyDown(slider, { key: "ArrowRight", shiftKey: true }); // 0.3 + 10 x 0.05
     expect(useEditorStore.getState().building.wallThickness).toBeCloseTo(0.8);
@@ -145,8 +149,17 @@ describe("App", () => {
     expect(container.querySelectorAll("input[type=number]")).toHaveLength(0);
   });
 
+  it("uses no uppercase styling and installs the cursor stylesheet with the active tool", () => {
+    const { container } = render(<App />);
+    expect(container.querySelectorAll(".uppercase")).toHaveLength(0);
+    expect(document.getElementById("bauwerk-cursors")).toBeTruthy();
+    fireEvent.keyDown(window, { key: "6" });
+    expect(container.querySelector("[data-tool='measure']")).toBeTruthy();
+  });
+
   it("switches the theme and stamps it on the document", () => {
     render(<App />);
+    fireEvent.click(screen.getByRole("radio", { name: "Settings" }));
     fireEvent.click(screen.getByRole("radio", { name: "Dark" }));
     expect(useEditorStore.getState().theme).toBe("dark");
   });

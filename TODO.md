@@ -218,3 +218,17 @@ Goal: the editor stops looking like every generated tool of this year. Light by 
 - [x] `INFO.md` design section rewritten to the new palette and type, `DECISIONS.md` entry for the change of direction.
 - [x] `npm run check` green, App tests updated.
 - [ ] A screenshot of light and dark for the README, taken by Adilzhan, and a visual pass over every panel in both themes.
+
+## 17. Interface, second pass
+
+Adilzhan's review of the redesign. Every item here overrules or refines section 16.
+
+- [x] Fully rounded elements: buttons, inputs, selects, segments and chips are pills; panels and dialogs have large rounded corners. Radius tokens only, no per-component values.
+- [x] Numbers stop using a mono font. Pick a clean geometric sans with tabular figures that is not Inter (Manrope), use it for body text and every measurement. Archivo stays for headings. Fonts bundled locally, old ones removed.
+- [x] The tool rail floats centred at the bottom of the viewport like Figma's toolbar: horizontal, pill shaped, shadowed, over the scene.
+- [x] Left and right panels float over the scene with a margin, fully rounded corners and a soft shadow. The viewport fills the window behind them.
+- [x] Everything in the side panels gets bigger: base type 15 px, controls 40 px tall, wider panels, more padding. Nothing below 13 px.
+- [x] No uppercase anywhere. Section titles, tabs and chips read as written: "Zones", not "ZONES". A test checks no element carries the uppercase class.
+- [x] Left panel navigation: an icon strip inside the panel switches between Storeys (with rooms), Zones, Location, Underlay and Settings. One section visible at a time, no long scroll. Each icon has a label tooltip and the active one is filled. Keyboard: arrow keys move between sections.
+- [x] Custom cursor set drawn as SVG in the Figma style (black arrow with a white outline) and applied through CSS variables: default, pointer for anything clickable, text for inputs, grab and grabbing on the canvas, crosshair for the drawing tools, horizontal resize for label scrubbing and slider thumbs, not-allowed for disabled controls. Hotspots set per cursor. Test: every cursor is valid SVG with a hotspot inside its box, and the canvas cursor changes with the active tool.
+- [x] Component tests and App tests updated, `npm run check` green, `DECISIONS.md` entry.

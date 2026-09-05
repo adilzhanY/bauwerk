@@ -30,7 +30,7 @@ export function CustomTabs<V extends string>({ label, value, tabs, onChange }: P
     }
   };
   return (
-    <div role="tablist" aria-label={label} className="flex border-b border-line">
+    <div role="tablist" aria-label={label} className="flex border-b border-line px-2">
       {tabs.map((t) => {
         const selected = t.value === value;
         return (
@@ -47,7 +47,7 @@ export function CustomTabs<V extends string>({ label, value, tabs, onChange }: P
             }}
             onKeyDown={onKeyDown}
             className={cx(
-              "-mb-px flex h-9 items-center gap-1.5 border-b-2 px-3 font-display text-xs font-semibold tracking-wide uppercase transition-colors",
+              "-mb-px flex h-9 items-center gap-1.5 border-b-2 px-3 font-display text-xs font-semibold  transition-colors",
               selected ? "border-ink text-ink" : "border-transparent text-muted hover:text-ink",
             )}
           >

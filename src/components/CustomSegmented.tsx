@@ -51,7 +51,7 @@ export function CustomSegmented<V extends string>({
       role="radiogroup"
       aria-label={label}
       className={cx(
-        "flex gap-1 rounded-sm border border-line bg-panel p-1",
+        "flex gap-1 rounded-pill border border-line bg-panel p-1",
         vertical && "flex-col",
       )}
     >
@@ -71,8 +71,8 @@ export function CustomSegmented<V extends string>({
             }}
             onKeyDown={onKeyDown}
             className={cx(
-              "relative flex items-center justify-center gap-1.5 rounded-sm text-sm transition-colors",
-              iconsOnly ? "h-9 w-9" : "h-7 flex-1 px-2",
+              "relative flex items-center justify-center gap-1.5 rounded-pill text-sm transition-colors",
+              iconsOnly ? "h-11 w-11" : "h-9 flex-1 px-3",
               selected ? "bg-ink text-paper" : "text-muted hover:bg-panel-2 hover:text-ink",
             )}
           >
@@ -81,7 +81,7 @@ export function CustomSegmented<V extends string>({
             {iconsOnly && o.hint && (
               <span
                 aria-hidden
-                className="absolute right-0.5 bottom-0 font-mono text-[9px] leading-none opacity-70"
+                className="absolute right-0.5 bottom-0 font-num text-xs leading-none opacity-70"
               >
                 {o.hint}
               </span>

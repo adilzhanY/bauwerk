@@ -69,7 +69,7 @@ export function BottomBar({ actor }: Props) {
   };
 
   return (
-    <footer className="flex h-10 items-center gap-1 border-t border-line bg-panel px-2 font-mono text-xs">
+    <footer className="pointer-events-auto flex h-12 items-center gap-1 rounded-pill border border-line bg-panel px-3 text-sm shadow-float">
       <CustomIconButton label={t("bar.undo")} size="sm" disabled={!canUndo} onClick={undo}>
         <Undo2 size={15} />
       </CustomIconButton>

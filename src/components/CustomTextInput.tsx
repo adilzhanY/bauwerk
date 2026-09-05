@@ -43,7 +43,7 @@ export function CustomTextInput({
     >
       <div
         className={cx(
-          "flex h-8 items-center gap-2 rounded-sm border border-line bg-paper px-2 transition-colors focus-within:border-select",
+          "flex h-10 items-center gap-2 rounded-pill border border-line bg-paper px-2 transition-colors focus-within:border-select",
           disabled && "opacity-40",
         )}
       >

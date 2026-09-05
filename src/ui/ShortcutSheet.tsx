@@ -19,7 +19,7 @@ export function ShortcutSheet({ onClose }: { onClose: () => void }) {
           {rows.map(([label, keys]) => (
             <tr key={label} className="border-t border-line">
               <td className="py-2 text-ink">{label}</td>
-              <td className="py-2 text-right font-mono text-xs text-muted">{keys}</td>
+              <td className="py-2 text-right font-num text-xs text-muted">{keys}</td>
             </tr>
           ))}
         </tbody>

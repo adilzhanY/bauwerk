@@ -45,11 +45,11 @@ interface SectionProps {
 /** A titled block in a side panel. The title is an h2 so panels read as an outline. */
 export function CustomSection({ title, action, children, first = false }: SectionProps) {
   return (
-    <section className={cx("flex flex-col gap-3 px-3 pt-3 pb-4", !first && "border-t border-line")}>
-      <header className="flex h-7 items-center justify-between">
-        <h2 className="font-display text-xs font-semibold tracking-wide text-muted uppercase">
-          {title}
-        </h2>
+    <section
+      className={cx("flex flex-col gap-3.5 px-4 pt-4 pb-5", !first && "border-t border-line")}
+    >
+      <header className="flex h-9 items-center justify-between">
+        <h2 className="font-display text-xs font-semibold  text-muted">{title}</h2>
         {action}
       </header>
       {children}
@@ -62,7 +62,7 @@ export function CustomReadOnly({ label, value }: { label: string; value: string 
   return (
     <div className="flex items-baseline justify-between gap-3">
       <span className="text-xs text-muted">{label}</span>
-      <span className="text-right font-mono text-sm text-ink">{value}</span>
+      <span className="text-right font-num text-sm text-ink">{value}</span>
     </div>
   );
 }

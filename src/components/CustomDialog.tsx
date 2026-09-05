@@ -65,7 +65,7 @@ export function CustomDialog({ title, closeLabel, onClose, children, width = 440
           e.stopPropagation();
         }}
         style={{ width, maxWidth: "100%" }}
-        className="rounded-md border border-line bg-paper p-5 shadow-2xl outline-none"
+        className="rounded-card border border-line bg-paper p-5 shadow-2xl outline-none"
       >
         <header className="mb-4 flex items-center justify-between">
           <h2 id="dialog-title" className="font-display text-lg font-semibold text-ink">

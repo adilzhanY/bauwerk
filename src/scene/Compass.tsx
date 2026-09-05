@@ -35,7 +35,7 @@ export function Compass() {
         center
         style={{ pointerEvents: "none" }}
       >
-        <span className="font-mono text-xs select-none" style={{ color }}>
+        <span className="font-num text-xs select-none" style={{ color }}>
           {t("location.north")}
         </span>
       </Html>

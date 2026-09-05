@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Viewport } from "@/scene/Viewport";
 import { useEditorStore } from "@/store/building";
 import { hasWebGL } from "@/lib/webgl";
+import { installCursors } from "@/lib/cursors";
 import { useSync } from "@/sync/useSync";
 import { BottomBar } from "@/ui/BottomBar";
 import { LeftPanel } from "@/ui/LeftPanel";
@@ -34,24 +35,33 @@ export function App() {
   const webgl = useMemo(() => hasWebGL(), []);
   const hasStoreys = useEditorStore((s) => s.building.storeys.length > 0);
   const language = useEditorStore((s) => s.language);
+  const tool = useEditorStore((s) => s.tool);
 
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
 
+  useEffect(() => {
+    installCursors();
+  }, []);
+
   if (new URLSearchParams(window.location.search).get("print") === "1") return <PrintView />;
   if (width < MIN_WIDTH) return <TooNarrow />;
 
   return (
-    <div className="grid h-full grid-cols-[56px_300px_1fr_320px] grid-rows-[1fr_40px] bg-paper">
-      <ToolRail />
-      <LeftPanel syncStatus={sync.status} />
-      <main className="relative min-w-0 bg-paper">
+    <div className="relative h-full overflow-hidden bg-paper" data-tool={tool}>
+      <main className="absolute inset-0">
         {!hasStoreys ? <EmptyState /> : webgl ? <Viewport /> : <WebGLMissing />}
       </main>
-      <RightPanel />
-      <div className="col-span-4">
-        <BottomBar actor={sync.status === "local" ? null : sync} />
+      <div className="pointer-events-none absolute inset-0 grid grid-cols-[380px_1fr_360px] grid-rows-[1fr_auto] gap-4 p-4">
+        <LeftPanel syncStatus={sync.status} />
+        <div className="flex flex-col items-center justify-end pb-1">
+          <ToolRail />
+        </div>
+        <RightPanel />
+        <div className="col-span-3 flex justify-center">
+          <BottomBar actor={sync.status === "local" ? null : sync} />
+        </div>
       </div>
     </div>
   );

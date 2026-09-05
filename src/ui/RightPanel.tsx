@@ -43,7 +43,7 @@ export function RightPanel() {
     if (selection) setTab("properties");
   }
   return (
-    <aside className="flex h-full min-h-0 flex-col border-l border-line bg-panel">
+    <aside className="pointer-events-auto flex h-full min-h-0 flex-col overflow-hidden rounded-card border border-line bg-panel shadow-float">
       <CustomTabs
         label={t("panel.properties")}
         value={tab}
@@ -242,7 +242,7 @@ function OpeningProperties({ storeyId, openingId }: { storeyId: string; openingI
       {errors.length > 0 && (
         <div
           role="alert"
-          className="rounded-sm border border-mark bg-mark-soft p-2 text-xs text-mark"
+          className="rounded-pill border border-mark bg-mark-soft p-2 text-xs text-mark"
         >
           <p className="font-medium">{t("opening.invalid")}</p>
           <ul className="mt-1 list-disc pl-4">
