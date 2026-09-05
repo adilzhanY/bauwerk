@@ -44,7 +44,7 @@ function Tile({ placed, opacity }: { placed: PlacedTile; opacity: number }) {
         map={texture}
         transparent
         opacity={opacity}
-        depthWrite={false}
+        depthWrite
         toneMapped={false}
       />
     </mesh>
