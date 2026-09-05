@@ -525,3 +525,32 @@ describe("duplicateStorey", () => {
     expect(store.getState().building.storeys).toHaveLength(1);
   });
 });
+
+describe("history batching", () => {
+  it("a gesture of many live changes is one undo step", () => {
+    store.getState().beginBatch();
+    for (let i = 1; i <= 20; i++) store.getState().setWallThickness(0.3 + i * 0.01);
+    store.getState().endBatch();
+    expect(store.getState().building.wallThickness).toBeCloseTo(0.5);
+    expect(store.getState().past).toHaveLength(1);
+    store.getState().undo();
+    expect(store.getState().building.wallThickness).toBe(0.3);
+    store.getState().redo();
+    expect(store.getState().building.wallThickness).toBeCloseTo(0.5);
+  });
+
+  it("changes after endBatch record normally again", () => {
+    store.getState().beginBatch();
+    store.getState().setWallThickness(0.4);
+    store.getState().setWallThickness(0.45);
+    store.getState().endBatch();
+    store.getState().setWallThickness(0.5);
+    expect(store.getState().past).toHaveLength(2);
+  });
+
+  it("an empty batch records nothing", () => {
+    store.getState().beginBatch();
+    store.getState().endBatch();
+    expect(store.getState().past).toHaveLength(0);
+  });
+});

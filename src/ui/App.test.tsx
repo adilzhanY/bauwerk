@@ -14,6 +14,7 @@ beforeEach(() => {
     past: [],
     future: [],
   });
+  useEditorStore.getState().endBatch();
   useEditorStore.setState((s) => ({ activeStoreyId: s.building.storeys[0]?.id ?? null }));
 });
 
@@ -72,12 +73,30 @@ describe("App", () => {
     expect(useEditorStore.getState().building.storeys[0]?.openings).toHaveLength(0);
   });
 
-  it("commits a number typed with a comma", () => {
+  it("commits a number typed with a comma live, as one undo step", () => {
     render(<App />);
     const input = screen.getByLabelText("Wall thickness", { selector: "input[type=text]" });
+    fireEvent.focus(input);
     fireEvent.change(input, { target: { value: "0,4" } });
-    fireEvent.blur(input);
     expect(useEditorStore.getState().building.wallThickness).toBeCloseTo(0.4);
+    fireEvent.change(input, { target: { value: "0,45" } });
+    expect(useEditorStore.getState().building.wallThickness).toBeCloseTo(0.45);
+    fireEvent.blur(input);
+    expect(useEditorStore.getState().past).toHaveLength(1);
+  });
+
+  it("the slider updates the model on every tick and undoes as one step", () => {
+    render(<App />);
+    const slider = screen.getByLabelText("Wall thickness", { selector: "input[type=range]" });
+    fireEvent.pointerDown(slider);
+    fireEvent.change(slider, { target: { value: "0.5" } });
+    expect(useEditorStore.getState().building.wallThickness).toBeCloseTo(0.5);
+    fireEvent.change(slider, { target: { value: "0.6" } });
+    expect(useEditorStore.getState().building.wallThickness).toBeCloseTo(0.6);
+    fireEvent.pointerUp(slider);
+    expect(useEditorStore.getState().past).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(useEditorStore.getState().building.wallThickness).toBeCloseTo(0.3);
   });
 
   it("shows the empty state when the last storey is removed", () => {

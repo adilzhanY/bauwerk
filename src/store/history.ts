@@ -10,6 +10,12 @@ export interface HistorySlice {
   redo: () => void;
   /** Runs `fn` without recording building changes. For applying remote state. */
   withoutHistory: (fn: () => void) => void;
+  /**
+   * Starts a gesture: every building change until `endBatch` is one undo step.
+   * Used by sliders and inputs that update the model live while the user drags or types.
+   */
+  beginBatch: () => void;
+  endBatch: () => void;
 }
 
 interface WithBuilding {
@@ -40,6 +46,8 @@ type HistoryImpl = <T extends WithBuilding>(
 const historyImpl: HistoryImpl = (initializer) => (set, get, api) => {
   type S = ReturnType<typeof initializer> & HistorySlice;
   let restoring = false;
+  let batching = false;
+  let batchRecorded = false;
 
   const trackedSet: typeof set = (partial, replace) => {
     const before = get().building;
@@ -50,6 +58,11 @@ const historyImpl: HistoryImpl = (initializer) => (set, get, api) => {
     }
     const after = get().building;
     if (restoring || before === after) return;
+    if (batching) {
+      // Only the first change of a gesture records the snapshot taken before it.
+      if (batchRecorded) return;
+      batchRecorded = true;
+    }
     set((state) => {
       const past = [...state.past, before];
       if (past.length > HISTORY_LIMIT) past.splice(0, past.length - HISTORY_LIMIT);
@@ -92,6 +105,14 @@ const historyImpl: HistoryImpl = (initializer) => (set, get, api) => {
     },
     redo: () => {
       restore("redo");
+    },
+    beginBatch: () => {
+      batching = true;
+      batchRecorded = false;
+    },
+    endBatch: () => {
+      batching = false;
+      batchRecorded = false;
     },
     withoutHistory: (fn) => {
       const previous = restoring;

@@ -63,3 +63,7 @@ The agent wrote the UTM test against a value it remembered from the Wikipedia wo
 ## 2026-09-05 Photo underlay stays out of the model
 
 The floor plan underlay (an image on the ground for tracing) is UI state in the browser only: an object URL, a width in metres, a position and an opacity. It is not part of the building, not autosaved, not exported and not synced. The alternative, embedding the image as base64 in the JSON, would have bloated every export and every WebSocket broadcast with megabytes that have nothing to do with the model. Scaling works through the measure tool: measure a known distance on the image, type the real length, apply. No image processing, no dependency.
+
+## 2026-09-05 Live updates while dragging, overruling commit-on-release
+
+Earlier the agent made number inputs and sliders commit only on release or blur, to keep one undo step per edit. Adilzhan rejected that: when changing a height, width or thickness the model has to follow the hand, not jump when the mouse is let go. The fix keeps both properties. Sliders and inputs write to the store on every tick and every valid keystroke, and the history middleware gained a batch mode: `beginBatch` on pointer down or focus, `endBatch` on release or blur, and only the first change inside a batch records the snapshot. A drag of twenty ticks is still one undo step, tested in `building.test.ts` and `App.test.tsx`. The sync client already coalesces writes, so a drag produces one request in flight at a time, not twenty.
