@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Mesh } from "three";
 import { Html } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
 import { centroid } from "@/geometry/polygon";
@@ -18,6 +19,12 @@ interface Props {
   active: boolean;
 }
 
+// Passing `undefined` to switch the override off writes undefined onto the mesh and every
+// later pointer event throws inside the raycaster, killing all interaction until reload.
+// Switch between the real Mesh raycast and a no-op instead.
+const meshRaycast: Mesh["raycast"] = function raycast(this: Mesh, raycaster, intersects) {
+  Mesh.prototype.raycast.call(this, raycaster, intersects);
+};
 const noRaycast = () => null;
 
 /** Flat fill on the floor, coloured by zone, with a label facing the camera. */
@@ -66,7 +73,7 @@ export function Room({ storeyId, room, zone, elevation, active }: Props) {
       <mesh
         geometry={geometry}
         onClick={onClick}
-        raycast={active ? undefined : noRaycast}
+        raycast={active ? meshRaycast : noRaycast}
         {...hover}
       >
         <meshStandardMaterial

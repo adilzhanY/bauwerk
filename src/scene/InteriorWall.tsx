@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { Mesh } from "three";
 import type { ThreeEvent } from "@react-three/fiber";
 import { distance, normalize, sub } from "@/geometry/polygon";
 import type { Id, Segment } from "@/geometry/types";
@@ -18,6 +19,12 @@ interface Props {
 }
 
 export const INTERIOR_WALL_THICKNESS = 0.1;
+// Passing `undefined` to switch the override off writes undefined onto the mesh and every
+// later pointer event throws inside the raycaster, killing all interaction until reload.
+// Switch between the real Mesh raycast and a no-op instead.
+const meshRaycast: Mesh["raycast"] = function raycast(this: Mesh, raycaster, intersects) {
+  Mesh.prototype.raycast.call(this, raycaster, intersects);
+};
 const noRaycast = () => null;
 
 export function InteriorWall({ storeyId, index, segment, height, elevation, active }: Props) {
@@ -47,7 +54,7 @@ export function InteriorWall({ storeyId, index, segment, height, elevation, acti
       position={[cx, elevation + height / 2, cz]}
       rotation={[0, yaw, 0]}
       onClick={onClick}
-      raycast={active ? undefined : noRaycast}
+      raycast={active ? meshRaycast : noRaycast}
       castShadow
       {...hover}
     >
