@@ -151,3 +151,7 @@ Starting the walkthrough replaced the orbit controls with pointer lock controls,
 ## 2026-09-05: The map was still invisible after three fixes
 
 The user reported for the fourth time that the OpenStreetMap ground was not showing. The earlier agent fixes changed depth writing and the ground material, based on reasoning rather than evidence. This time the tile was downloaded with curl and the quad normal computed from the real corner numbers: it pointed down, so the single-sided material culled every tile from above. The winding is now derived from the corners, the material is double-sided, and a test asserts the face normal points up for several rotations.
+
+## 2026-09-05: Four-option segmented control overflowed its track
+
+The roof display switch was the first segmented control with four options, and the last pill was drawn outside the rounded track. The agent had never tested the component with more than three labels. Flex items now may shrink, groups with more than three options use the smaller text size, and a test covers the four-option case.

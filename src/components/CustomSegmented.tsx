@@ -71,13 +71,20 @@ export function CustomSegmented<V extends string>({
             }}
             onKeyDown={onKeyDown}
             className={cx(
-              "relative flex items-center justify-center gap-1.5 rounded-pill text-sm transition-colors",
-              iconsOnly ? (o.hint ? "h-11 px-3" : "h-11 w-11") : "h-9 flex-1 px-3",
+              "relative flex items-center justify-center gap-1.5 rounded-pill transition-colors",
+              // Flex items refuse to shrink below their text by default, so a fourth
+              // option pushed the last pill out of the track. min-w-0 lets them share
+              // the width, and dense groups drop to the smaller size.
+              iconsOnly
+                ? o.hint
+                  ? "h-11 px-3 text-sm"
+                  : "h-11 w-11 text-sm"
+                : cx("h-9 min-w-0 flex-1", options.length > 3 ? "px-2 text-xs" : "px-3 text-sm"),
               selected ? "bg-ink text-paper" : "text-muted hover:bg-panel-2 hover:text-ink",
             )}
           >
             {o.icon}
-            {!iconsOnly && <span>{o.label}</span>}
+            {!iconsOnly && <span className="truncate">{o.label}</span>}
             {iconsOnly && o.hint && (
               <span aria-hidden className="font-num text-xs leading-none opacity-70">
                 {o.hint}

@@ -50,4 +50,26 @@ describe("CustomSegmented", () => {
     render(<Harness iconsOnly />);
     expect(screen.getByRole("radio", { name: "Renovated" })).toBeTruthy();
   });
+
+  it("segments may shrink and dense groups use the small size so the track never overflows", () => {
+    render(
+      <CustomSegmented
+        label="Roof"
+        value="solid"
+        options={[
+          { value: "hidden", label: "Hidden" },
+          { value: "outline", label: "Outline" },
+          { value: "ghost", label: "Ghost" },
+          { value: "solid", label: "Solid" },
+        ]}
+        onChange={() => undefined}
+      />,
+    );
+    const radios = screen.getAllByRole("radio");
+    expect(radios).toHaveLength(4);
+    for (const r of radios) {
+      expect(r.className).toContain("min-w-0");
+      expect(r.className).toContain("text-xs");
+    }
+  });
 });
