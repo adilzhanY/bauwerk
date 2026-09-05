@@ -2,7 +2,8 @@ import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { Building, Id, Opening, Segment, Storey, Vec2, Zone } from "@/geometry/types";
 import { DEFAULT_STOREY_HEIGHT, DEFAULT_WALL_THICKNESS } from "@/geometry/types";
-import { defaultStoreyName } from "@/i18n";
+import { computeRooms } from "@/geometry/rooms";
+import { defaultRoomName, defaultStoreyName } from "@/i18n";
 import type { Language } from "@/i18n";
 import { createId } from "@/lib/ids";
 import { history } from "./history";
@@ -67,7 +68,7 @@ export function createStorey(index: number, language: Language): Storey {
 
 /** A 10 m by 8 m rectangle, one storey, no openings. Counter-clockwise on the XZ plane. */
 export function createDefaultBuilding(language: Language = "en"): Building {
-  return {
+  const building: Building = {
     id: createId("building"),
     name: "Bauwerk",
     footprint: [
@@ -80,10 +81,24 @@ export function createDefaultBuilding(language: Language = "en"): Building {
     storeys: [createStorey(0, language)],
     zones: [],
   };
+  refreshAllRooms(building, language);
+  return building;
 }
 
 function findStorey(building: Building, storeyId: Id): Storey | undefined {
   return building.storeys.find((s) => s.id === storeyId);
+}
+
+/** Rooms are derived. Recompute them whenever the footprint or the interior walls change. */
+function refreshRooms(storey: Storey, footprint: readonly Vec2[], language: Language): void {
+  storey.rooms = computeRooms(footprint, storey.interiorWalls, storey.rooms, {
+    createId: () => createId("room"),
+    defaultName: (i) => defaultRoomName(i, language),
+  });
+}
+
+function refreshAllRooms(building: Building, language: Language): void {
+  for (const storey of building.storeys) refreshRooms(storey, building.footprint, language);
 }
 
 export function createEditorStore(initial?: Partial<EditorState>) {
@@ -103,12 +118,14 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             set((state) => {
               if (index < 0 || index >= state.building.footprint.length) return;
               state.building.footprint[index] = { x: position.x, y: position.y };
+              refreshAllRooms(state.building, state.language);
             });
           },
 
           addStorey: () => {
             set((state) => {
               const storey = createStorey(state.building.storeys.length, state.language);
+              refreshRooms(storey, state.building.footprint, state.language);
               state.building.storeys.push(storey);
               state.activeStoreyId = storey.id;
             });
@@ -184,7 +201,9 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           addInteriorWall: (storeyId, segment) => {
             set((state) => {
               const storey = findStorey(state.building, storeyId);
-              if (storey) storey.interiorWalls.push({ a: { ...segment.a }, b: { ...segment.b } });
+              if (!storey) return;
+              storey.interiorWalls.push({ a: { ...segment.a }, b: { ...segment.b } });
+              refreshRooms(storey, state.building.footprint, state.language);
             });
           },
 
@@ -193,6 +212,7 @@ export function createEditorStore(initial?: Partial<EditorState>) {
               const storey = findStorey(state.building, storeyId);
               if (!storey || index < 0 || index >= storey.interiorWalls.length) return;
               storey.interiorWalls.splice(index, 1);
+              refreshRooms(storey, state.building.footprint, state.language);
               if (state.selection?.kind === "interiorWall" && state.selection.index === index) {
                 state.selection = null;
               }

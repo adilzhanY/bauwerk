@@ -50,6 +50,11 @@ export default tseslint.config(
     },
   },
   {
+    // Test fixtures index into known arrays; a non-null assertion reads better than a guard.
+    files: ["src/**/*.test.{ts,tsx}", "src/geometry/fixtures.ts"],
+    rules: { "@typescript-eslint/no-non-null-assertion": "off" },
+  },
+  {
     files: ["eslint.config.js", "vite.config.ts"],
     ...tseslint.configs.disableTypeChecked,
   },

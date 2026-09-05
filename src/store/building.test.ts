@@ -17,12 +17,8 @@ beforeEach(() => {
 const storeyId = () => store.getState().building.storeys[0]?.id ?? "";
 
 function withRoom(): string {
-  // Rooms are derived by geometry later; for store tests we plant one directly.
-  const room = { id: "room_test", name: "Kitchen", polygon: [], area: 0 };
-  const building = structuredClone(store.getState().building);
-  building.storeys[0]?.rooms.push(room);
-  store.getState().loadBuilding(building);
-  return room.id;
+  // The default building already derives one room covering the whole footprint.
+  return store.getState().building.storeys[0]?.rooms[0]?.id ?? "";
 }
 
 interface ActionCase {
@@ -135,7 +131,7 @@ const cases: ActionCase[] = [
       withRoom();
     },
     act: (s) => {
-      s.renameRoom(storeyId(), "room_test", "Bad");
+      s.renameRoom(storeyId(), withRoom(), "Bad");
     },
   },
   {
@@ -145,7 +141,7 @@ const cases: ActionCase[] = [
       store.getState().addZone("Heated", "#ff0000");
     },
     act: (s) => {
-      s.assignRoomToZone(storeyId(), "room_test", s.building.zones[0]?.id);
+      s.assignRoomToZone(storeyId(), withRoom(), s.building.zones[0]?.id);
     },
   },
   { name: "addZone", act: (s) => s.addZone("Heated", "#ff0000") },
@@ -163,7 +159,7 @@ const cases: ActionCase[] = [
     arrange: () => {
       withRoom();
       const zoneId = store.getState().addZone("Heated", "#ff0000");
-      store.getState().assignRoomToZone(storeyId(), "room_test", zoneId);
+      store.getState().assignRoomToZone(storeyId(), withRoom(), zoneId);
     },
     act: (s) => {
       s.removeZone(s.building.zones[0]?.id ?? "");
@@ -263,6 +259,19 @@ describe("UI state and history", () => {
 });
 
 describe("store behaviour", () => {
+  it("derives rooms when interior walls change and keeps names", () => {
+    const sid = storeyId();
+    expect(store.getState().building.storeys[0]?.rooms).toHaveLength(1);
+    store.getState().renameRoom(sid, withRoom(), "Kitchen");
+    store.getState().addInteriorWall(sid, { a: { x: 4, y: 0 }, b: { x: 4, y: 8 } });
+    const rooms = store.getState().building.storeys[0]?.rooms ?? [];
+    expect(rooms).toHaveLength(2);
+    expect(rooms.map((r) => r.name).sort()).toEqual(["Kitchen", "Room 1"]);
+    expect(rooms.reduce((s, r) => s + r.area, 0)).toBeCloseTo(80, 6);
+    store.getState().undo();
+    expect(store.getState().building.storeys[0]?.rooms).toHaveLength(1);
+  });
+
   it("starts with a 10 by 8 rectangle, one storey, no openings", () => {
     const b = store.getState().building;
     expect(b.footprint).toEqual([
@@ -299,7 +308,7 @@ describe("store behaviour", () => {
   it("removing a zone unassigns its rooms", () => {
     withRoom();
     const zoneId = store.getState().addZone("Heated", "#ff0000");
-    store.getState().assignRoomToZone(storeyId(), "room_test", zoneId);
+    store.getState().assignRoomToZone(storeyId(), withRoom(), zoneId);
     expect(store.getState().building.storeys[0]?.rooms[0]?.zoneId).toBe(zoneId);
     store.getState().removeZone(zoneId);
     expect(store.getState().building.storeys[0]?.rooms[0]?.zoneId).toBeUndefined();

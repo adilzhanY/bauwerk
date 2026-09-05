@@ -27,3 +27,8 @@ function ordinal(n: number): string {
       return `${n}th`;
   }
 }
+
+/** Default room names, numbered from 1. */
+export function defaultRoomName(index: number, language: Language): string {
+  return language === "de" ? `Raum ${index}` : `Room ${index}`;
+}

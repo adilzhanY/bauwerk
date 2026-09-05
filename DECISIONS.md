@@ -23,3 +23,11 @@ Decided before generation: everything under `src/geometry/` is plain TypeScript 
 ## 2026-09-05 Scaffold template rejected, versions pinned by hand
 
 `npm create vite@latest` now produces React 19, Vite 8, TypeScript 6 and oxlint, which contradicts the fixed stack in `INFO.md` (Vite 6, React 18, TypeScript 5, ESLint). The generated template was discarded and `package.json` was written by hand with the pinned majors. This also forced `@react-three/fiber` 8 and `@react-three/drei` 9, since fiber 9 and drei 10 require React 19. `npm install` needed `--legacy-peer-deps` because npm 10 crashes resolving Vitest 4's optional peers. Verified with `npm run check` and a production build under `VITE_BASE_PATH=/bauwerk/`, fonts bundled locally, no external requests.
+
+## 2026-09-05 Footprint is the outer face, interior walls have no thickness
+
+Two calls the agent could not make alone. First: the footprint polygon is the outer face of the exterior walls and the inner face is offset inward by the wall thickness, mitred at corners. Opening offsets measure along the outer edge. The alternative, footprint as wall centreline, would make the visible outline and the drawn polygon disagree. Second: interior walls are zero-thickness lines for room extraction, so room areas sum exactly to the footprint area, which is the invariant the tests enforce. A thick interior wall would eat floor area and the sum rule would no longer hold. Verified in `walls.test.ts` (ring area equals outer minus inner rectangle) and `rooms.test.ts` (areas sum within 1e-4).
+
+## 2026-09-05 Room identity survives recomputation by centroid, not by index
+
+Rooms are derived from interior walls, but the user names them and assigns zones. When a wall is added the agent's first idea was to match old rooms to new ones by array index, which reshuffles names as soon as face order changes. Replaced with centroid matching: a previous room keeps its id, name and zone in whichever new face contains its old centroid, largest rooms first. Splitting a room keeps the identity in the half that holds the centroid; merging keeps the larger room. Tested in `rooms.test.ts` and `building.test.ts`.
