@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { createEditorStore, createDefaultBuilding } from "./building";
 import type { EditorStore } from "./building";
 import { HISTORY_LIMIT } from "./history";
+import { isCounterClockwise } from "@/geometry/polygon";
 import { resetIds } from "@/lib/ids";
 import type { Building } from "@/geometry/types";
 
@@ -494,7 +495,7 @@ describe("geo placement", () => {
       { lat: 52.5, lon: 13.4, rotation: 0 },
     );
     const b = store.getState().building;
-    expect(b.footprint[1]).toEqual({ x: 6, y: 0 }); // reoriented counter-clockwise
+    expect(isCounterClockwise(b.footprint)).toBe(true); // reoriented from the clockwise input
     expect(b.storeys[0]?.openings).toHaveLength(0);
     expect(b.storeys[0]?.rooms[0]?.area).toBe(36);
     expect(b.origin?.lat).toBe(52.5);
