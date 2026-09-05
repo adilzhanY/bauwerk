@@ -85,7 +85,7 @@ Work top to bottom. Tick with `[x]`. A task is done when `npm run check` passes 
 - [ ] `npm run check` green with zero warnings.
 - [ ] Test coverage on `src/geometry/` and `src/store/` above 90 percent lines.
 - [ ] Manual visual check of every state listed in `INFO.md` design principles, in both languages.
-- [ ] `grep -rn "—\|–" src docs *.md` returns nothing.
+- [ ] `grep -rn "dash characters" src docs *.md` returns nothing.
 - [ ] Lighthouse performance above 90 on the production build.
 
 ## 9. CI and deployment
