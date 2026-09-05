@@ -240,3 +240,16 @@ Adilzhan's review of the redesign. Every item here overrules or refines section 
 - [x] German conventions for every number regardless of UI language: comma decimal, point thousands, `dd.mm.yyyy`, 24 hour time `18:04`, units `m²`, `kWh/(m²·a)`, `W/(m²·K)`.
 - [x] Sections: Gebäude (data fields), Energetische Kennwerte with current and renovated markers on the scale, Bauteile (U, A, U·A per element type), one plan and room table per storey, footer with method and assumptions.
 - [x] Test: the rendered print view contains no rounded classes, shows a 24 hour time and a German date, and one section per storey.
+
+## 19. Map underlay
+
+Goal: when a location is set, the ground shows the real surroundings from OpenStreetMap, at true scale and rotated with the plan, so "place the building on the map" is visible.
+
+- [x] `src/geometry/tiles.ts`, pure: Web Mercator slippy tile maths. Lat/lon to tile x, y at a zoom, tile to its lat/lon corners, metres per pixel at a latitude, and the list of tiles covering a radius around a point. Tests against known tile numbers for Berlin and the equator, round trip, and the covering set size.
+- [x] Tile corners are projected into plan coordinates through the existing UTM origin, so the tiles land at true scale and follow the plan rotation. Over a few hundred metres the Mercator to UTM mismatch is below a centimetre; documented in the code.
+- [x] `src/scene/MapUnderlay.tsx`: one quad per tile textured with the OSM raster tile, zoom 19, under the grid and the slab, not raycast, faded to the underlay opacity. Tiles load with `crossOrigin` and fail silently.
+- [x] Store: `showMap` and `mapOpacity` as UI state, persisted with the other view settings. Default on when a location is set.
+- [x] Location section: switch for the map and an opacity slider; the grid switch stays.
+- [x] Attribution: "© OpenStreetMap contributors" with a link, drawn in the viewport corner whenever a tile is visible. Required by the OSM tile usage policy.
+- [x] `INFO.md`: the external request rule gets its one exception, OSM tiles when the map is on, and the print view never includes tiles.
+- [x] Tests: tile maths, App test that the switch appears with a location and the attribution renders when on.

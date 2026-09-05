@@ -72,6 +72,9 @@ export interface EditorState {
   /** Result of the measure tool. UI state. */
   measurement: { a: Vec2; b: Vec2 } | null;
   theme: Theme;
+  /** OpenStreetMap tiles on the ground when a location is set. UI state. */
+  showMap: boolean;
+  mapOpacity: number;
 }
 
 export interface Underlay {
@@ -138,6 +141,8 @@ export interface EditorActions {
   setUnderlay: (underlay: Underlay | null) => void;
   setMeasurement: (measurement: { a: Vec2; b: Vec2 } | null) => void;
   setTheme: (theme: Theme) => void;
+  setShowMap: (on: boolean) => void;
+  setMapOpacity: (opacity: number) => void;
   /** Replaces the building with server state. Not recorded in history and clears the redo stack. */
   applyRemoteBuilding: (building: Building) => void;
   setShowGrid: (show: boolean) => void;
@@ -231,6 +236,8 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           underlay: null,
           measurement: null,
           theme: initial?.theme ?? "system",
+          showMap: true,
+          mapOpacity: 0.85,
 
           setFootprintVertex: (index, position) => {
             set((state) => {
@@ -610,6 +617,18 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           setUnderlay: (underlay) => {
             set((state) => {
               state.underlay = underlay;
+            });
+          },
+
+          setShowMap: (on) => {
+            set((state) => {
+              state.showMap = on;
+            });
+          },
+
+          setMapOpacity: (opacity) => {
+            set((state) => {
+              state.mapOpacity = Math.min(1, Math.max(0.1, opacity));
             });
           },
 

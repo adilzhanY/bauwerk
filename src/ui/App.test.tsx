@@ -166,6 +166,19 @@ describe("App", () => {
     expect(container.querySelector("[data-tool='measure']")).toBeTruthy();
   });
 
+  it("offers the map when a location is set and shows the attribution", () => {
+    render(<App />);
+    expect(screen.queryByText("© OpenStreetMap contributors")).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "Location" }));
+    fireEvent.click(screen.getByRole("switch", { name: "Place the building on the map" }));
+    expect(
+      screen.getByRole("switch", { name: "Show map (OpenStreetMap)" }).getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(screen.getByRole("link", { name: "© OpenStreetMap contributors" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("switch", { name: "Show map (OpenStreetMap)" }));
+    expect(screen.queryByText("© OpenStreetMap contributors")).toBeNull();
+  });
+
   it("switches the theme and stamps it on the document", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("radio", { name: "Settings" }));

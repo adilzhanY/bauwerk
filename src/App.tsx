@@ -11,6 +11,7 @@ import { RightPanel } from "@/ui/RightPanel";
 import { EmptyState, TooNarrow, WebGLMissing } from "@/ui/States";
 import { ToolRail } from "@/ui/ToolRail";
 import { useKeyboardShortcuts } from "@/ui/useKeyboardShortcuts";
+import { useT } from "@/i18n/useT";
 
 const MIN_WIDTH = 1024;
 
@@ -36,6 +37,8 @@ export function App() {
   const hasStoreys = useEditorStore((s) => s.building.storeys.length > 0);
   const language = useEditorStore((s) => s.language);
   const tool = useEditorStore((s) => s.tool);
+  const mapVisible = useEditorStore((s) => s.showMap && s.building.origin !== undefined);
+  const t = useT();
 
   useEffect(() => {
     document.documentElement.lang = language;
@@ -59,6 +62,16 @@ export function App() {
           <ToolRail />
         </div>
         <RightPanel />
+        {mapVisible && hasStoreys && (
+          <a
+            href="https://www.openstreetmap.org/copyright"
+            target="_blank"
+            rel="noreferrer"
+            className="pointer-events-auto absolute right-[380px] bottom-16 rounded-soft bg-paper/85 px-2 py-0.5 text-xs text-muted hover:text-ink"
+          >
+            {t("map.attribution")}
+          </a>
+        )}
         <div className="col-span-3 flex justify-center">
           <BottomBar actor={sync.status === "local" ? null : sync} />
         </div>

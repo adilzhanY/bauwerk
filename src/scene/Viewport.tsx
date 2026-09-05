@@ -4,6 +4,7 @@ import { bounds } from "@/geometry/polygon";
 import { planCamera } from "./planView";
 import { Dimensions } from "./Dimensions";
 import { Underlay } from "./Underlay";
+import { MapUnderlay } from "./MapUnderlay";
 import { UValueBands } from "./UValueBand";
 import { useSceneColors } from "./useSceneColors";
 import { useEditorStore } from "@/store/building";
@@ -48,6 +49,7 @@ export function Viewport() {
       />
       <Ground />
       <Grid />
+      <MapUnderlay />
       <Underlay />
       <UValueBands />
       <Dimensions />

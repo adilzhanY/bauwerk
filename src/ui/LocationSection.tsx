@@ -19,6 +19,10 @@ export function LocationSection() {
   const building = useEditorStore((s) => s.building);
   const setOrigin = useEditorStore((s) => s.setOrigin);
   const setFootprint = useEditorStore((s) => s.setFootprint);
+  const showMap = useEditorStore((s) => s.showMap);
+  const setShowMap = useEditorStore((s) => s.setShowMap);
+  const mapOpacity = useEditorStore((s) => s.mapOpacity);
+  const setMapOpacity = useEditorStore((s) => s.setMapOpacity);
   const beginBatch = useEditorStore((s) => s.beginBatch);
   const endBatch = useEditorStore((s) => s.endBatch);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -104,6 +108,23 @@ export function LocationSection() {
             }}
             {...batch}
           />
+          <CustomCheckbox
+            variant="switch"
+            label={t("map.show")}
+            checked={showMap}
+            onChange={setShowMap}
+          />
+          {showMap && (
+            <CustomNumberInput
+              label={t("map.opacity")}
+              value={mapOpacity}
+              min={0.1}
+              max={1}
+              step={0.05}
+              language={language}
+              onChange={setMapOpacity}
+            />
+          )}
           <CustomReadOnly
             label={`${t("location.utm")} ${utm.zone}${utm.north ? "N" : "S"} (EPSG:${epsgForZone(utm.zone)})`}
             value={`${formatNumber(utm.easting, language, 1)} E, ${formatNumber(utm.northing, language, 1)} N`}
