@@ -74,6 +74,8 @@ export interface EditorState {
   /** Result of the measure tool. UI state. */
   measurement: { a: Vec2; b: Vec2 } | null;
   theme: Theme;
+  /** Red lines for thermal bridges. UI state. */
+  showBridges: boolean;
   /** OpenStreetMap tiles on the ground when a location is set. UI state. */
   showMap: boolean;
   mapOpacity: number;
@@ -113,6 +115,7 @@ export interface EditorActions {
   setWallThickness: (thickness: number) => void;
   renameBuilding: (name: string) => void;
   setOrigin: (origin: GeoOrigin | undefined) => void;
+  setBridgeDetail: (detail: "good" | "poor") => void;
   /** Replaces the footprint, for a GeoJSON import. Rooms are recomputed. */
   setFootprint: (footprint: Vec2[], origin?: GeoOrigin) => void;
   addOpening: (storeyId: Id, opening: NewOpening) => Id;
@@ -148,6 +151,7 @@ export interface EditorActions {
   setMeasurement: (measurement: { a: Vec2; b: Vec2 } | null) => void;
   setTheme: (theme: Theme) => void;
   setShowMap: (on: boolean) => void;
+  setShowBridges: (on: boolean) => void;
   setMapOpacity: (opacity: number) => void;
   /** Replaces the building with server state. Not recorded in history and clears the redo stack. */
   applyRemoteBuilding: (building: Building) => void;
@@ -243,6 +247,7 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           measurement: null,
           theme: initial?.theme ?? "system",
           showMap: true,
+          showBridges: false,
           mapOpacity: 0.85,
 
           setFootprintVertex: (index, position) => {
@@ -365,6 +370,12 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             set((state) => {
               const storey = findStorey(state.building, storeyId);
               if (storey) storey.name = name;
+            });
+          },
+
+          setBridgeDetail: (detail) => {
+            set((state) => {
+              state.building.bridgeDetail = detail;
             });
           },
 
@@ -674,6 +685,12 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           setUnderlay: (underlay) => {
             set((state) => {
               state.underlay = underlay;
+            });
+          },
+
+          setShowBridges: (on) => {
+            set((state) => {
+              state.showBridges = on;
             });
           },
 

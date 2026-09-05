@@ -1,3 +1,5 @@
+import { bridgeDetailOf, summarizeBridges } from "./bridges";
+import type { BridgeSummary } from "./bridges";
 import { bestInCategory, findConstruction } from "./constructions";
 import { validateOpening } from "./openings";
 import { area, edges, pointInPolygon, pointOnSegment, sub, distance } from "./polygon";
@@ -37,7 +39,7 @@ export const INTERIOR_WALL_HEIGHT_FACTOR = 1;
 export type Orientation = "N" | "E" | "S" | "W";
 
 export interface ElementLoss {
-  category: ConstructionCategory | "interiorWall";
+  category: ConstructionCategory | "interiorWall" | "bridge";
   label: string;
   area: number;
   uValue: number;
@@ -68,7 +70,11 @@ export interface EnergySummary {
   windowToWallRatio: number;
   heatedFloorArea: number;
   heatedVolume: number;
+  /** Σ U·A plus the thermal bridge term. */
   transmissionLoss: number;
+  /** Σ ψ·l, already included in transmissionLoss. */
+  bridgeLoss: number;
+  bridges: BridgeSummary;
   specificTransmissionLoss: number;
   ventilationLoss: number;
   heatingDemand: number;
@@ -327,6 +333,18 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
   );
   const wallGross = storeys.reduce((s, e) => s + e.wallGrossArea, 0);
   const windowArea = storeys.reduce((s, e) => s + e.windowArea, 0);
+  // Thermal bridges: the renovated scenario assumes good detailing.
+  const bridges = summarizeBridges(building, options.renovated ? "good" : bridgeDetailOf(building));
+  if (bridges.total > 0) {
+    transmission += bridges.total;
+    elements.push({
+      category: "bridge",
+      label: "bridges",
+      area: 0,
+      uValue: 0,
+      loss: bridges.total,
+    });
+  }
   const ventilation = AIR_HEAT_CAPACITY * AIR_CHANGE_RATE * heatedVolume;
   const heatingDemand = (transmission + ventilation) * HEATING_DEGREE_HOURS_BERLIN;
   const specific = heatedFloorArea > 0 ? heatingDemand / heatedFloorArea : 0;
@@ -341,6 +359,8 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
     heatedFloorArea,
     heatedVolume,
     transmissionLoss: transmission,
+    bridgeLoss: bridges.total,
+    bridges,
     specificTransmissionLoss: envelopeArea > 0 ? transmission / envelopeArea : 0,
     ventilationLoss: ventilation,
     heatingDemand,

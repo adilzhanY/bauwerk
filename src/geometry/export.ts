@@ -354,6 +354,9 @@ function checkBuildingShape(v: unknown, path: string): ImportError | null {
   if (!isString(b.id)) return bad(`${path}.id`);
   if (!isString(b.name)) return bad(`${path}.name`);
   if (!isNumber(b.wallThickness)) return bad(`${path}.wallThickness`);
+  if (b.bridgeDetail !== undefined && b.bridgeDetail !== "good" && b.bridgeDetail !== "poor") {
+    return bad(`${path}.bridgeDetail`);
+  }
   if (b.origin !== undefined) {
     if (!isRecord(b.origin)) return bad(`${path}.origin`);
     for (const k of ["lat", "lon", "rotation"])

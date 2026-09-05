@@ -5,6 +5,7 @@ import { planCamera } from "./planView";
 import { Dimensions } from "./Dimensions";
 import { Underlay } from "./Underlay";
 import { MapUnderlay } from "./MapUnderlay";
+import { ThermalBridges } from "./ThermalBridges";
 import { UValueBands } from "./UValueBand";
 import { useSceneColors } from "./useSceneColors";
 import { useEditorStore } from "@/store/building";
@@ -52,6 +53,7 @@ export function Viewport() {
       <MapUnderlay />
       <Underlay />
       <UValueBands />
+      <ThermalBridges />
       <Dimensions />
       {planView && (
         <OrthographicCamera

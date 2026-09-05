@@ -39,6 +39,12 @@ export function SettingsSection() {
           checked={s.showUValueBands}
           onChange={s.setShowUValueBands}
         />
+        <CustomCheckbox
+          variant="switch"
+          label={t("bridges.show")}
+          checked={s.showBridges}
+          onChange={s.setShowBridges}
+        />
         <div className="flex flex-col gap-1">
           <span className="text-xs font-medium text-muted">{t("settings.theme")}</span>
           <CustomSegmented

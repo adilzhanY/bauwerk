@@ -98,6 +98,8 @@ export interface Building {
   doorConstructionId: Id;
   /** Where the plan origin sits on the earth. Optional. */
   origin?: GeoOrigin;
+  /** Thermal bridge detailing level. Missing means "poor", the uninsulated stock. */
+  bridgeDetail?: "good" | "poor";
 }
 
 export interface GeoOrigin {

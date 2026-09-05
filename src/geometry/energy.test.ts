@@ -56,12 +56,12 @@ describe("computeEnergy on the default 10 by 8 single storey", () => {
     const e = computeEnergy(building());
     expect(e.envelopeArea).toBeCloseTo(268);
     expect(e.wallNetArea).toBeCloseTo(108);
-    expect(e.transmissionLoss).toBeCloseTo(BASE);
-    expect(e.specificTransmissionLoss).toBeCloseTo(BASE / 268);
+    expect(e.transmissionLoss - e.bridgeLoss).toBeCloseTo(BASE);
+    expect(e.specificTransmissionLoss).toBeCloseTo(e.transmissionLoss / 268);
     expect(e.heatedVolume).toBeCloseTo(240);
     expect(e.ventilationLoss).toBeCloseTo(0.34 * 0.5 * 240);
-    expect(e.heatingDemand).toBeCloseTo((BASE + 40.8) * 84);
-    expect(e.specificHeatingDemand).toBeCloseTo(((BASE + 40.8) * 84) / 80);
+    expect(e.heatingDemand).toBeCloseTo((BASE + e.bridgeLoss + 40.8) * 84);
+    expect(e.specificHeatingDemand).toBeCloseTo(((BASE + e.bridgeLoss + 40.8) * 84) / 80);
     expect(e.energyClass).toBe("H");
   });
 
@@ -71,7 +71,7 @@ describe("computeEnergy on the default 10 by 8 single storey", () => {
       U(PRESET_IDS.wallInsulated) * 108 +
       U(PRESET_IDS.floorInsulated) * 80 +
       U(PRESET_IDS.roofInsulated) * 80;
-    expect(e.transmissionLoss).toBeCloseTo(best);
+    expect(e.transmissionLoss - e.bridgeLoss).toBeCloseTo(best);
     expect(e.transmissionLoss).toBeLessThan(BASE / 3);
     expect(e.energyClass).not.toBe("H");
   });
@@ -81,7 +81,7 @@ describe("computeEnergy on the default 10 by 8 single storey", () => {
     const area = 1.2 * 1.4;
     expect(withDouble.windowArea).toBeCloseTo(area);
     expect(withDouble.wallNetArea).toBeCloseTo(108 - area);
-    expect(withDouble.transmissionLoss).toBeCloseTo(
+    expect(withDouble.transmissionLoss - withDouble.bridgeLoss).toBeCloseTo(
       WALL * (108 - area) + 2.8 * area + FLOOR * 80 + ROOF * 80,
     );
     const withTriple = computeEnergy(
@@ -95,7 +95,7 @@ describe("computeEnergy on the default 10 by 8 single storey", () => {
   it("an invalid opening is ignored", () => {
     const e = computeEnergy(building([], [window({ offset: 9.5 })]));
     expect(e.windowArea).toBe(0);
-    expect(e.transmissionLoss).toBeCloseTo(BASE);
+    expect(e.transmissionLoss - e.bridgeLoss).toBeCloseTo(BASE);
   });
 
   it("window-to-wall ratio per orientation, y is north", () => {
@@ -124,12 +124,12 @@ describe("computeEnergy on the default 10 by 8 single storey", () => {
     // interior wall 8 x 3 x 1.0 = 24.
     const heatedBase = WALL * 60 + FLOOR * 48 + ROOF * 48 + 24;
     expect(e.heatedFloorArea).toBeCloseTo(48);
-    expect(e.transmissionLoss).toBeCloseTo(heatedBase);
+    expect(e.transmissionLoss - e.bridgeLoss).toBeCloseTo(heatedBase);
     expect(e.elements.some((x) => x.category === "interiorWall")).toBe(true);
 
     const allCold = computeEnergy(building(split, [], zones, { 0: "cold", 1: "cold" }));
-    expect(allCold.transmissionLoss).toBe(0);
-    expect(allCold.heatingDemand).toBe(0);
+    expect(allCold.transmissionLoss - allCold.bridgeLoss).toBe(0);
+    expect(allCold.heatedVolume).toBe(0);
   });
 
   it("a window in an unheated room does not count, a window in a heated room does", () => {
@@ -145,8 +145,8 @@ describe("computeEnergy on the default 10 by 8 single storey", () => {
     const a = computeEnergy(building(split, [coldWindow], zones, { [leftIndex]: "cold" }));
     const b = computeEnergy(building(split, [warmWindow], zones, { [leftIndex]: "cold" }));
     const base = WALL * 60 + FLOOR * 48 + ROOF * 48 + 24;
-    expect(a.transmissionLoss).toBeCloseTo(base);
-    expect(b.transmissionLoss).toBeCloseTo(base - WALL * 1.68 + 2.8 * 1.68);
+    expect(a.transmissionLoss - a.bridgeLoss).toBeCloseTo(base);
+    expect(b.transmissionLoss - b.bridgeLoss).toBeCloseTo(base - WALL * 1.68 + 2.8 * 1.68);
   });
 
   it("per zone breakdown sums to the total", () => {
@@ -157,7 +157,7 @@ describe("computeEnergy on the default 10 by 8 single storey", () => {
     const split: Segment[] = [{ a: { x: 4, y: 0 }, b: { x: 4, y: 8 } }];
     const e = computeEnergy(building(split, [window({ offset: 1 })], zones, { 0: "z1", 1: "z2" }));
     const sum = e.zones.reduce((s, z) => s + z.transmissionLoss, 0);
-    expect(sum).toBeCloseTo(e.transmissionLoss);
+    expect(sum).toBeCloseTo(e.transmissionLoss - e.bridgeLoss);
     expect(e.zones.reduce((s, z) => s + z.floorArea, 0)).toBeCloseTo(80);
   });
 });
@@ -181,5 +181,18 @@ describe("orientation and energy class", () => {
     expect(energyClass(200)).toBe("F");
     expect(energyClass(250)).toBe("G");
     expect(energyClass(251)).toBe("H");
+  });
+});
+
+describe("thermal bridges in the energy balance", () => {
+  it("adds Σ ψ·l with the poor set by default and the good set when renovated", () => {
+    const e = computeEnergy(building());
+    // 4 corners x 3 m x 0.15 + 36 m slab x 0.5 + 36 m roof x 0.3
+    expect(e.bridgeLoss).toBeCloseTo(1.8 + 18 + 10.8);
+    expect(e.transmissionLoss).toBeCloseTo(BASE + e.bridgeLoss);
+    const r = computeEnergy(building(), { renovated: true });
+    expect(r.bridgeLoss).toBeCloseTo(12 * 0.05 + 36 * 0.1 + 36 * 0.1);
+    const good = computeEnergy({ ...building(), bridgeDetail: "good" });
+    expect(good.bridgeLoss).toBeCloseTo(r.bridgeLoss);
   });
 });
