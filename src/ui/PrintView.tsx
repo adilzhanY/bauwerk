@@ -1,105 +1,430 @@
-import { computeEnergy } from "@/geometry/energy";
+import { computeEnergy, ENERGY_CLASS_COLORS } from "@/geometry/energy";
+import type { EnergyClass, EnergySummary } from "@/geometry/energy";
+import { findConstruction } from "@/geometry/constructions";
+import { epsgForZone, toUtm } from "@/geometry/geo";
 import { bounds, edges } from "@/geometry/polygon";
-import type { Storey } from "@/geometry/types";
+import type { Building, Storey } from "@/geometry/types";
 import { useT } from "@/i18n/useT";
-import { formatArea, formatMetres, formatNumber } from "@/lib/format";
+import type { MessageKey } from "@/i18n";
 import { useEditorStore } from "@/store/building";
 
-/** Static report for the customer meeting: plan per storey, energy summary, room table. Printed with the browser. */
+/*
+  The report is a document, not an interface. It follows the conventions of
+  German building documents: plain sans type, black hairlines, grey field
+  labels over white value boxes, a numbered section order, the energy scale
+  from A+ to H with kWh/(m²·a) ticks. No rounded corners, no shadows, no colour
+  outside the scale. Numbers, dates and times use German conventions whatever
+  the interface language: 1.234,5 and 05.09.2026, 18:04.
+*/
+
+const DE = "de-DE";
+const num = (v: number, digits = 1) =>
+  new Intl.NumberFormat(DE, { minimumFractionDigits: 0, maximumFractionDigits: digits }).format(v);
+const dateTime = (d: Date) =>
+  `${new Intl.DateTimeFormat(DE, { day: "2-digit", month: "2-digit", year: "numeric" }).format(d)}, ${new Intl.DateTimeFormat(DE, { hour: "2-digit", minute: "2-digit", hour12: false }).format(d)}`;
+
+const CLASSES: EnergyClass[] = ["A+", "A", "B", "C", "D", "E", "F", "G", "H"];
+/** Upper bound of each class on the scale in kWh/(m²a); H is open ended and drawn to 300. */
+const CLASS_UPPER = [30, 50, 75, 100, 130, 160, 200, 250, 300];
+const SCALE_MAX = 300;
+
 export function PrintView() {
   const t = useT();
-  const language = useEditorStore((s) => s.language);
   const building = useEditorStore((s) => s.building);
   const energy = computeEnergy(building);
   const renovated = computeEnergy(building, { renovated: true });
-  const date = new Intl.DateTimeFormat(language === "de" ? "de-DE" : "en-GB").format(new Date());
-  const num = (v: number, d = 1) => formatNumber(v, language, d);
+  const now = new Date();
 
   return (
     <div
-      className="min-h-full bg-white p-10 font-sans text-black print:p-0"
-      style={{ colorScheme: "light" }}
+      className="doc min-h-full bg-white text-black"
+      style={{
+        fontFamily: "Arial, Helvetica, sans-serif",
+        fontSize: "11pt",
+        lineHeight: 1.4,
+        colorScheme: "light",
+      }}
     >
-      <div className="mb-6 flex items-center justify-between print:hidden">
-        <a href={window.location.pathname} className="text-sm text-select underline">
-          {t("print.back")}
-        </a>
-        <button
-          type="button"
-          onClick={() => {
-            window.print();
+      <style>{`
+        .doc { --rule: #000; }
+        .doc .page { max-width: 190mm; margin: 0 auto; padding: 14mm 0 12mm; }
+        .doc .page + .page { border-top: 1px dashed #999; }
+        .doc h1 { font-size: 20pt; font-weight: bold; margin: 0; letter-spacing: 0; }
+        .doc h2 { font-size: 12pt; font-weight: bold; margin: 0; padding: 4pt 0 3pt; border-bottom: 1.5px solid var(--rule); }
+        .doc h2 span.n { display: inline-block; width: 22pt; }
+        .doc .fields { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0; border-left: 1px solid var(--rule); border-top: 1px solid var(--rule); }
+        .doc .field { border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); display: grid; grid-template-columns: 42% 58%; }
+        .doc .field .k { background: #e6e6e6; padding: 4pt 6pt; font-size: 9pt; }
+        .doc .field .v { padding: 4pt 6pt; font-size: 10.5pt; }
+        .doc table { width: 100%; border-collapse: collapse; font-size: 10pt; }
+        .doc th { text-align: left; background: #e6e6e6; font-weight: normal; font-size: 9pt; padding: 3pt 5pt; border-bottom: 1px solid var(--rule); border-top: 1px solid var(--rule); }
+        .doc td { padding: 3pt 5pt; border-bottom: 1px solid #999; vertical-align: top; }
+        .doc td.r, .doc th.r { text-align: right; font-variant-numeric: tabular-nums; }
+        .doc .small { font-size: 9pt; color: #333; }
+        .doc .toolbar { display: flex; justify-content: space-between; align-items: center; padding: 8pt 0; border-bottom: 1px solid #999; margin-bottom: 8pt; }
+        .doc .toolbar a, .doc .toolbar button { font: inherit; font-size: 10pt; color: #000; background: #fff; border: 1px solid #000; padding: 4pt 10pt; cursor: pointer; text-decoration: none; }
+        @media print {
+          @page { size: A4; margin: 16mm 18mm; }
+          .doc .toolbar { display: none; }
+          .doc .page { max-width: none; padding: 0; break-after: page; }
+          .doc .page:last-child { break-after: auto; }
+          .doc .page + .page { border-top: none; }
+        }
+      `}</style>
+
+      <div className="page">
+        <div className="toolbar">
+          <a href={window.location.pathname}>{t("print.back")}</a>
+          <button
+            type="button"
+            onClick={() => {
+              window.print();
+            }}
+          >
+            {t("print.print")}
+          </button>
+        </div>
+
+        <header
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-end",
+            borderBottom: "2px solid #000",
+            paddingBottom: "6pt",
+            marginBottom: "10pt",
           }}
-          className="rounded-pill border border-black px-3 py-1 font-sans text-sm"
         >
-          {t("print.print")}
-        </button>
-      </div>
-      <h1 className="font-display text-title font-semibold">{building.name}</h1>
-      <p className="mb-6 text-sm text-neutral-600">{t("print.title")}</p>
-
-      <section className="mb-8 grid grid-cols-3 gap-4 text-sm">
-        <Stat
-          label={t("energy.energyClass")}
-          value={`${energy.energyClass} (${t("energy.scenario.renovated")}: ${renovated.energyClass})`}
-        />
-        <Stat
-          label={t("energy.specificHeatingDemand")}
-          value={`${num(energy.specificHeatingDemand, 0)} kWh/(m²a)`}
-        />
-        <Stat label={t("energy.heatingDemand")} value={`${num(energy.heatingDemand, 0)} kWh/a`} />
-        <Stat label={t("energy.transmissionLoss")} value={`${num(energy.transmissionLoss)} W/K`} />
-        <Stat label={t("energy.envelopeArea")} value={formatArea(energy.envelopeArea, language)} />
-        <Stat
-          label={t("energy.windowToWall")}
-          value={`${num(energy.windowToWallRatio * 100, 0)} %`}
-        />
-      </section>
-
-      {building.storeys.map((storey) => (
-        <section key={storey.id} className="mb-8 break-inside-avoid">
-          <h2 className="mb-2 text-lg font-semibold">
-            {storey.name}{" "}
-            <span className="font-normal text-neutral-500">
-              ({formatMetres(storey.height, language)})
-            </span>
-          </h2>
-          <div className="grid grid-cols-[1fr_1fr] gap-6">
-            <StoreyPlan storey={storey} />
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-black text-left">
-                  <th className="py-1">{t("room.title")}</th>
-                  <th className="py-1">{t("room.zone")}</th>
-                  <th className="py-1 text-right">{t("room.area")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {storey.rooms.map((r) => (
-                  <tr key={r.id} className="border-b border-neutral-300">
-                    <td className="py-1">{r.name}</td>
-                    <td className="py-1">
-                      {building.zones.find((z) => z.id === r.zoneId)?.name ?? ""}
-                    </td>
-                    <td className="py-1 text-right font-num">{formatArea(r.area, language)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div>
+            <div className="small">{t("print.title")}</div>
+            <h1>{building.name}</h1>
           </div>
-        </section>
+          <div className="small" style={{ textAlign: "right" }}>
+            <div>
+              {t("print.issued")}: <time dateTime={now.toISOString()}>{dateTime(now)}</time>
+            </div>
+            <div>{t("print.generatedBy")}</div>
+          </div>
+        </header>
+        <p
+          className="small"
+          style={{ border: "1px solid #000", padding: "4pt 6pt", margin: "0 0 10pt" }}
+        >
+          {t("print.disclaimer")}
+        </p>
+
+        <h2>
+          <span className="n">1</span>
+          {t("print.section.building")}
+        </h2>
+        <BuildingFields building={building} energy={energy} />
+
+        <h2 style={{ marginTop: "12pt" }}>
+          <span className="n">2</span>
+          {t("print.section.energy")}
+        </h2>
+        <EnergyTable current={energy} renovated={renovated} />
+        <Scale current={energy} renovated={renovated} />
+
+        <h2 style={{ marginTop: "12pt" }}>
+          <span className="n">3</span>
+          {t("print.section.elements")}
+        </h2>
+        <ElementsTable energy={energy} />
+      </div>
+
+      {building.storeys.map((storey, i) => (
+        <div className="page" key={storey.id}>
+          <h2>
+            <span className="n">{4 + i}</span>
+            {t("print.section.storey")}: {storey.name}
+          </h2>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "10pt",
+              marginTop: "8pt",
+            }}
+          >
+            <StoreyPlan storey={storey} />
+            <div>
+              <div className="fields" style={{ gridTemplateColumns: "1fr", marginBottom: "8pt" }}>
+                <Field k={t("storey.height")} v={`${num(storey.height, 2)} m`} />
+                <Field k={t("storey.openings")} v={String(storey.openings.length)} />
+                <Field k={t("storey.rooms")} v={String(storey.rooms.length)} />
+                <Field
+                  k={t("room.area")}
+                  v={`${num(
+                    storey.rooms.reduce((s, r) => s + r.area, 0),
+                    2,
+                  )} m²`}
+                />
+              </div>
+              <table>
+                <thead>
+                  <tr>
+                    <th>{t("room.title")}</th>
+                    <th>{t("room.zone")}</th>
+                    <th className="r">{t("room.area")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {storey.rooms.map((r) => (
+                    <tr key={r.id}>
+                      <td>{r.name}</td>
+                      <td>
+                        {building.zones.find((z) => z.id === r.zoneId)?.name ??
+                          "–".replace("–", "")}
+                      </td>
+                      <td className="r">{num(r.area, 2)} m²</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       ))}
-      <p className="mt-8 text-xs text-neutral-500">{t("print.generated", { date })}</p>
-      <p className="text-xs text-neutral-500">{t("energy.assumptions")}</p>
+
+      <div className="page">
+        <h2>
+          <span className="n">{4 + building.storeys.length}</span>
+          {t("print.section.method")}
+        </h2>
+        <p className="small" style={{ marginTop: "6pt" }}>
+          {t("energy.assumptions")}
+        </p>
+        <p className="small">{t("print.methodText")}</p>
+        <p
+          className="small"
+          style={{ marginTop: "16pt", borderTop: "1px solid #999", paddingTop: "4pt" }}
+        >
+          {t("print.generated", { date: dateTime(now) })}
+        </p>
+      </div>
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Field({ k, v }: { k: string; v: string }) {
   return (
-    <div className="rounded-pill border border-neutral-300 p-2">
-      <div className="text-xs text-neutral-600">{label}</div>
-      <div className="font-num">{value}</div>
+    <div className="field">
+      <div className="k">{k}</div>
+      <div className="v">{v}</div>
     </div>
+  );
+}
+
+function BuildingFields({ building, energy }: { building: Building; energy: EnergySummary }) {
+  const t = useT();
+  const c = (id: string) => findConstruction(building.constructions, id);
+  const construction = (id: string) => {
+    const x = c(id);
+    return x ? `${x.name} (U = ${num(x.uValue, 2)} W/(m²·K))` : "";
+  };
+  const origin = building.origin;
+  const location = origin
+    ? (() => {
+        const u = toUtm(origin);
+        return `${num(origin.lat, 6)}° N, ${num(origin.lon, 6)}° E · UTM ${u.zone}N ${num(u.easting, 0)} E ${num(u.northing, 0)} N (EPSG:${epsgForZone(u.zone)})`;
+      })()
+    : t("print.notGiven");
+  const height = building.storeys.reduce((s, x) => s + x.height, 0);
+  return (
+    <div className="fields">
+      <Field k={t("building.name")} v={building.name} />
+      <Field k={t("location.title")} v={location} />
+      <Field k={t("status.storeys")} v={String(building.storeys.length)} />
+      <Field
+        k={t("status.rooms")}
+        v={String(building.storeys.reduce((s, x) => s + x.rooms.length, 0))}
+      />
+      <Field k={t("print.totalHeight")} v={`${num(height, 2)} m`} />
+      <Field k={t("energy.heatedFloorArea")} v={`${num(energy.heatedFloorArea, 2)} m²`} />
+      <Field k={t("energy.envelopeArea")} v={`${num(energy.envelopeArea, 2)} m²`} />
+      <Field k={t("energy.windowToWall")} v={`${num(energy.windowToWallRatio * 100, 0)} %`} />
+      <Field k={t("energy.wallConstruction")} v={construction(building.wallConstructionId)} />
+      <Field k={t("energy.roofConstruction")} v={construction(building.roofConstructionId)} />
+      <Field k={t("energy.floorConstruction")} v={construction(building.floorConstructionId)} />
+      <Field k={t("energy.windowDefault")} v={construction(building.windowConstructionId)} />
+    </div>
+  );
+}
+
+function EnergyTable({ current, renovated }: { current: EnergySummary; renovated: EnergySummary }) {
+  const t = useT();
+  const rows: [MessageKey, (e: EnergySummary) => string][] = [
+    ["energy.transmissionLoss", (e) => `${num(e.transmissionLoss, 1)} W/K`],
+    ["energy.specificTransmissionLoss", (e) => `${num(e.specificTransmissionLoss, 2)} W/(m²·K)`],
+    ["energy.ventilationLoss", (e) => `${num(e.ventilationLoss, 1)} W/K`],
+    ["energy.heatingDemand", (e) => `${num(e.heatingDemand, 0)} kWh/a`],
+    ["energy.specificHeatingDemand", (e) => `${num(e.specificHeatingDemand, 0)} kWh/(m²·a)`],
+    ["energy.energyClass", (e) => e.energyClass],
+  ];
+  return (
+    <table style={{ marginTop: "6pt" }}>
+      <thead>
+        <tr>
+          <th style={{ width: "50%" }}>{t("print.indicator")}</th>
+          <th className="r">{t("energy.scenario.current")}</th>
+          <th className="r">{t("energy.scenario.renovated")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map(([key, f]) => (
+          <tr key={key}>
+            <td>{t(key)}</td>
+            <td className="r">{f(current)}</td>
+            <td className="r">{f(renovated)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+/** The A+ to H scale with kWh/(m²·a) ticks and two markers, current above and renovated below. */
+function Scale({ current, renovated }: { current: EnergySummary; renovated: EnergySummary }) {
+  const t = useT();
+  const w = 560;
+  const h = 78;
+  const barY = 30;
+  const barH = 16;
+  const x = (v: number) => (Math.min(v, SCALE_MAX) / SCALE_MAX) * w;
+  const segments = CLASSES.map((c, i) => ({
+    c,
+    x0: x(i === 0 ? 0 : (CLASS_UPPER[i - 1] ?? 0)),
+    x1: x(CLASS_UPPER[i] ?? SCALE_MAX),
+  }));
+  const ticks = [0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250];
+  const marker = (v: number, label: string, above: boolean) => {
+    const px = x(v);
+    const y = above ? barY - 4 : barY + barH + 4;
+    const dir = above ? -1 : 1;
+    return (
+      <g key={label}>
+        <path d={`M${px} ${y} l${-5} ${dir * 7} h10 z`} fill="#000" />
+        <text x={px} y={y + dir * 18} fontSize="9" textAnchor="middle" fill="#000">
+          {label}: {num(v, 0)}
+        </text>
+      </g>
+    );
+  };
+  return (
+    <svg
+      viewBox={`0 0 ${w} ${h}`}
+      style={{ width: "100%", marginTop: "8pt" }}
+      role="img"
+      aria-label={`${t("energy.energyClass")} ${current.energyClass}`}
+    >
+      {segments.map((s) => (
+        <g key={s.c}>
+          <rect
+            x={s.x0}
+            y={barY}
+            width={s.x1 - s.x0}
+            height={barH}
+            fill={ENERGY_CLASS_COLORS[s.c]}
+            stroke="#000"
+            strokeWidth="0.5"
+          />
+          <text
+            x={(s.x0 + s.x1) / 2}
+            y={barY + barH - 4}
+            fontSize="9"
+            textAnchor="middle"
+            fill="#000"
+          >
+            {s.c}
+          </text>
+        </g>
+      ))}
+      {ticks.map((v) => (
+        <g key={v}>
+          <line
+            x1={x(v)}
+            y1={barY + barH}
+            x2={x(v)}
+            y2={barY + barH + 3}
+            stroke="#000"
+            strokeWidth="0.5"
+          />
+          <text x={x(v)} y={h - 2} fontSize="7" textAnchor="middle" fill="#000">
+            {v}
+          </text>
+        </g>
+      ))}
+      <text x={w - 2} y={h - 2} fontSize="7" textAnchor="end" fill="#000">
+        {"kWh/(m²·a)"}
+      </text>
+      {marker(current.specificHeatingDemand, t("energy.scenario.current"), true)}
+      {marker(renovated.specificHeatingDemand, t("energy.scenario.renovated"), false)}
+    </svg>
+  );
+}
+
+function ElementsTable({ energy }: { energy: EnergySummary }) {
+  const t = useT();
+  const categoryKey: Record<string, MessageKey> = {
+    wall: "category.wall",
+    window: "category.window",
+    door: "category.door",
+    floor: "category.floor",
+    roof: "category.roof",
+    interiorWall: "category.interiorWall",
+  };
+  // Aggregate by category and U-value so the table stays short.
+  const groups = new Map<
+    string,
+    { category: string; uValue: number; area: number; loss: number }
+  >();
+  for (const e of energy.elements) {
+    const key = `${e.category}:${e.uValue}`;
+    const g = groups.get(key) ?? { category: e.category, uValue: e.uValue, area: 0, loss: 0 };
+    g.area += e.area;
+    g.loss += e.loss;
+    groups.set(key, g);
+  }
+  const rows = [...groups.values()].sort((a, b) => b.loss - a.loss);
+  const total = rows.reduce((s, r) => s + r.loss, 0);
+  return (
+    <table style={{ marginTop: "6pt" }}>
+      <thead>
+        <tr>
+          <th>{t("print.element")}</th>
+          <th className="r">U [W/(m²·K)]</th>
+          <th className="r">A [m²]</th>
+          <th className="r">U·A [W/K]</th>
+          <th className="r">{t("print.share")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr key={`${r.category}-${r.uValue}`}>
+            <td>{t(categoryKey[r.category] ?? "category.wall")}</td>
+            <td className="r">{num(r.uValue, 2)}</td>
+            <td className="r">{num(r.area, 2)}</td>
+            <td className="r">{num(r.loss, 1)}</td>
+            <td className="r">{total > 0 ? `${num((r.loss / total) * 100, 0)} %` : ""}</td>
+          </tr>
+        ))}
+        <tr>
+          <td style={{ fontWeight: "bold" }}>{t("print.total")}</td>
+          <td />
+          <td className="r" style={{ fontWeight: "bold" }}>
+            {num(
+              rows.reduce((s, r) => s + r.area, 0),
+              2,
+            )}
+          </td>
+          <td className="r" style={{ fontWeight: "bold" }}>
+            {num(total, 1)}
+          </td>
+          <td className="r">100 %</td>
+        </tr>
+      </tbody>
+    </table>
   );
 }
 
@@ -109,28 +434,21 @@ function StoreyPlan({ storey }: { storey: Storey }) {
   const pad = 1;
   const w = max.x - min.x + 2 * pad;
   const h = max.y - min.y + 2 * pad;
-  // SVG y grows downwards; the plan's +y is north, so flip.
-  const pt = (p: { x: number; y: number }) => `${p.x - min.x + pad},${max.y - p.y + pad}`;
+  const px = (x: number) => x - min.x + pad;
+  const py = (y: number) => max.y - y + pad;
+  const pt = (p: { x: number; y: number }) => `${px(p.x)},${py(p.y)}`;
   const es = edges(building.footprint);
   return (
     <svg
       viewBox={`0 0 ${w} ${h}`}
-      className="w-full border border-neutral-300"
+      style={{ width: "100%", border: "1px solid #000" }}
       role="img"
       aria-label={storey.name}
     >
-      {storey.rooms.map((r) => {
-        const zone = building.zones.find((z) => z.id === r.zoneId);
-        return (
-          <polygon
-            key={r.id}
-            points={r.polygon.map(pt).join(" ")}
-            fill={zone?.color ?? "#f0f0f0"}
-            fillOpacity={0.5}
-            stroke="none"
-          />
-        );
-      })}
+      <rect x="0" y="0" width={w} height={h} fill="#fff" />
+      {storey.rooms.map((r) => (
+        <polygon key={r.id} points={r.polygon.map(pt).join(" ")} fill="#f2f2f2" stroke="none" />
+      ))}
       <polygon
         points={building.footprint.map(pt).join(" ")}
         fill="none"
@@ -140,10 +458,10 @@ function StoreyPlan({ storey }: { storey: Storey }) {
       {storey.interiorWalls.map((s, i) => (
         <line
           key={i}
-          x1={s.a.x - min.x + pad}
-          y1={max.y - s.a.y + pad}
-          x2={s.b.x - min.x + pad}
-          y2={max.y - s.b.y + pad}
+          x1={px(s.a.x)}
+          y1={py(s.a.y)}
+          x2={px(s.b.x)}
+          y2={py(s.b.y)}
           stroke="#000"
           strokeWidth={0.1}
         />
@@ -156,12 +474,13 @@ function StoreyPlan({ storey }: { storey: Storey }) {
         return (
           <line
             key={o.id}
-            x1={a.x - min.x + pad}
-            y1={max.y - a.y + pad}
-            x2={b.x - min.x + pad}
-            y2={max.y - b.y + pad}
-            stroke={o.kind === "door" ? "#a67c52" : "#3a86c8"}
-            strokeWidth={0.35}
+            x1={px(a.x)}
+            y1={py(a.y)}
+            x2={px(b.x)}
+            y2={py(b.y)}
+            stroke="#fff"
+            strokeWidth={0.36}
+            strokeDasharray={o.kind === "door" ? "0.3 0.15" : undefined}
           />
         );
       })}
@@ -171,18 +490,28 @@ function StoreyPlan({ storey }: { storey: Storey }) {
           { x: 0, y: 0 },
         );
         return (
-          <text
-            key={`${r.id}-l`}
-            x={c.x - min.x + pad}
-            y={max.y - c.y + pad}
-            fontSize={0.45}
-            textAnchor="middle"
-            fill="#000"
-          >
-            {r.name}
-          </text>
+          <g key={`${r.id}-l`}>
+            <text x={px(c.x)} y={py(c.y) - 0.1} fontSize={0.42} textAnchor="middle" fill="#000">
+              {r.name}
+            </text>
+            <text x={px(c.x)} y={py(c.y) + 0.45} fontSize={0.32} textAnchor="middle" fill="#333">
+              {num(r.area, 1)} m²
+            </text>
+          </g>
         );
       })}
+      {es.map((e) => (
+        <text
+          key={e.index}
+          x={px((e.a.x + e.b.x) / 2 + e.normal.x * 0.55)}
+          y={py((e.a.y + e.b.y) / 2 + e.normal.y * 0.55)}
+          fontSize={0.3}
+          textAnchor="middle"
+          fill="#000"
+        >
+          {num(e.length, 2)} m
+        </text>
+      ))}
     </svg>
   );
 }

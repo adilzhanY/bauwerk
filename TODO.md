@@ -232,3 +232,11 @@ Adilzhan's review of the redesign. Every item here overrules or refines section 
 - [x] Left panel navigation: an icon strip inside the panel switches between Storeys (with rooms), Zones, Location, Underlay and Settings. One section visible at a time, no long scroll. Each icon has a label tooltip and the active one is filled. Keyboard: arrow keys move between sections.
 - [x] Custom cursor set drawn as SVG in the Figma style (black arrow with a white outline) and applied through CSS variables: default, pointer for anything clickable, text for inputs, grab and grabbing on the canvas, crosshair for the drawing tools, horizontal resize for label scrubbing and slider thumbs, not-allowed for disabled controls. Hotspots set per cursor. Test: every cursor is valid SVG with a hotspot inside its box, and the canvas cursor changes with the active tool.
 - [x] Component tests and App tests updated, `npm run check` green, `DECISIONS.md` entry.
+
+## 18. Print view as a German building document
+
+- [x] The print view drops the interface design entirely: no rounded corners, no shadows, no pills, plain Arial or Helvetica, black rules, A4 page breaks. It follows the visual language of German building documents (Energieausweis, iSFP): numbered grey field boxes, a plain data table, the A+ to H scale with kWh/(m²·a) ticks and a marker.
+- [x] It states clearly that it is not an official Energieausweis and that the calculation is simplified.
+- [x] German conventions for every number regardless of UI language: comma decimal, point thousands, `dd.mm.yyyy`, 24 hour time `18:04`, units `m²`, `kWh/(m²·a)`, `W/(m²·K)`.
+- [x] Sections: Gebäude (data fields), Energetische Kennwerte with current and renovated markers on the scale, Bauteile (U, A, U·A per element type), one plan and room table per storey, footer with method and assumptions.
+- [x] Test: the rendered print view contains no rounded classes, shows a 24 hour time and a German date, and one section per storey.

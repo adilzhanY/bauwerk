@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { App } from "@/App";
 import { resetIds } from "@/lib/ids";
@@ -122,12 +122,21 @@ describe("App", () => {
     expect(screen.getByText("Saving")).toBeTruthy();
   });
 
-  it("renders the print view when the URL asks for it", () => {
+  it("renders the print view as a plain document with German conventions", () => {
     window.history.replaceState(null, "", "/?print=1");
-    render(<App />);
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 5, 18, 4));
+    const { container } = render(<App />);
     expect(screen.getByText("Building report")).toBeTruthy();
+    expect(screen.getByText(/Issued on/).textContent).toContain("05.09.2026, 18:04");
+    expect(container.querySelectorAll("[class*='rounded']")).toHaveLength(0);
+    expect(container.querySelectorAll("[class*='shadow']")).toHaveLength(0);
+    expect(screen.getByRole("img", { name: /Energy efficiency class/ })).toBeTruthy();
     expect(screen.getByRole("img", { name: "Ground floor" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Print" })).toBeTruthy();
+    // German number format regardless of the English interface: 80 m² floor, 268 m² envelope shown as "268".
+    expect(screen.getAllByText(/1\.234|268 m²|80 m²/).length).toBeGreaterThan(0);
+    vi.useRealTimers();
     window.history.replaceState(null, "", "/");
   });
 
