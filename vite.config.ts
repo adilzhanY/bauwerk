@@ -30,6 +30,8 @@ export default defineConfig({
     globals: true,
     environment: "jsdom",
     include: ["src/**/*.test.{ts,tsx}"],
+    // The panel tests render the whole app with jsdom; CI runners need more than the 5 s default.
+    testTimeout: 20000,
     coverage: { include: ["src/geometry/**", "src/store/**"] },
   },
 });
