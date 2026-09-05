@@ -78,7 +78,7 @@ function OtherStoreysControls() {
   const t = useT();
   const s = useEditorStore();
   const o = s.otherStoreys;
-  const showOpacity = o.above === "ghost" || o.below === "ghost";
+  const showOpacity = o.above === "ghost" || o.below === "ghost" || o.roof === "ghost";
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
@@ -108,6 +108,22 @@ function OtherStoreysControls() {
           ]}
           onChange={(below) => {
             s.setOtherStoreys({ below });
+          }}
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-muted">{t("view.roofDisplay")}</span>
+        <CustomSegmented
+          label={t("view.roofDisplay")}
+          value={o.roof}
+          options={[
+            { value: "hidden", label: t("view.storeysHidden") },
+            { value: "outline", label: t("view.storeysOutline") },
+            { value: "ghost", label: t("view.storeysGhost") },
+            { value: "solid", label: t("view.storeysSolid") },
+          ]}
+          onChange={(roof) => {
+            s.setOtherStoreys({ roof });
           }}
         />
       </div>

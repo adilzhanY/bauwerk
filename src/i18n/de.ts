@@ -413,6 +413,7 @@ export const de: Messages = {
   "view.storeysOutline": "Kontur",
   "view.storeysGhost": "Transparent",
   "view.storeysSolid": "Voll",
+  "view.roofDisplay": "Dach",
   "view.ghostOpacity": "Deckkraft transparent",
   "view.sectionCut": "Schnitt",
   "view.cutAxis": "Schnittrichtung",

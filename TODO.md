@@ -387,4 +387,5 @@ Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 - [x] Ghost opacity slider, default 15 % instead of the fixed 25 %
 - [x] Outline mode draws wall and slab edges only, no fills, no raycast
 - [x] Pure helper `storeyDisplay` with tests, UI strings in both languages
+- [x] Roof display switch: hidden, outline, ghost, solid (default outline, a selected roof is always solid)
 - [ ] Manual check: two storeys, ground floor active, rooms and windows readable

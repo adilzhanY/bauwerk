@@ -404,6 +404,7 @@ export const en = {
   "view.storeysOutline": "Outline",
   "view.storeysGhost": "Ghost",
   "view.storeysSolid": "Solid",
+  "view.roofDisplay": "Roof",
   "view.ghostOpacity": "Ghost opacity",
   "view.sectionCut": "Section cut",
   "view.cutAxis": "Cut direction",

@@ -62,6 +62,7 @@ export type Selection =
 export interface OtherStoreys {
   above: "hidden" | "outline" | "ghost";
   below: "outline" | "ghost" | "solid";
+  roof: "hidden" | "outline" | "ghost" | "solid";
   ghostOpacity: number;
 }
 
@@ -309,7 +310,7 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           showBridges: false,
           sun: { enabled: false, dayOfYear: 172, minutes: 14 * 60 },
           sectionCut: { enabled: false, axis: "horizontal", value: 1.5 },
-          otherStoreys: { above: "outline", below: "ghost", ghostOpacity: 0.15 },
+          otherStoreys: { above: "outline", below: "ghost", roof: "outline", ghostOpacity: 0.15 },
           walkthrough: false,
           mapOpacity: 0.85,
 

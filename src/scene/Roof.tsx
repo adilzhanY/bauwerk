@@ -3,7 +3,8 @@ import type { ThreeEvent } from "@react-three/fiber";
 import { BufferAttribute, BufferGeometry, ShapeUtils, Vector2 } from "three";
 import { buildRoof } from "@/geometry/roof";
 import type { RoofFace } from "@/geometry/roof";
-import { colors, INACTIVE_OPACITY } from "@/lib/colors";
+import { colors } from "@/lib/colors";
+import { Outline } from "./Outline";
 import { sameSelection, useEditorStore } from "@/store/building";
 import { selectTotalHeight } from "@/store/selectors";
 import { useHover } from "./hover";
@@ -16,14 +17,14 @@ const ROOF_THICKNESS = 0.2;
 export function Roof() {
   const building = useEditorStore((s) => s.building);
   const top = useEditorStore(selectTotalHeight);
-  const activeStoreyId = useEditorStore((s) => s.activeStoreyId);
   const select = useEditorStore((s) => s.select);
   const tool = useEditorStore((s) => s.tool);
   const selected = useEditorStore((s) => sameSelection(s.selection, { kind: "roof" }));
   const hovered = useEditorStore((s) => sameSelection(s.hovered, { kind: "roof" }));
-  const hover = useHover({ kind: "roof" }, true);
-  const topStorey = building.storeys[building.storeys.length - 1];
-  const active = topStorey?.id === activeStoreyId;
+  const other = useEditorStore((s) => s.otherStoreys);
+  // A selected roof is always drawn solid so pitch and overhang edits are visible.
+  const display = selected ? "solid" : other.roof;
+  const hover = useHover({ kind: "roof" }, display !== "outline");
 
   const geometry = useMemo(() => {
     if (building.storeys.length === 0) return null;
@@ -33,7 +34,8 @@ export function Roof() {
     return mergeAll(roof.faces.map(faceGeometry));
   }, [building, top]);
 
-  if (!geometry) return null;
+  if (!geometry || display === "hidden") return null;
+  if (display === "outline") return <Outline geometry={geometry} />;
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > 6 || tool !== "select") return;
     e.stopPropagation();
@@ -46,9 +48,9 @@ export function Roof() {
         emissive={selected ? colors.accent : "#000000"}
         emissiveIntensity={selected ? 0.3 : 0}
         roughness={0.85}
-        transparent={!active}
-        opacity={active ? 1 : INACTIVE_OPACITY + 0.35}
-        depthWrite={active}
+        transparent={display === "ghost"}
+        opacity={display === "ghost" ? Math.min(1, other.ghostOpacity + 0.35) : 1}
+        depthWrite={display !== "ghost"}
         side={2}
       />
     </mesh>

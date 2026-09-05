@@ -11,7 +11,12 @@ describe("storeyDisplay", () => {
     store.getState().addStorey();
     const b = store.getState().building;
     const [g, first, second] = b.storeys.map((s) => s.id) as [string, string, string];
-    const other = { above: "outline" as const, below: "ghost" as const, ghostOpacity: 0.15 };
+    const other = {
+      above: "outline" as const,
+      below: "ghost" as const,
+      roof: "outline" as const,
+      ghostOpacity: 0.15,
+    };
     expect(storeyDisplay(b, first, first, other)).toBe("solid");
     expect(storeyDisplay(b, second, first, other)).toBe("outline");
     expect(storeyDisplay(b, g, first, other)).toBe("ghost");
@@ -22,6 +27,7 @@ describe("storeyDisplay", () => {
     expect(store.getState().otherStoreys).toEqual({
       above: "ghost",
       below: "ghost",
+      roof: "outline",
       ghostOpacity: 0.3,
     });
   });
