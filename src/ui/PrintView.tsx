@@ -173,10 +173,7 @@ export function PrintView() {
                   {storey.rooms.map((r) => (
                     <tr key={r.id}>
                       <td>{r.name}</td>
-                      <td>
-                        {building.zones.find((z) => z.id === r.zoneId)?.name ??
-                          "–".replace("–", "")}
-                      </td>
+                      <td>{building.zones.find((z) => z.id === r.zoneId)?.name ?? ""}</td>
                       <td className="r">{num(r.area, 2)} m²</td>
                     </tr>
                   ))}
