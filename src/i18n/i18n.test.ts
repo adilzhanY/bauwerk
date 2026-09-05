@@ -14,7 +14,7 @@ describe("messages", () => {
 
   it("contains no dashes used as punctuation", () => {
     const all = [...Object.values(en), ...Object.values(de)].join("\n");
-    expect(all).not.toMatch(/[–—]/);
+    expect(all).not.toMatch(/[\u2013\u2014]/);
   });
 
   it("fills placeholders", () => {

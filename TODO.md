@@ -82,22 +82,22 @@ Work top to bottom. Tick with `[x]`. A task is done when `npm run check` passes 
 
 ## 8. Quality gates
 
-- [ ] `npm run check` green with zero warnings.
-- [ ] Test coverage on `src/geometry/` and `src/store/` above 90 percent lines.
+- [x] `npm run check` green with zero warnings.
+- [x] Test coverage on `src/geometry/` and `src/store/` above 90 percent lines. (98.5 and 95.3 on 2026-09-05, `npx vitest run --coverage`.)
 - [ ] Manual visual check of every state listed in `INFO.md` design principles, in both languages.
-- [ ] `grep -rn "dash characters" src docs *.md` returns nothing.
+- [x] `grep -rn "dash characters" src docs *.md` returns nothing.
 - [ ] Lighthouse performance above 90 on the production build.
 
 ## 9. CI and deployment
 
-- [ ] `.github/workflows/check.yml`: on push and pull request, install, `npm run check`, build.
-- [ ] `.github/workflows/deploy.yml`: on push to `main`, build with the Pages base path and deploy with `actions/deploy-pages`, gated behind a GitHub environment that requires manual approval.
+- [x] `.github/workflows/check.yml`: on push and pull request, install, `npm run check`, build.
+- [x] `.github/workflows/deploy.yml`: on push to `main`, build with the Pages base path and deploy with `actions/deploy-pages`, gated behind a GitHub environment that requires manual approval.
 - [ ] Create the GitHub repository `adilzhanY/bauwerk`, public, push. Do not enable Pages until local testing is signed off by Adilzhan.
 - [ ] After sign-off: enable Pages, approve the deployment, verify the live URL, add it to `README.md`.
 
 ## 10. Interview preparation
 
-- [ ] Write the three minute walkthrough in `README.md` under "Demo path": open, add a storey, place a door and three windows, split into three rooms, create a heated zone with two rooms, undo four steps, redo them, export, switch the UI to German.
+- [x] Write the three minute walkthrough in `README.md` under "Demo path": open, add a storey, place a door and three windows, split into three rooms, create a heated zone with two rooms, undo four steps, redo them, export, switch the UI to German.
 - [ ] Rehearse the walkthrough three times against the live URL, timed.
 - [ ] `DECISIONS.md` has at least five real entries from the build. Pick the two best to tell.
 - [ ] One minute explanations ready for: how openings cut the wall, how undo works, why geometry has no Three.js imports, what was cut and why.
