@@ -76,12 +76,19 @@ export interface EditorState {
   underlay: Underlay | null;
   /** Result of the measure tool. UI state. */
   measurement: { a: Vec2; b: Vec2 } | null;
+  /** Footprint proposal from the vision pipeline, shown over the underlay until accepted. UI state. */
+  proposal: FootprintProposal | null;
   theme: Theme;
   /** Red lines for thermal bridges. UI state. */
   showBridges: boolean;
   /** OpenStreetMap tiles on the ground when a location is set. UI state. */
   showMap: boolean;
   mapOpacity: number;
+}
+
+export interface FootprintProposal {
+  footprint: Vec2[];
+  interiorWalls: { segment: Segment; confidence: number; enabled: boolean }[];
 }
 
 export interface Underlay {
@@ -153,6 +160,10 @@ export interface EditorActions {
   setShowUValueBands: (on: boolean) => void;
   setUnderlay: (underlay: Underlay | null) => void;
   setMeasurement: (measurement: { a: Vec2; b: Vec2 } | null) => void;
+  setProposal: (proposal: FootprintProposal | null) => void;
+  toggleProposalWall: (index: number) => void;
+  /** Replaces the footprint and interior walls with the proposal in one undo step. */
+  acceptProposal: () => void;
   setTheme: (theme: Theme) => void;
   setShowMap: (on: boolean) => void;
   setShowBridges: (on: boolean) => void;
@@ -249,6 +260,7 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           showUValueBands: false,
           underlay: null,
           measurement: null,
+          proposal: null,
           theme: initial?.theme ?? "system",
           showMap: true,
           showBridges: false,
@@ -720,6 +732,43 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           setTheme: (theme) => {
             set((state) => {
               state.theme = theme;
+            });
+          },
+
+          setProposal: (proposal) => {
+            set((state) => {
+              state.proposal = proposal;
+            });
+          },
+
+          toggleProposalWall: (index) => {
+            set((state) => {
+              const w = state.proposal?.interiorWalls[index];
+              if (w) w.enabled = !w.enabled;
+            });
+          },
+
+          acceptProposal: () => {
+            const proposal = get().proposal;
+            if (!proposal) return;
+            const api = get() as unknown as EditorStore;
+            api.beginBatch();
+            try {
+              api.setFootprint(proposal.footprint);
+              const storeyId = get().activeStoreyId;
+              if (storeyId) {
+                const existing =
+                  get().building.storeys.find((st) => st.id === storeyId)?.interiorWalls.length ??
+                  0;
+                for (let i = existing - 1; i >= 0; i--) api.removeInteriorWall(storeyId, i);
+                for (const w of proposal.interiorWalls)
+                  if (w.enabled) api.addInteriorWall(storeyId, w.segment);
+              }
+            } finally {
+              api.endBatch();
+            }
+            set((state) => {
+              state.proposal = null;
             });
           },
 

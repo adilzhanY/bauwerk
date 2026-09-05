@@ -302,14 +302,14 @@ Goal: a house reads as a house, and the roof area feeds the heat loss. Answers e
 
 Goal: drop a floor plan scan and get a proposed footprint and interior walls. Answers the computer vision bullet, which has nothing behind it yet.
 
-- [ ] Pipeline in `src/geometry/vision/`, pure over pixel arrays so it runs in a worker and in tests: greyscale, adaptive threshold, morphological close, connected components, then wall line detection with a probabilistic Hough transform restricted to horizontal and vertical lines, merging of collinear segments, snapping to a detected grid pitch.
-- [ ] Outer boundary: the largest closed loop of detected lines becomes the footprint proposal; inner lines that touch the boundary or each other become interior wall proposals. Output is in image pixels with a confidence per segment.
-- [ ] Scale: the user marks one known distance on the image (reuse the underlay scale flow) or types the paper scale (1:100 at a given DPI); pixels convert to metres and snap to the 0.5 m grid.
-- [ ] Tests on synthetic plans rendered in the test: a drawn rectangle with two interior lines is recovered within one pixel; a rotated scan (2 degrees) is deskewed first and still recovered; noise speckles do not create walls.
-- [ ] Worker: the pipeline runs in a Web Worker so the interface stays responsive on a 4000 px scan; progress reported.
-- [ ] Review step in the interface: proposed lines drawn over the underlay in the selection colour, each toggleable, a confidence filter slider, "Accept" replaces the footprint and interior walls in one undo step.
+- [x] Pipeline in `src/geometry/vision/`, pure over pixel arrays so it runs in a worker and in tests: greyscale, adaptive threshold, morphological close, connected components, then wall line detection with a probabilistic Hough transform restricted to horizontal and vertical lines, merging of collinear segments, snapping to a detected grid pitch.
+- [x] Outer boundary: the largest closed loop of detected lines becomes the footprint proposal; inner lines that touch the boundary or each other become interior wall proposals. Output is in image pixels with a confidence per segment.
+- [x] Scale: the user marks one known distance on the image (reuse the underlay scale flow) or types the paper scale (1:100 at a given DPI); pixels convert to metres and snap to the 0.5 m grid.
+- [x] Tests on synthetic plans rendered in the test: a drawn rectangle with two interior lines is recovered within one pixel; a rotated scan (2 degrees) is deskewed first and still recovered; noise speckles do not create walls.
+- [x] Worker: the pipeline runs in a Web Worker so the interface stays responsive on a 4000 px scan; progress reported.
+- [x] Review step in the interface: proposed lines drawn over the underlay in the selection colour, each toggleable, a confidence filter slider, "Accept" replaces the footprint and interior walls in one undo step.
 - [ ] Stretch: a small ONNX segmentation model for walls in the browser through onnxruntime-web, behind a feature flag, compared against the classical pipeline on the test plans. Only if the classical result is not good enough on real scans.
-- [ ] `DECISIONS.md` entry on classical CV versus a model and what real scans broke.
+- [x] `DECISIONS.md` entry on classical CV versus a model and what real scans broke.
 
 ## 24. HVAC as elements
 

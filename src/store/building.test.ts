@@ -610,3 +610,34 @@ describe("roof", () => {
     expect(store.getState().building.roof?.ridgeAxis).toBe("x");
   });
 });
+
+describe("footprint proposal", () => {
+  it("acceptProposal replaces footprint and walls of the active storey in one undo step", () => {
+    const sid = storeyId();
+    store.getState().addInteriorWall(sid, { a: { x: 2, y: 0 }, b: { x: 2, y: 8 } });
+    const entries = store.getState().past.length;
+    store.getState().setProposal({
+      footprint: [
+        { x: 0, y: 0 },
+        { x: 12, y: 0 },
+        { x: 12, y: 6 },
+        { x: 0, y: 6 },
+      ],
+      interiorWalls: [
+        { segment: { a: { x: 6, y: 0 }, b: { x: 6, y: 6 } }, confidence: 0.9, enabled: true },
+        { segment: { a: { x: 0, y: 3 }, b: { x: 6, y: 3 } }, confidence: 0.4, enabled: false },
+      ],
+    });
+    store.getState().toggleProposalWall(1);
+    store.getState().acceptProposal();
+    const b = store.getState().building;
+    expect(b.footprint).toHaveLength(4);
+    expect(b.storeys[0]?.interiorWalls).toHaveLength(2);
+    expect(b.storeys[0]?.rooms).toHaveLength(3);
+    expect(store.getState().proposal).toBeNull();
+    expect(store.getState().past.length).toBe(entries + 1);
+    store.getState().undo();
+    expect(store.getState().building.footprint[1]).toEqual({ x: 10, y: 0 });
+    expect(store.getState().building.storeys[0]?.interiorWalls).toHaveLength(1);
+  });
+});

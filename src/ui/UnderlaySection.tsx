@@ -6,6 +6,7 @@ import { useEditorStore } from "@/store/building";
 import { CustomButton } from "@/components/CustomButton";
 import { CustomSection } from "@/components/CustomField";
 import { CustomNumberInput } from "@/components/CustomNumberInput";
+import { VisionSection } from "./VisionSection";
 
 /** Floor plan image on the ground for tracing. Local UI state only. */
 export function UnderlaySection() {
@@ -150,6 +151,7 @@ export function UnderlaySection() {
         </>
       )}
       <p className="text-xs text-muted">{t("underlay.local")}</p>
+      <VisionSection />
     </CustomSection>
   );
 }

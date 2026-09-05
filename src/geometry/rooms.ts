@@ -125,7 +125,17 @@ export function extractFaces(
     b: footprint[(i + 1) % footprint.length] ?? p,
   }));
   const clipped = interiorWalls.flatMap((w) => clipSegmentToPolygon(w, footprint));
-  const edges = splitSegments([...boundary, ...clipped]);
+  return facesOfSegments([...boundary, ...clipped]);
+}
+
+/**
+ * Bounded faces of the planar graph formed by any set of segments. Each face is
+ * returned counter-clockwise with spikes (dangling segments) and collinear points
+ * removed. Classic half-edge walk: at every vertex turn to the next edge clockwise
+ * from the one we arrived on, which keeps the face on the left.
+ */
+export function facesOfSegments(segments: readonly Segment[]): Vec2[][] {
+  const edges = splitSegments(segments);
 
   const points = new Map<string, Vec2>();
   const outgoing = new Map<string, HalfEdge[]>();

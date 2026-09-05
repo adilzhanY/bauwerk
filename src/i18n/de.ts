@@ -318,6 +318,21 @@ export const de: Messages = {
     "Ein Walmdach braucht einen rechteckigen Grundriss; stattdessen wird ein Satteldach gezeichnet.",
   "import.error.roofInvalid":
     "Das Dach hat eine ungültige Neigung, einen ungültigen Überstand oder eine ungültige Attika.",
+  "vision.detect": "Wände aus dem Bild erkennen",
+  "vision.running": "Bild wird analysiert",
+  "vision.step.image": "Bild laden",
+  "vision.step.threshold": "Tinte finden",
+  "vision.step.lines": "Wandlinien finden",
+  "vision.step.footprint": "Grundriss schließen",
+  "vision.none":
+    "Kein geschlossener Grundriss gefunden. Maßstab und Kontrast des Bildes prüfen oder von Hand nachzeichnen.",
+  "vision.found": "{corners} Ecken, {walls} Innenwände gefunden, Bildschieflage {skew}°",
+  "vision.confidence": "Mindestkonfidenz",
+  "vision.accept": "Grundriss und Wände übernehmen",
+  "vision.discard": "Verwerfen",
+  "vision.hint":
+    "Zuerst den Bildmaßstab mit einer gemessenen Strecke setzen. Der Vorschlag ersetzt den Grundriss und die Innenwände des aktiven Geschosses in einem Schritt.",
+  "vision.wall": "Wand {n}",
   "common.metres": "m",
   "common.squareMetres": "m²",
   "common.remove": "Entfernen",

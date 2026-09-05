@@ -7,6 +7,7 @@ import { Underlay } from "./Underlay";
 import { MapUnderlay } from "./MapUnderlay";
 import { ThermalBridges } from "./ThermalBridges";
 import { Roof } from "./Roof";
+import { ProposalOverlay } from "./ProposalOverlay";
 import { UValueBands } from "./UValueBand";
 import { useSceneColors } from "./useSceneColors";
 import { useEditorStore } from "@/store/building";
@@ -53,6 +54,7 @@ export function Viewport() {
       <Grid />
       <MapUnderlay />
       <Underlay />
+      <ProposalOverlay />
       <UValueBands />
       <ThermalBridges />
       {!planView && <Roof />}
