@@ -14,8 +14,10 @@ export interface CursorDef {
 
 const outline = 'stroke="#ffffff" stroke-width="1.5" stroke-linejoin="round"';
 const fill = 'fill="#111111"';
+/** Drawn on a 24 unit grid, rendered at CURSOR_SIZE pixels. */
+export const CURSOR_SIZE = 32;
 const wrap = (body: string) =>
-  `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">${body}</svg>`;
+  `<svg xmlns="http://www.w3.org/2000/svg" width="${CURSOR_SIZE}" height="${CURSOR_SIZE}" viewBox="0 0 24 24">${body}</svg>`;
 
 export const CURSORS: CursorDef[] = [
   {
@@ -89,7 +91,10 @@ export function cursorUrl(def: CursorDef): string {
     .replace(/'/g, "%27")
     .replace(/\(/g, "%28")
     .replace(/\)/g, "%29");
-  return `url("data:image/svg+xml,${encoded}") ${def.hotspot[0]} ${def.hotspot[1]}, ${def.fallback}`;
+  const scale = CURSOR_SIZE / 24;
+  const hx = Math.round(def.hotspot[0] * scale);
+  const hy = Math.round(def.hotspot[1] * scale);
+  return `url("data:image/svg+xml,${encoded}") ${hx} ${hy}, ${def.fallback}`;
 }
 
 /** CSS that defines the cursor variables and applies them by role and state. */

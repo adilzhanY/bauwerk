@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CURSORS, cursorCss, cursorUrl, installCursors } from "./cursors";
+import { CURSORS, CURSOR_SIZE, cursorCss, cursorUrl, installCursors } from "./cursors";
 
 describe("cursors", () => {
   it("every cursor is valid SVG with a hotspot inside its 24 px box", () => {
@@ -21,7 +21,12 @@ describe("cursors", () => {
       expect(c.hotspot[0]).toBeLessThan(24);
       expect(c.hotspot[1]).toBeGreaterThanOrEqual(0);
       expect(c.hotspot[1]).toBeLessThan(24);
-      expect(cursorUrl(c)).toMatch(/^url\("data:image\/svg\+xml,.*"\) \d+ \d+, [a-z-]+$/);
+      const url = cursorUrl(c);
+      expect(url).toMatch(/^url\("data:image\/svg\+xml,.*"\) \d+ \d+, [a-z-]+$/);
+      const [hx, hy] = /"\) (\d+) (\d+),/.exec(url)!.slice(1, 3).map(Number);
+      expect(hx).toBeLessThan(CURSOR_SIZE);
+      expect(hy).toBeLessThan(CURSOR_SIZE);
+      expect(decodeURIComponent(url)).toContain(`width="${CURSOR_SIZE}"`);
     }
   });
 

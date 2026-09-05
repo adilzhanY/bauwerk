@@ -72,17 +72,14 @@ export function CustomSegmented<V extends string>({
             onKeyDown={onKeyDown}
             className={cx(
               "relative flex items-center justify-center gap-1.5 rounded-pill text-sm transition-colors",
-              iconsOnly ? "h-11 w-11" : "h-9 flex-1 px-3",
+              iconsOnly ? (o.hint ? "h-11 px-3" : "h-11 w-11") : "h-9 flex-1 px-3",
               selected ? "bg-ink text-paper" : "text-muted hover:bg-panel-2 hover:text-ink",
             )}
           >
             {o.icon}
             {!iconsOnly && <span>{o.label}</span>}
             {iconsOnly && o.hint && (
-              <span
-                aria-hidden
-                className="absolute right-0.5 bottom-0 font-num text-xs leading-none opacity-70"
-              >
+              <span aria-hidden className="font-num text-xs leading-none opacity-70">
                 {o.hint}
               </span>
             )}

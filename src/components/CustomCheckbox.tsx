@@ -45,11 +45,11 @@ export function CustomCheckbox({
           "inline-flex shrink-0 cursor-pointer items-center transition-colors",
           variant === "switch"
             ? cx(
-                "h-4 w-7 rounded-full border p-0.5",
+                "h-6 w-11 rounded-full border p-0.5",
                 checked ? "border-ink bg-ink" : "border-line-strong bg-panel-2",
               )
             : cx(
-                "h-4 w-4 justify-center rounded-soft border",
+                "h-5 w-5 justify-center rounded-soft border",
                 checked ? "border-ink bg-ink text-paper" : "border-line-strong bg-paper",
               ),
           disabled && "cursor-not-allowed",
@@ -59,12 +59,12 @@ export function CustomCheckbox({
           <span
             aria-hidden
             className={cx(
-              "h-2.5 w-2.5 rounded-full bg-paper transition-transform",
-              checked && "translate-x-3",
+              "h-4 w-4 rounded-full bg-paper shadow-sm transition-transform",
+              checked && "translate-x-5",
             )}
           />
         ) : (
-          checked && <Check size={12} strokeWidth={3} aria-hidden />
+          checked && <Check size={14} strokeWidth={3} aria-hidden />
         )}
       </span>
       <label

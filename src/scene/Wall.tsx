@@ -19,8 +19,6 @@ interface Props {
   active: boolean;
 }
 
-const noRaycast = () => null;
-
 export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
   const target: Selection = useMemo(
     () => ({ kind: "wall", storeyId, wallIndex: wall.index }),
@@ -34,6 +32,7 @@ export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
   const select = useEditorStore((s) => s.select);
   const tool = useEditorStore((s) => s.tool);
   const addOpening = useEditorStore((s) => s.addOpening);
+  const setActiveStorey = useEditorStore((s) => s.setActiveStorey);
   const hover = useHover(target, active);
 
   // Memoised by a hash of the inputs: the wall quad, height and the openings on it.
@@ -45,7 +44,10 @@ export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
   }, [hash]);
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
-    if (!active || e.delta > 4) return;
+    if (e.delta > 6) return;
+    // A click on another storey's wall makes that storey active first, so placing
+    // an opening on the ground floor works while the first floor is active.
+    if (!active) setActiveStorey(storeyId);
     if (tool === "opening") {
       e.stopPropagation();
       const kind = e.nativeEvent.shiftKey ? "door" : "window";
@@ -71,7 +73,6 @@ export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
       geometry={geometry}
       position={[0, elevation, 0]}
       onClick={onClick}
-      raycast={active ? undefined : noRaycast}
       castShadow
       receiveShadow
       {...hover}

@@ -22,8 +22,6 @@ interface Props {
   valid: boolean;
 }
 
-const noRaycast = () => null;
-
 /** A translucent pane for windows and a slab for doors, sitting inside the wall hole. */
 export function Opening({ storeyId, wall, opening, thickness, elevation, active, valid }: Props) {
   const target: Selection = useMemo(
@@ -38,6 +36,7 @@ export function Opening({ storeyId, wall, opening, thickness, elevation, active,
   const select = useEditorStore((s) => s.select);
   const tool = useEditorStore((s) => s.tool);
   const updateOpening = useEditorStore((s) => s.updateOpening);
+  const setActiveStorey = useEditorStore((s) => s.setActiveStorey);
   const hover = useHover(target, active);
   const lock = useDragLock();
   const [dragOffset, setDragOffset] = useState<number | null>(null);
@@ -51,8 +50,9 @@ export function Opening({ storeyId, wall, opening, thickness, elevation, active,
   const yaw = yawFor(wall.direction);
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
-    if (!active) return;
+    if (e.delta > 6) return;
     e.stopPropagation();
+    if (!active) setActiveStorey(storeyId);
     select(target);
   };
 
@@ -100,7 +100,6 @@ export function Opening({ storeyId, wall, opening, thickness, elevation, active,
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      raycast={active ? undefined : noRaycast}
       {...hover}
     >
       {opening.kind === "door" ? (

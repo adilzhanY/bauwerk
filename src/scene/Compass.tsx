@@ -1,5 +1,6 @@
 import { Html, Line } from "@react-three/drei";
-import { northInPlan } from "@/geometry/geo";
+import { northInPlan, toUtm } from "@/geometry/geo";
+import { formatNumber } from "@/lib/format";
 import { bounds } from "@/geometry/polygon";
 import { useSceneColors } from "./useSceneColors";
 import { useT } from "@/i18n/useT";
@@ -10,7 +11,9 @@ export function Compass() {
   const t = useT();
   const footprint = useEditorStore((s) => s.building.footprint);
   const origin = useEditorStore((s) => s.building.origin);
+  const language = useEditorStore((s) => s.language);
   const scene = useSceneColors();
+  const utm = toUtm(origin ?? { lat: 0, lon: 0 });
   const { min, max } = bounds(footprint);
   const north = northInPlan(origin);
   const base: [number, number] = [max.x + 2, min.y - 1];
@@ -35,10 +38,22 @@ export function Compass() {
         center
         style={{ pointerEvents: "none" }}
       >
-        <span className="font-num text-xs select-none" style={{ color }}>
+        <span className="font-num text-sm font-semibold select-none" style={{ color }}>
           {t("location.north")}
         </span>
       </Html>
+      {origin && (
+        <Html position={[base[0], 0.05, base[1] + 1.2]} center style={{ pointerEvents: "none" }}>
+          <span
+            className="rounded-soft border border-line bg-paper/90 px-2 py-0.5 font-num text-xs whitespace-nowrap select-none"
+            style={{ color }}
+          >
+            {formatNumber(origin.lat, language, 5)}° N · {formatNumber(origin.lon, language, 5)}° E
+            · UTM {utm.zone}
+            {utm.north ? "N" : "S"} · {formatNumber(origin.rotation, language, 0)}°
+          </span>
+        </Html>
+      )}
     </group>
   );
 }
