@@ -1,9 +1,11 @@
 import { fromJson, toJson } from "@/geometry/export";
 import type { Building } from "@/geometry/types";
 import type { Language } from "@/i18n";
+import type { Theme } from "@/store/building";
 
 const BUILDING_KEY = "bauwerk.building";
 const LANGUAGE_KEY = "bauwerk.language";
+const THEME_KEY = "bauwerk.theme";
 
 function storage(): Storage | null {
   try {
@@ -36,4 +38,20 @@ export function saveBuilding(building: Building): void {
 
 export function clearBuilding(): void {
   storage()?.removeItem(BUILDING_KEY);
+}
+
+export function loadTheme(): Theme | null {
+  const v = storage()?.getItem(THEME_KEY);
+  return v === "light" || v === "dark" || v === "system" ? v : null;
+}
+
+export function saveTheme(theme: Theme): void {
+  storage()?.setItem(THEME_KEY, theme);
+}
+
+/** Stamps data-theme on the root element; "system" removes it so the media query decides. */
+export function applyTheme(theme: Theme): void {
+  if (typeof document === "undefined") return;
+  if (theme === "system") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = theme;
 }

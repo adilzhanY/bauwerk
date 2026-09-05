@@ -1,4 +1,4 @@
-import { saveBuilding, saveLanguage } from "@/lib/storage";
+import { applyTheme, saveBuilding, saveLanguage, saveTheme } from "@/lib/storage";
 import type { createEditorStore } from "./building";
 
 const SAVE_DELAY_MS = 300;
@@ -6,8 +6,13 @@ const SAVE_DELAY_MS = 300;
 /** Autosaves the building (debounced) and the language to localStorage. */
 export function startPersistence(store: ReturnType<typeof createEditorStore>): () => void {
   let timer: ReturnType<typeof setTimeout> | null = null;
+  applyTheme(store.getState().theme);
   return store.subscribe((state, previous) => {
     if (state.language !== previous.language) saveLanguage(state.language);
+    if (state.theme !== previous.theme) {
+      saveTheme(state.theme);
+      applyTheme(state.theme);
+    }
     if (state.building !== previous.building) {
       if (timer) clearTimeout(timer);
       timer = setTimeout(() => {

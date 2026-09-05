@@ -25,7 +25,7 @@ describe("App", () => {
   it("renders the panels and the WebGL-missing state under jsdom", () => {
     render(<App />);
     expect(screen.getByRole("heading", { name: "Storeys" })).toBeTruthy();
-    expect(screen.getByText("Properties")).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Properties" })).toBeTruthy();
     expect(screen.getByText("WebGL is not available")).toBeTruthy();
     expect(screen.getByText("Ground floor")).toBeTruthy();
   });
@@ -49,9 +49,10 @@ describe("App", () => {
 
   it("switches the whole UI to German", () => {
     render(<App />);
-    fireEvent.change(screen.getByLabelText("Language"), { target: { value: "de" } });
+    fireEvent.click(screen.getByRole("combobox", { name: "Language" }));
+    fireEvent.click(screen.getByRole("option", { name: "Deutsch" }));
     expect(screen.getByRole("heading", { name: "Geschosse" })).toBeTruthy();
-    expect(screen.getByText("Eigenschaften")).toBeTruthy();
+    expect(screen.getByRole("tab", { name: "Eigenschaften" })).toBeTruthy();
     expect(screen.getByText("WebGL ist nicht verfügbar")).toBeTruthy();
   });
 
@@ -78,7 +79,7 @@ describe("App", () => {
 
   it("commits a number typed with a comma live, as one undo step", () => {
     render(<App />);
-    const input = screen.getByLabelText("Wall thickness", { selector: "input[type=text]" });
+    const input = screen.getByLabelText("Wall thickness", { selector: "input" });
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: "0,4" } });
     expect(useEditorStore.getState().building.wallThickness).toBeCloseTo(0.4);
@@ -90,13 +91,12 @@ describe("App", () => {
 
   it("the slider updates the model on every tick and undoes as one step", () => {
     render(<App />);
-    const slider = screen.getByLabelText("Wall thickness", { selector: "input[type=range]" });
-    fireEvent.pointerDown(slider);
-    fireEvent.change(slider, { target: { value: "0.5" } });
-    expect(useEditorStore.getState().building.wallThickness).toBeCloseTo(0.5);
-    fireEvent.change(slider, { target: { value: "0.6" } });
-    expect(useEditorStore.getState().building.wallThickness).toBeCloseTo(0.6);
-    fireEvent.pointerUp(slider);
+    const slider = screen.getByRole("slider", { name: "Wall thickness" });
+    fireEvent.keyDown(slider, { key: "ArrowRight", shiftKey: true }); // 0.3 + 10 x 0.05
+    expect(useEditorStore.getState().building.wallThickness).toBeCloseTo(0.8);
+    fireEvent.keyDown(slider, { key: "ArrowLeft" });
+    expect(useEditorStore.getState().building.wallThickness).toBeCloseTo(0.75);
+    fireEvent.keyUp(slider, { key: "ArrowLeft" });
     expect(useEditorStore.getState().past).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
     expect(useEditorStore.getState().building.wallThickness).toBeCloseTo(0.3);
@@ -110,6 +110,7 @@ describe("App", () => {
 
   it("shows the energy panel with a class band and the renovated scenario", () => {
     render(<App />);
+    fireEvent.click(screen.getByRole("tab", { name: "Energy" }));
     expect(screen.getByRole("heading", { name: "Energy" })).toBeTruthy();
     expect(screen.getByLabelText(/Energy efficiency class: H/)).toBeTruthy();
     fireEvent.click(screen.getByRole("radio", { name: "Renovated" }));
@@ -133,6 +134,21 @@ describe("App", () => {
     fireEvent.keyDown(window, { key: "6" });
     expect(useEditorStore.getState().tool).toBe("measure");
     expect(screen.getByText(/read the distance/)).toBeTruthy();
+  });
+
+  it("uses no native form controls outside the components folder", () => {
+    const { container } = render(<App />);
+    fireEvent.click(screen.getByRole("tab", { name: "Energy" }));
+    expect(container.querySelectorAll("select")).toHaveLength(0);
+    expect(container.querySelectorAll("input[type=range]")).toHaveLength(0);
+    expect(container.querySelectorAll("input[type=checkbox]")).toHaveLength(0);
+    expect(container.querySelectorAll("input[type=number]")).toHaveLength(0);
+  });
+
+  it("switches the theme and stamps it on the document", () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("radio", { name: "Dark" }));
+    expect(useEditorStore.getState().theme).toBe("dark");
   });
 
   it("opens the shortcut sheet", () => {

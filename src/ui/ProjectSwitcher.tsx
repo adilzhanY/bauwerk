@@ -11,9 +11,9 @@ import {
 } from "@/sync/useSync";
 import type { ProjectSummary } from "@/sync/useSync";
 import type { SyncStatus } from "@/sync/client";
-import { IconButton } from "./controls/Button";
-import { Section } from "./controls/Field";
-import { Select } from "./controls/Select";
+import { CustomIconButton } from "@/components/CustomIconButton";
+import { CustomSection } from "@/components/CustomField";
+import { CustomSelect } from "@/components/CustomSelect";
 
 /** Only rendered when the client is built with a server URL. */
 export function ProjectSwitcher({ status }: { status: SyncStatus | "local" }) {
@@ -37,11 +37,12 @@ export function ProjectSwitcher({ status }: { status: SyncStatus | "local" }) {
     options.push({ value: current, label: current.slice(0, 8) });
 
   return (
-    <Section
+    <CustomSection
       title={t("project.title")}
       action={
-        <IconButton
+        <CustomIconButton
           label={t("project.new")}
+          size="sm"
           onClick={() => {
             void createProject().then((id) => {
               if (id) openProject(id);
@@ -49,10 +50,10 @@ export function ProjectSwitcher({ status }: { status: SyncStatus | "local" }) {
           }}
         >
           <Plus size={16} />
-        </IconButton>
+        </CustomIconButton>
       }
     >
-      <Select
+      <CustomSelect
         label={t("project.open")}
         value={current}
         options={options}
@@ -62,12 +63,12 @@ export function ProjectSwitcher({ status }: { status: SyncStatus | "local" }) {
       />
       <div className="flex items-center gap-2 text-xs text-muted">
         {status === "online" ? (
-          <Cloud size={14} className="text-accent" />
+          <Cloud size={14} className="text-ok" />
         ) : (
-          <CloudOff size={14} className="text-warning" />
+          <CloudOff size={14} className="text-mark" />
         )}
         {t(`project.status.${status}`)}
       </div>
-    </Section>
+    </CustomSection>
   );
 }

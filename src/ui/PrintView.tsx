@@ -21,7 +21,7 @@ export function PrintView() {
       style={{ colorScheme: "light" }}
     >
       <div className="mb-6 flex items-center justify-between print:hidden">
-        <a href={window.location.pathname} className="text-sm text-blue-700 underline">
+        <a href={window.location.pathname} className="text-sm text-select underline">
           {t("print.back")}
         </a>
         <button
@@ -29,12 +29,12 @@ export function PrintView() {
           onClick={() => {
             window.print();
           }}
-          className="rounded border border-black px-3 py-1 text-sm"
+          className="rounded-sm border border-black px-3 py-1 font-sans text-sm"
         >
           {t("print.print")}
         </button>
       </div>
-      <h1 className="text-title font-semibold">{building.name}</h1>
+      <h1 className="font-display text-title font-semibold">{building.name}</h1>
       <p className="mb-6 text-sm text-neutral-600">{t("print.title")}</p>
 
       <section className="mb-8 grid grid-cols-3 gap-4 text-sm">

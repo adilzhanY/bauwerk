@@ -22,7 +22,9 @@ export function Dimensions() {
       zIndexRange={[5, 0]}
       style={{ pointerEvents: "none" }}
     >
-      <span className="rounded bg-bg/80 px-1 font-mono text-xs text-fg select-none">{text}</span>
+      <span className="rounded-sm bg-paper/90 px-1 font-mono text-xs text-ink select-none">
+        {text}
+      </span>
     </Html>
   );
   return (

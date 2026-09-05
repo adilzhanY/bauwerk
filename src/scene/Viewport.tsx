@@ -5,7 +5,7 @@ import { planCamera } from "./planView";
 import { Dimensions } from "./Dimensions";
 import { Underlay } from "./Underlay";
 import { UValueBands } from "./UValueBand";
-import { colors } from "@/lib/colors";
+import { useSceneColors } from "./useSceneColors";
 import { useEditorStore } from "@/store/building";
 import { Camera } from "./Camera";
 import { Grid } from "./Grid";
@@ -19,6 +19,7 @@ export function Viewport() {
   const building = useEditorStore((s) => s.building);
   const activeStoreyId = useEditorStore((s) => s.activeStoreyId);
   const planView = useEditorStore((s) => s.planView);
+  const scene = useSceneColors();
   const activeElevation = activeStoreyId ? storeyElevation(building, activeStoreyId) : 0;
   const plan = planCamera(
     bounds(building.footprint),
@@ -32,9 +33,9 @@ export function Viewport() {
       dpr={[1, 2]}
       camera={{ position: [18, 14, 18], fov: 45, near: 0.1, far: 500 }}
       gl={{ antialias: true, preserveDrawingBuffer: false }}
-      style={{ background: colors.bg }}
+      style={{ background: scene.bg }}
     >
-      <hemisphereLight args={["#dfe6f5", "#3a3f4b", 0.9]} />
+      <hemisphereLight args={["#eef1f7", "#6b6f78", 0.9]} />
       <directionalLight
         position={[20, 30, 10]}
         intensity={1.6}

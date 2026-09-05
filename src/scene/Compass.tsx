@@ -1,7 +1,7 @@
 import { Html, Line } from "@react-three/drei";
 import { northInPlan } from "@/geometry/geo";
 import { bounds } from "@/geometry/polygon";
-import { colors } from "@/lib/colors";
+import { useSceneColors } from "./useSceneColors";
 import { useT } from "@/i18n/useT";
 import { useEditorStore } from "@/store/building";
 
@@ -10,11 +10,12 @@ export function Compass() {
   const t = useT();
   const footprint = useEditorStore((s) => s.building.footprint);
   const origin = useEditorStore((s) => s.building.origin);
+  const scene = useSceneColors();
   const { min, max } = bounds(footprint);
   const north = northInPlan(origin);
   const base: [number, number] = [max.x + 2, min.y - 1];
   const tip: [number, number] = [base[0] + north.x * 2, base[1] + north.y * 2];
-  const color = origin ? colors.accent : colors.muted;
+  const color = origin ? scene.select : scene.muted;
   return (
     <group>
       <Line

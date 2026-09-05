@@ -191,3 +191,30 @@ Only what an energy consultant needs on a site visit. No decoration.
 - [x] Photo underlay: drop an image of a floor plan onto the ground plane, scale it by marking a known distance, trace the footprint over it. Image stays local, not exported.
 - [x] Print view: a static page with plan per storey, the energy summary and the room table, for the customer meeting. Uses the browser's print to PDF.
 - [ ] Performance check after all of the above: the five storey, twenty openings per storey model still above 60 fps on the RTX 5070; measure with the browser's frame counter and write the number here.
+
+## 16. Interface redesign
+
+Goal: the editor stops looking like every generated tool of this year. Light by default with a designed dark option, a drawing office feel, no native form controls anywhere. Every control is its own component in `src/components/`, named `Custom<Name>.tsx`, with a test next to it that drives it with keyboard and pointer and checks the accessible role, the value it reports and the visual states it exposes (hover, focus, disabled, invalid). The old `src/ui/controls/` folder disappears.
+
+- [x] Design tokens in `src/index.css`: paper `#f6f6f2`, panel `#ecece6`, line `#cfd1c9`, ink `#1b1d20`, muted ink `#5b6068`, mark red `#c2431f` for warnings and markup, selection blue `#234d8f`; a dark set with the same roles. Tokens only, no colour literal in a component.
+- [x] Theme: `light | dark | system` in the store, persisted in localStorage, applied as `data-theme` on the root element, `prefers-color-scheme` honoured for system. The 3D scene follows: ground, grid and background take their colours from the theme.
+- [x] Fonts bundled locally: Archivo (headings, big numbers), IBM Plex Sans (labels, body), IBM Plex Mono (every measurement, tabular digits). Inter and JetBrains Mono removed. No external font request at runtime.
+- [x] `CustomButton`: default, primary, quiet and danger variants, optional icon, loading state, keyboard focus ring drawn with the selection colour. Test: role button, click, disabled does not fire, Enter and Space fire.
+- [x] `CustomIconButton`: square, tooltip from its label, pressed state for toggles. Test: accessible name from label, aria-pressed when toggle.
+- [x] `CustomSlider`: own track, fill and thumb, pointer capture, live value while dragging, arrow keys with Shift for ten steps, Home and End, value bubble while active. Test: role slider with aria-valuenow and min, max; keyboard changes value by step; pointer down and move along the track maps to the value; value is clamped.
+- [x] `CustomNumberInput`: mono digits, unit drawn inside, comma and dot accepted, drag on the label scrubs the value (Blender style) with Shift for fine steps, arrow keys step, invalid state in the mark colour. Test: typing commits live within range, blur clamps and snaps, scrub changes value by pixels moved, Escape reverts.
+- [x] `CustomSelect`: button showing the value, popover listbox, arrow keys, Home and End, type-ahead, Enter selects, Escape closes, closes on outside click, option can carry a colour dot or a secondary text. Test: role combobox and listbox, keyboard selection, outside click closes, the selected option has aria-selected.
+- [x] `CustomCheckbox` and `CustomToggle`: drawn box with a check mark, drawn switch. Test: role checkbox or switch, aria-checked, Space toggles, label click toggles.
+- [x] `CustomTextInput`: commit on blur or Enter, Escape reverts, optional leading icon. Test: commit and revert paths.
+- [x] `CustomSegmented`: a row of mutually exclusive options (Current / Renovated, tools). Test: role radiogroup, arrow keys move selection.
+- [x] `CustomSwatches`: the zone colour picker, radiogroup of coloured circles. Test: arrow keys, aria-checked.
+- [x] `CustomDialog`: focus trap, Escape closes, click outside closes, returns focus. Test: focus lands inside, Escape closes, Tab cycles.
+- [x] `CustomSection` and `CustomField`: section header with optional action, field with label, hint and error line. Test: label is associated with the control.
+- [x] `CustomTabs` for the right panel: Properties and Energy as tabs instead of stacked sections. Test: role tablist, arrow keys, aria-selected.
+- [x] Replace every native control in `LeftPanel`, `RightPanel`, `BottomBar`, `EnergyPanel`, `LocationSection`, `UnderlaySection`, `ProjectSwitcher`, `ShortcutSheet`, `States`. No `<select>`, `<input type="range">`, `<input type="checkbox">` or native `<button>` outside the components folder. A test greps the rendered app for those tags.
+- [x] Layout: a 56 px tool rail on the far left with icons and key hints, the left panel for storeys, rooms, zones, location, settings, the viewport, the right panel with tabs, and a mono status line at the bottom. Storey list drawn as a stacked section, active storey filled.
+- [x] Viewport chrome: room labels, dimension labels, measure labels and the compass use the new tokens and fonts, and read on both grounds.
+- [x] Print view and states (empty, WebGL, narrow) restyled with the same tokens.
+- [x] `INFO.md` design section rewritten to the new palette and type, `DECISIONS.md` entry for the change of direction.
+- [x] `npm run check` green, App tests updated.
+- [ ] A screenshot of light and dark for the README, taken by Adilzhan, and a visual pass over every panel in both themes.

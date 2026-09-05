@@ -83,7 +83,7 @@ export function MeasureTool() {
             center
             style={{ pointerEvents: "none" }}
           >
-            <span className="rounded bg-panel/90 px-1.5 py-0.5 font-mono text-xs text-warning select-none">
+            <span className="rounded-sm border border-mark bg-paper/90 px-1.5 py-0.5 font-mono text-xs text-mark select-none">
               {formatMetres(distance(a, b), language)}
             </span>
           </Html>

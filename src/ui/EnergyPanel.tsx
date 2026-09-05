@@ -8,9 +8,10 @@ import type { MessageKey } from "@/i18n";
 import { formatArea, formatNumber } from "@/lib/format";
 import { useEditorStore } from "@/store/building";
 import type { ConstructionTarget } from "@/store/building";
-import { ReadOnly } from "./controls/Field";
-import { NumberField } from "./controls/NumberField";
-import { Select } from "./controls/Select";
+import { CustomReadOnly } from "@/components/CustomField";
+import { CustomNumberInput } from "@/components/CustomNumberInput";
+import { CustomSegmented } from "@/components/CustomSegmented";
+import { CustomSelect } from "@/components/CustomSelect";
 
 const CLASSES: EnergyClass[] = ["A+", "A", "B", "C", "D", "E", "F", "G", "H"];
 
@@ -23,7 +24,6 @@ const categoryKey: Record<ConstructionCategory | "interiorWall", MessageKey> = {
   interiorWall: "category.interiorWall",
 };
 
-/** Shown in the right panel when nothing is selected. */
 export function EnergyPanel() {
   const t = useT();
   const language = useEditorStore((s) => s.language);
@@ -41,27 +41,17 @@ export function EnergyPanel() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div
-        role="radiogroup"
-        aria-label={t("energy.title")}
-        className="grid grid-cols-2 gap-1 rounded border border-border p-1"
-      >
-        {([false, true] as const).map((on) => (
-          <button
-            key={String(on)}
-            type="button"
-            role="radio"
-            aria-checked={renovated === on}
-            onClick={() => {
-              setRenovatedView(on);
-            }}
-            className={`h-7 rounded text-sm ${renovated === on ? "bg-accent/15 text-accent" : "text-muted hover:text-fg"}`}
-          >
-            {t(on ? "energy.scenario.renovated" : "energy.scenario.current")}
-          </button>
-        ))}
-      </div>
-
+      <CustomSegmented
+        label={t("energy.title")}
+        value={renovated ? "renovated" : "current"}
+        options={[
+          { value: "current", label: t("energy.scenario.current") },
+          { value: "renovated", label: t("energy.scenario.renovated") },
+        ]}
+        onChange={(v) => {
+          setRenovatedView(v === "renovated");
+        }}
+      />
       <ClassBand value={shown.energyClass} />
       <div className="grid grid-cols-2 gap-2">
         <Big
@@ -72,33 +62,42 @@ export function EnergyPanel() {
         <Big label={t("energy.heatingDemand")} value={num(shown.heatingDemand, 0)} unit="kWh/a" />
       </div>
       {renovated && current.heatingDemand > 0 && (
-        <ReadOnly label={t("energy.saving")} value={pct(saving)} />
+        <CustomReadOnly label={t("energy.saving")} value={pct(saving)} />
       )}
       <p className="text-xs leading-relaxed text-muted">{t("energy.scenario.hint")}</p>
 
-      <div className="flex flex-col gap-1.5 border-t border-border pt-3">
-        <ReadOnly
+      <div className="flex flex-col gap-1.5 border-t border-line pt-3">
+        <CustomReadOnly
           label={t("energy.transmissionLoss")}
           value={`${num(shown.transmissionLoss)} W/K`}
         />
-        <ReadOnly
+        <CustomReadOnly
           label={t("energy.specificTransmissionLoss")}
           value={`${num(shown.specificTransmissionLoss, 2)} W/(m²K)`}
         />
-        <ReadOnly label={t("energy.ventilationLoss")} value={`${num(shown.ventilationLoss)} W/K`} />
-        <ReadOnly
+        <CustomReadOnly
+          label={t("energy.ventilationLoss")}
+          value={`${num(shown.ventilationLoss)} W/K`}
+        />
+        <CustomReadOnly
           label={t("energy.envelopeArea")}
           value={formatArea(shown.envelopeArea, language)}
         />
-        <ReadOnly label={t("energy.wallArea")} value={formatArea(shown.wallNetArea, language)} />
-        <ReadOnly label={t("energy.windowArea")} value={formatArea(shown.windowArea, language)} />
-        <ReadOnly label={t("energy.doorArea")} value={formatArea(shown.doorArea, language)} />
-        <ReadOnly label={t("energy.windowToWall")} value={pct(shown.windowToWallRatio)} />
-        <ReadOnly
+        <CustomReadOnly
+          label={t("energy.wallArea")}
+          value={formatArea(shown.wallNetArea, language)}
+        />
+        <CustomReadOnly
+          label={t("energy.windowArea")}
+          value={formatArea(shown.windowArea, language)}
+        />
+        <CustomReadOnly label={t("energy.doorArea")} value={formatArea(shown.doorArea, language)} />
+        <CustomReadOnly label={t("energy.windowToWall")} value={pct(shown.windowToWallRatio)} />
+        <CustomReadOnly
           label={t("energy.heatedFloorArea")}
           value={formatArea(shown.heatedFloorArea, language)}
         />
-        <ReadOnly label={t("energy.heatedVolume")} value={`${num(shown.heatedVolume)} m³`} />
+        <CustomReadOnly label={t("energy.heatedVolume")} value={`${num(shown.heatedVolume)} m³`} />
       </div>
 
       <Orientations summary={shown} />
@@ -115,12 +114,12 @@ function ClassBand({ value }: { value: EnergyClass }) {
   return (
     <div className="flex flex-col gap-1">
       <span className="text-xs font-medium text-muted">{t("energy.energyClass")}</span>
-      <div className="flex gap-0.5" aria-label={`${t("energy.energyClass")}: ${value}`}>
+      <div className="flex gap-0.5" role="img" aria-label={`${t("energy.energyClass")}: ${value}`}>
         {CLASSES.map((c) => (
           <div
             key={c}
-            className={`flex h-7 flex-1 items-center justify-center rounded-sm font-mono text-xs ${c === value ? "ring-2 ring-fg" : "opacity-50"}`}
-            style={{ background: ENERGY_CLASS_COLORS[c], color: "#0f1115" }}
+            className={`flex h-7 flex-1 items-center justify-center rounded-sm font-mono text-xs ${c === value ? "ring-2 ring-ink ring-offset-1 ring-offset-panel" : "opacity-40"}`}
+            style={{ background: ENERGY_CLASS_COLORS[c], color: "#1b1d20" }}
           >
             {c}
           </div>
@@ -132,10 +131,10 @@ function ClassBand({ value }: { value: EnergyClass }) {
 
 function Big({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <div className="rounded border border-border bg-bg p-2">
+    <div className="rounded-sm border border-line bg-paper p-2">
       <div className="text-xs text-muted">{label}</div>
-      <div className="font-mono text-xl text-fg">{value}</div>
-      <div className="text-xs text-muted">{unit}</div>
+      <div className="font-display text-xl font-semibold text-ink">{value}</div>
+      <div className="font-mono text-xs text-muted">{unit}</div>
     </div>
   );
 }
@@ -156,13 +155,13 @@ function Orientations({ summary }: { summary: EnergySummary }) {
     }
   }
   return (
-    <div className="flex flex-col gap-1 border-t border-border pt-3">
+    <div className="flex flex-col gap-1 border-t border-line pt-3">
       <span className="text-xs font-medium text-muted">{t("energy.byOrientation")}</span>
       {(["N", "E", "S", "W"] as const).map((o) => {
         const b = totals[o];
         const ratio = b.wall > 0 ? b.window / b.wall : 0;
         return (
-          <ReadOnly
+          <CustomReadOnly
             key={o}
             label={t(`orientation.${o}`)}
             value={`${formatArea(b.window, language)} (${formatNumber(ratio * 100, language, 0)} %)`}
@@ -179,7 +178,7 @@ function Zones({ summary }: { summary: EnergySummary }) {
   const zones = useEditorStore((s) => s.building.zones);
   if (summary.zones.length === 0) return null;
   return (
-    <div className="flex flex-col gap-1 border-t border-border pt-3">
+    <div className="flex flex-col gap-1 border-t border-line pt-3">
       <span className="text-xs font-medium text-muted">{t("energy.byZone")}</span>
       {summary.zones.map((z) => {
         const zone = zones.find((x) => x.id === z.zoneId);
@@ -189,10 +188,16 @@ function Zones({ summary }: { summary: EnergySummary }) {
             className="flex items-baseline justify-between gap-2 text-xs"
           >
             <span className="flex items-center gap-1.5 text-muted">
-              {zone && <span className="h-2 w-2 rounded-full" style={{ background: zone.color }} />}
+              {zone && (
+                <span
+                  aria-hidden
+                  className="h-2 w-2 rounded-full"
+                  style={{ background: zone.color }}
+                />
+              )}
               {zone?.name ?? t("zone.none")}
             </span>
-            <span className="font-mono text-fg">
+            <span className="font-mono text-ink">
               {formatArea(z.floorArea, language)} · {formatNumber(z.transmissionLoss, language, 1)}{" "}
               W/K
             </span>
@@ -210,7 +215,7 @@ function Assignments() {
   const options = (category: ConstructionCategory) =>
     building.constructions
       .filter((c) => c.category === category)
-      .map((c) => ({ value: c.id, label: `${c.name} (${c.uValue})` }));
+      .map((c) => ({ value: c.id, label: c.name, detail: String(c.uValue) }));
   const rows: {
     label: MessageKey;
     target: ConstructionTarget;
@@ -249,9 +254,9 @@ function Assignments() {
     },
   ];
   return (
-    <div className="flex flex-col gap-2 border-t border-border pt-3">
+    <div className="flex flex-col gap-2 border-t border-line pt-3">
       {rows.map((r) => (
-        <Select
+        <CustomSelect
           key={r.label}
           label={t(r.label)}
           value={r.value}
@@ -267,16 +272,19 @@ function Assignments() {
 
 function Constructions() {
   const t = useT();
+  const language = useEditorStore((s) => s.language);
   const constructions = useEditorStore((s) => s.building.constructions);
   const update = useEditorStore((s) => s.updateConstruction);
+  const beginBatch = useEditorStore((s) => s.beginBatch);
+  const endBatch = useEditorStore((s) => s.endBatch);
   return (
-    <details className="border-t border-border pt-3">
-      <summary className="cursor-pointer text-xs font-medium text-muted">
+    <details className="border-t border-line pt-3">
+      <summary className="cursor-pointer text-xs font-medium text-muted select-none">
         {t("energy.constructions")} ({t("energy.uValue")}, {t("energy.uValueUnit")})
       </summary>
       <div className="mt-2 flex flex-col gap-2">
         {constructions.map((c) => (
-          <NumberField
+          <CustomNumberInput
             key={c.id}
             label={`${t(categoryKey[c.category])}: ${c.name}`}
             value={c.uValue}
@@ -284,9 +292,12 @@ function Constructions() {
             max={6}
             step={0.05}
             slider={false}
-            onCommit={(uValue) => {
+            language={language}
+            onChange={(uValue) => {
               update(c.id, { uValue });
             }}
+            onGestureStart={beginBatch}
+            onGestureEnd={endBatch}
           />
         ))}
       </div>
@@ -314,17 +325,17 @@ export function ConstructionSelect({
     constructions.find((c) => c.id === value) ?? bestInCategory(constructions, category);
   return (
     <>
-      <Select
+      <CustomSelect
         label={t("energy.construction")}
         value={value}
         options={constructions
           .filter((c) => c.category === category)
-          .map((c) => ({ value: c.id, label: `${c.name} (${c.uValue})` }))}
+          .map((c) => ({ value: c.id, label: c.name, detail: String(c.uValue) }))}
         onChange={(id) => {
           assign(target, id);
         }}
       />
-      <ReadOnly
+      <CustomReadOnly
         label={t("energy.elementLoss")}
         value={`${formatNumber((chosen?.uValue ?? 0) * area, language, 2)} W/K`}
       />

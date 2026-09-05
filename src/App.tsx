@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Viewport } from "@/scene/Viewport";
 import { useEditorStore } from "@/store/building";
+import { hasWebGL } from "@/lib/webgl";
+import { useSync } from "@/sync/useSync";
 import { BottomBar } from "@/ui/BottomBar";
 import { LeftPanel } from "@/ui/LeftPanel";
-import { RightPanel } from "@/ui/RightPanel";
-import { hasWebGL } from "@/lib/webgl";
-import { EmptyState, TooNarrow, WebGLMissing } from "@/ui/States";
-import { useKeyboardShortcuts } from "@/ui/useKeyboardShortcuts";
-import { useSync } from "@/sync/useSync";
 import { PrintView } from "@/ui/PrintView";
+import { RightPanel } from "@/ui/RightPanel";
+import { EmptyState, TooNarrow, WebGLMissing } from "@/ui/States";
+import { ToolRail } from "@/ui/ToolRail";
+import { useKeyboardShortcuts } from "@/ui/useKeyboardShortcuts";
 
 const MIN_WIDTH = 1024;
 
@@ -42,13 +43,14 @@ export function App() {
   if (width < MIN_WIDTH) return <TooNarrow />;
 
   return (
-    <div className="grid h-full grid-cols-[280px_1fr_300px] grid-rows-[1fr_40px]">
+    <div className="grid h-full grid-cols-[56px_300px_1fr_320px] grid-rows-[1fr_40px] bg-paper">
+      <ToolRail />
       <LeftPanel syncStatus={sync.status} />
-      <main className="relative min-w-0 bg-bg">
+      <main className="relative min-w-0 bg-paper">
         {!hasStoreys ? <EmptyState /> : webgl ? <Viewport /> : <WebGLMissing />}
       </main>
       <RightPanel />
-      <div className="col-span-3">
+      <div className="col-span-4">
         <BottomBar actor={sync.status === "local" ? null : sync} />
       </div>
     </div>

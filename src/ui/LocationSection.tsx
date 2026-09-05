@@ -6,9 +6,10 @@ import { useT } from "@/i18n/useT";
 import type { MessageKey } from "@/i18n";
 import { formatNumber } from "@/lib/format";
 import { useEditorStore } from "@/store/building";
-import { Button } from "./controls/Button";
-import { ReadOnly, Section } from "./controls/Field";
-import { NumberField } from "./controls/NumberField";
+import { CustomButton } from "@/components/CustomButton";
+import { CustomCheckbox } from "@/components/CustomCheckbox";
+import { CustomReadOnly, CustomSection } from "@/components/CustomField";
+import { CustomNumberInput } from "@/components/CustomNumberInput";
 
 const BERLIN = { lat: 52.516275, lon: 13.377704, rotation: 0 };
 
@@ -18,6 +19,8 @@ export function LocationSection() {
   const building = useEditorStore((s) => s.building);
   const setOrigin = useEditorStore((s) => s.setOrigin);
   const setFootprint = useEditorStore((s) => s.setFootprint);
+  const beginBatch = useEditorStore((s) => s.beginBatch);
+  const endBatch = useEditorStore((s) => s.endBatch);
   const fileInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<MessageKey | null>(null);
   const origin = building.origin;
@@ -46,23 +49,21 @@ export function LocationSection() {
   };
 
   const utm = origin ? toUtm(origin) : null;
+  const batch = { onGestureStart: beginBatch, onGestureEnd: endBatch };
 
   return (
-    <Section title={t("location.title")}>
-      <label className="flex items-center gap-2 text-sm text-fg">
-        <input
-          type="checkbox"
-          checked={origin !== undefined}
-          onChange={(e) => {
-            setOrigin(e.target.checked ? BERLIN : undefined);
-          }}
-          className="accent-accent"
-        />
-        {t("location.enabled")}
-      </label>
+    <CustomSection title={t("location.title")}>
+      <CustomCheckbox
+        variant="switch"
+        label={t("location.enabled")}
+        checked={origin !== undefined}
+        onChange={(on) => {
+          setOrigin(on ? BERLIN : undefined);
+        }}
+      />
       {origin && utm && (
         <>
-          <NumberField
+          <CustomNumberInput
             label={t("location.lat")}
             value={origin.lat}
             min={-90}
@@ -70,11 +71,13 @@ export function LocationSection() {
             step={0.000001}
             slider={false}
             unit="°"
-            onCommit={(lat) => {
+            language={language}
+            onChange={(lat) => {
               setOrigin({ ...origin, lat });
             }}
+            {...batch}
           />
-          <NumberField
+          <CustomNumberInput
             label={t("location.lon")}
             value={origin.lon}
             min={-180}
@@ -82,39 +85,49 @@ export function LocationSection() {
             step={0.000001}
             slider={false}
             unit="°"
-            onCommit={(lon) => {
+            language={language}
+            onChange={(lon) => {
               setOrigin({ ...origin, lon });
             }}
+            {...batch}
           />
-          <NumberField
+          <CustomNumberInput
             label={t("location.rotation")}
             value={origin.rotation}
             min={0}
             max={359}
             step={1}
             unit="°"
-            onCommit={(rotation) => {
+            language={language}
+            onChange={(rotation) => {
               setOrigin({ ...origin, rotation });
             }}
+            {...batch}
           />
-          <ReadOnly
+          <CustomReadOnly
             label={`${t("location.utm")} ${utm.zone}${utm.north ? "N" : "S"} (EPSG:${epsgForZone(utm.zone)})`}
             value={`${formatNumber(utm.easting, language, 1)} E, ${formatNumber(utm.northing, language, 1)} N`}
           />
-          <Button variant="ghost" icon={<Download size={14} />} onClick={onExport}>
+          <CustomButton
+            variant="quiet"
+            className="self-start"
+            icon={<Download size={14} />}
+            onClick={onExport}
+          >
             {t("location.exportGeoJson")}
-          </Button>
+          </CustomButton>
         </>
       )}
-      <Button
-        variant="ghost"
+      <CustomButton
+        variant="quiet"
+        className="self-start"
         icon={<Upload size={14} />}
         onClick={() => {
           fileInput.current?.click();
         }}
       >
         {t("location.importGeoJson")}
-      </Button>
+      </CustomButton>
       <input
         ref={fileInput}
         type="file"
@@ -129,10 +142,10 @@ export function LocationSection() {
       />
       <p className="text-xs text-muted">{t("location.importHint")}</p>
       {error && (
-        <p role="alert" className="text-xs text-warning">
+        <p role="alert" className="text-xs text-mark">
           {t(error)}
         </p>
       )}
-    </Section>
+    </CustomSection>
   );
 }

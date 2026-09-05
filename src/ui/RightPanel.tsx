@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { validateOpening } from "@/geometry/openings";
 import type { OpeningError } from "@/geometry/openings";
@@ -8,12 +9,15 @@ import type { MessageKey } from "@/i18n";
 import { formatArea, formatMetres, formatNumber } from "@/lib/format";
 import { useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
-import { Button } from "./controls/Button";
-import { ColorSwatches } from "./controls/ColorSwatches";
-import { ReadOnly, Section } from "./controls/Field";
-import { NumberField } from "./controls/NumberField";
-import { Select } from "./controls/Select";
-import { TextField } from "./controls/TextField";
+import { CustomButton } from "@/components/CustomButton";
+import { CustomCheckbox } from "@/components/CustomCheckbox";
+import { CustomReadOnly, CustomSection } from "@/components/CustomField";
+import { CustomNumberInput } from "@/components/CustomNumberInput";
+import { CustomSegmented } from "@/components/CustomSegmented";
+import { CustomSelect } from "@/components/CustomSelect";
+import { CustomSwatches } from "@/components/CustomSwatches";
+import { CustomTabPanel, CustomTabs } from "@/components/CustomTabs";
+import { CustomTextInput } from "@/components/CustomTextInput";
 import { ConstructionSelect, EnergyPanel } from "./EnergyPanel";
 
 const openingErrorKey: Record<OpeningError, MessageKey> = {
@@ -26,25 +30,48 @@ const openingErrorKey: Record<OpeningError, MessageKey> = {
   negativeSill: "opening.error.negativeSill",
 };
 
+type Tab = "properties" | "energy";
+
 export function RightPanel() {
   const t = useT();
   const selection = useEditorStore((s) => s.selection);
+  const [tab, setTab] = useState<Tab>("properties");
+  const [lastSelection, setLastSelection] = useState(selection);
+  if (selection !== lastSelection) {
+    // A fresh selection brings the properties tab forward.
+    setLastSelection(selection);
+    if (selection) setTab("properties");
+  }
   return (
-    <aside className="flex h-full flex-col overflow-y-auto border-l border-border bg-panel">
-      {selection ? (
-        <Section title={t("panel.properties")}>
-          <Properties selection={selection} />
-        </Section>
-      ) : (
-        <>
-          <Section title={t("panel.properties")}>
-            <p className="text-sm text-muted">{t("properties.empty")}</p>
-          </Section>
-          <Section title={t("energy.title")}>
-            <EnergyPanel />
-          </Section>
-        </>
-      )}
+    <aside className="flex h-full min-h-0 flex-col border-l border-line bg-panel">
+      <CustomTabs
+        label={t("panel.properties")}
+        value={tab}
+        tabs={[
+          { value: "properties", label: t("tabs.properties") },
+          { value: "energy", label: t("tabs.energy") },
+        ]}
+        onChange={setTab}
+      />
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        {tab === "properties" ? (
+          <CustomTabPanel value="properties">
+            <CustomSection title={t("panel.properties")} first>
+              {selection ? (
+                <Properties selection={selection} />
+              ) : (
+                <p className="text-sm text-muted">{t("properties.empty")}</p>
+              )}
+            </CustomSection>
+          </CustomTabPanel>
+        ) : (
+          <CustomTabPanel value="energy">
+            <CustomSection title={t("energy.title")} first>
+              <EnergyPanel />
+            </CustomSection>
+          </CustomTabPanel>
+        )}
+      </div>
     </aside>
   );
 }
@@ -72,53 +99,88 @@ function useStorey(storeyId: string): Storey | undefined {
   return useEditorStore((s) => s.building.storeys.find((st) => st.id === storeyId));
 }
 
+function useBatch() {
+  const beginBatch = useEditorStore((s) => s.beginBatch);
+  const endBatch = useEditorStore((s) => s.endBatch);
+  return { onGestureStart: beginBatch, onGestureEnd: endBatch };
+}
+
 function Title({ children }: { children: string }) {
-  return <h3 className="text-base font-semibold text-fg">{children}</h3>;
+  return <h3 className="font-display text-lg font-semibold text-ink">{children}</h3>;
+}
+
+function RemoveButton({
+  label,
+  onClick,
+  disabled,
+  title,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+  title?: string;
+}) {
+  return (
+    <CustomButton
+      variant="danger"
+      icon={<Trash2 size={14} />}
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      className="mt-2 self-start"
+    >
+      {label}
+    </CustomButton>
+  );
 }
 
 function VertexProperties({ index }: { index: number }) {
   const t = useT();
+  const language = useEditorStore((s) => s.language);
   const footprint = useEditorStore((s) => s.building.footprint);
   const setFootprintVertex = useEditorStore((s) => s.setFootprintVertex);
   const removeFootprintVertex = useEditorStore((s) => s.removeFootprintVertex);
+  const batch = useBatch();
   const vertex = footprint[index];
   if (!vertex) return null;
+  const m = t("common.metres");
   return (
     <>
       <Title>{t("vertex.title", { n: index + 1 })}</Title>
-      <NumberField
+      <CustomNumberInput
         label={t("vertex.x")}
         value={vertex.x}
         min={-50}
         max={50}
         step={0.5}
-        unit={t("common.metres")}
-        onCommit={(x) => {
+        unit={m}
+        language={language}
+        onChange={(x) => {
           setFootprintVertex(index, { x, y: vertex.y });
         }}
+        {...batch}
       />
-      <NumberField
+      <CustomNumberInput
         label={t("vertex.y")}
         value={vertex.y}
         min={-50}
         max={50}
         step={0.5}
-        unit={t("common.metres")}
-        onCommit={(y) => {
+        unit={m}
+        language={language}
+        onChange={(y) => {
           setFootprintVertex(index, { x: vertex.x, y });
         }}
+        {...batch}
       />
-      <Button
-        variant="danger"
-        icon={<Trash2 size={14} />}
+      <RemoveButton
+        label={t("vertex.remove")}
         disabled={footprint.length <= 3}
         title={footprint.length <= 3 ? t("vertex.cannotRemove") : undefined}
         onClick={() => {
           removeFootprintVertex(index);
         }}
-      >
-        {t("vertex.remove")}
-      </Button>
+      />
     </>
   );
 }
@@ -133,14 +195,13 @@ function WallProperties({ storeyId, wallIndex }: { storeyId: string; wallIndex: 
   const edge = edges(footprint)[wallIndex];
   if (!edge || !storey) return null;
   const onWall = storey.openings.filter((o) => o.wallIndex === wallIndex);
-  const count = onWall.length;
   const netArea = edge.length * storey.height - onWall.reduce((a, o) => a + o.width * o.height, 0);
   return (
     <>
       <Title>{t("wall.title", { n: wallIndex + 1 })}</Title>
-      <ReadOnly label={t("wall.length")} value={formatMetres(edge.length, language)} />
-      <ReadOnly label={t("wall.thickness")} value={formatMetres(thickness, language)} />
-      <ReadOnly label={t("wall.openings")} value={String(count)} />
+      <CustomReadOnly label={t("wall.length")} value={formatMetres(edge.length, language)} />
+      <CustomReadOnly label={t("wall.thickness")} value={formatMetres(thickness, language)} />
+      <CustomReadOnly label={t("wall.openings")} value={String(onWall.length)} />
       <ConstructionSelect
         category="wall"
         value={wallConstructionId}
@@ -154,12 +215,14 @@ function WallProperties({ storeyId, wallIndex }: { storeyId: string; wallIndex: 
 
 function OpeningProperties({ storeyId, openingId }: { storeyId: string; openingId: string }) {
   const t = useT();
+  const language = useEditorStore((s) => s.language);
   const footprint = useEditorStore((s) => s.building.footprint);
   const storey = useStorey(storeyId);
   const updateOpening = useEditorStore((s) => s.updateOpening);
   const removeOpening = useEditorStore((s) => s.removeOpening);
   const windowConstructionId = useEditorStore((s) => s.building.windowConstructionId);
   const doorConstructionId = useEditorStore((s) => s.building.doorConstructionId);
+  const batch = useBatch();
   const opening = storey?.openings.find((o) => o.id === openingId);
   const edge = opening ? edges(footprint)[opening.wallIndex] : undefined;
   if (!storey || !opening || !edge) return null;
@@ -179,7 +242,7 @@ function OpeningProperties({ storeyId, openingId }: { storeyId: string; openingI
       {errors.length > 0 && (
         <div
           role="alert"
-          className="rounded border border-warning/60 bg-warning/10 p-2 text-xs text-warning"
+          className="rounded-sm border border-mark bg-mark-soft p-2 text-xs text-mark"
         >
           <p className="font-medium">{t("opening.invalid")}</p>
           <ul className="mt-1 list-disc pl-4">
@@ -189,77 +252,91 @@ function OpeningProperties({ storeyId, openingId }: { storeyId: string; openingI
           </ul>
         </div>
       )}
-      <Select
-        label={t("opening.kind")}
-        value={opening.kind}
-        options={[
-          { value: "window", label: t("opening.window") },
-          { value: "door", label: t("opening.door") },
-        ]}
-        onChange={(kind) => {
-          const constructionId = kind === "door" ? doorConstructionId : windowConstructionId;
-          patch(kind === "door" ? { kind, sill: 0, constructionId } : { kind, constructionId });
-        }}
-      />
-      <NumberField
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-muted">{t("opening.kind")}</span>
+        <CustomSegmented
+          label={t("opening.kind")}
+          value={opening.kind}
+          options={[
+            { value: "window", label: t("opening.window") },
+            { value: "door", label: t("opening.door") },
+          ]}
+          onChange={(kind) => {
+            const constructionId = kind === "door" ? doorConstructionId : windowConstructionId;
+            patch(kind === "door" ? { kind, sill: 0, constructionId } : { kind, constructionId });
+          }}
+        />
+      </div>
+      <CustomNumberInput
         label={t("opening.offset")}
         value={opening.offset}
         min={0}
         max={Math.max(0, edge.length - opening.width)}
         step={0.1}
         unit={m}
+        language={language}
         invalid={has("outsideWallStart", "outsideWallEnd", "overlaps")}
-        onCommit={(offset) => {
+        onChange={(offset) => {
           patch({ offset });
         }}
+        {...batch}
       />
-      <NumberField
+      <CustomNumberInput
         label={t("opening.width")}
         value={opening.width}
         min={0.1}
         max={edge.length}
         step={0.1}
         unit={m}
+        language={language}
         invalid={has("outsideWallEnd", "overlaps", "tooSmall")}
-        onCommit={(width) => {
+        onChange={(width) => {
           patch({ width });
         }}
+        {...batch}
       />
-      <NumberField
+      <CustomNumberInput
         label={t("opening.height")}
         value={opening.height}
         min={0.1}
         max={storey.height}
         step={0.1}
         unit={m}
+        language={language}
         invalid={has("tooTall", "tooSmall")}
-        onCommit={(height) => {
+        onChange={(height) => {
           patch({ height });
         }}
+        {...batch}
       />
       {opening.kind === "window" && (
-        <NumberField
+        <CustomNumberInput
           label={t("opening.sill")}
           value={opening.sill}
           min={0}
           max={Math.max(0, storey.height - opening.height)}
           step={0.1}
           unit={m}
+          language={language}
           invalid={has("tooTall", "negativeSill")}
-          onCommit={(sill) => {
+          onChange={(sill) => {
             patch({ sill });
           }}
+          {...batch}
         />
       )}
-      <Button
-        variant="danger"
-        icon={<Trash2 size={14} />}
+      <ConstructionSelect
+        category={opening.kind}
+        value={opening.constructionId}
+        area={opening.width * opening.height}
+        target={{ kind: "opening", storeyId, id: openingId }}
+      />
+      <RemoveButton
+        label={t("opening.remove")}
         onClick={() => {
           removeOpening(storeyId, openingId);
         }}
-      >
-        {t("opening.remove")}
-      </Button>
+      />
     </>
   );
 }
@@ -274,19 +351,16 @@ function InteriorWallProperties({ storeyId, index }: { storeyId: string; index: 
   return (
     <>
       <Title>{t("interiorWall.title")}</Title>
-      <ReadOnly
+      <CustomReadOnly
         label={t("interiorWall.length")}
         value={formatMetres(distance(segment.a, segment.b), language)}
       />
-      <Button
-        variant="danger"
-        icon={<Trash2 size={14} />}
+      <RemoveButton
+        label={t("interiorWall.remove")}
         onClick={() => {
           removeInteriorWall(storeyId, index);
         }}
-      >
-        {t("interiorWall.remove")}
-      </Button>
+      />
     </>
   );
 }
@@ -303,20 +377,20 @@ function RoomProperties({ storeyId, roomId }: { storeyId: string; roomId: string
   return (
     <>
       <Title>{t("room.title")}</Title>
-      <TextField
+      <CustomTextInput
         label={t("room.name")}
         value={room.name}
         onCommit={(name) => {
           renameRoom(storeyId, roomId, name);
         }}
       />
-      <ReadOnly label={t("room.area")} value={formatArea(room.area, language)} />
-      <Select
+      <CustomReadOnly label={t("room.area")} value={formatArea(room.area, language)} />
+      <CustomSelect
         label={t("room.zone")}
         value={room.zoneId ?? ""}
         options={[
           { value: "", label: t("zone.none") },
-          ...zones.map((z: Zone) => ({ value: z.id, label: z.name })),
+          ...zones.map((z: Zone) => ({ value: z.id, label: z.name, color: z.color })),
         ]}
         onChange={(id) => {
           assignRoomToZone(storeyId, roomId, id === "" ? undefined : id);
@@ -333,47 +407,48 @@ function StoreyProperties({ storeyId }: { storeyId: string }) {
   const renameStorey = useEditorStore((s) => s.renameStorey);
   const setStoreyHeight = useEditorStore((s) => s.setStoreyHeight);
   const removeStorey = useEditorStore((s) => s.removeStorey);
+  const batch = useBatch();
   if (!storey) return null;
   const area = storey.rooms.reduce((s, r) => s + r.area, 0);
   return (
     <>
       <Title>{t("storey.title")}</Title>
-      <TextField
+      <CustomTextInput
         label={t("storey.name")}
         value={storey.name}
         onCommit={(name) => {
           renameStorey(storeyId, name);
         }}
       />
-      <NumberField
+      <CustomNumberInput
         label={t("storey.height")}
         value={storey.height}
         min={2}
         max={6}
         step={0.1}
         unit={t("common.metres")}
-        onCommit={(h) => {
+        language={language}
+        onChange={(h) => {
           setStoreyHeight(storeyId, h);
         }}
+        {...batch}
       />
-      <ReadOnly label={t("storey.openings")} value={String(storey.openings.length)} />
-      <ReadOnly label={t("storey.rooms")} value={String(storey.rooms.length)} />
-      <ReadOnly label={t("room.area")} value={formatArea(area, language)} />
-      <Button
-        variant="danger"
-        icon={<Trash2 size={14} />}
+      <CustomReadOnly label={t("storey.openings")} value={String(storey.openings.length)} />
+      <CustomReadOnly label={t("storey.rooms")} value={String(storey.rooms.length)} />
+      <CustomReadOnly label={t("room.area")} value={formatArea(area, language)} />
+      <RemoveButton
+        label={t("storey.remove")}
         onClick={() => {
           removeStorey(storeyId);
         }}
-      >
-        {t("storey.remove")}
-      </Button>
+      />
     </>
   );
 }
 
 function ZoneProperties({ zoneId }: { zoneId: string }) {
   const t = useT();
+  const language = useEditorStore((s) => s.language);
   const zone = useEditorStore((s) => s.building.zones.find((z) => z.id === zoneId));
   const roomCount = useEditorStore((s) =>
     s.building.storeys.reduce((n, st) => n + st.rooms.filter((r) => r.zoneId === zoneId).length, 0),
@@ -381,50 +456,43 @@ function ZoneProperties({ zoneId }: { zoneId: string }) {
   const updateZone = useEditorStore((s) => s.updateZone);
   const removeZone = useEditorStore((s) => s.removeZone);
   const setZoneHeated = useEditorStore((s) => s.setZoneHeated);
-  const language = useEditorStore((s) => s.language);
   if (!zone) return null;
   return (
     <>
       <Title>{t("zone.title")}</Title>
-      <TextField
+      <CustomTextInput
         label={t("zone.name")}
         value={zone.name}
         onCommit={(name) => {
           updateZone(zoneId, { name });
         }}
       />
-      <ColorSwatches
+      <CustomSwatches
         label={t("zone.color")}
         value={zone.color}
         onChange={(color) => {
           updateZone(zoneId, { color });
         }}
       />
-      <label className="flex items-center gap-2 text-sm text-fg">
-        <input
-          type="checkbox"
-          checked={zone.heated}
-          onChange={(e) => {
-            setZoneHeated(zoneId, e.target.checked);
-          }}
-          className="accent-accent"
-        />
-        {t(zone.heated ? "zone.heated" : "zone.unheated")}
-      </label>
-      <ReadOnly
+      <CustomCheckbox
+        variant="switch"
+        label={t(zone.heated ? "zone.heated" : "zone.unheated")}
+        checked={zone.heated}
+        onChange={(heated) => {
+          setZoneHeated(zoneId, heated);
+        }}
+      />
+      <CustomReadOnly
         label={t("zone.temperature")}
         value={`${formatNumber(zone.temperature, language, 0)} °C`}
       />
-      <ReadOnly label={t("zone.rooms")} value={String(roomCount)} />
-      <Button
-        variant="danger"
-        icon={<Trash2 size={14} />}
+      <CustomReadOnly label={t("zone.rooms")} value={String(roomCount)} />
+      <RemoveButton
+        label={t("zone.remove")}
         onClick={() => {
           removeZone(zoneId);
         }}
-      >
-        {t("zone.remove")}
-      </Button>
+      />
     </>
   );
 }

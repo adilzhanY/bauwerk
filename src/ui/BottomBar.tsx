@@ -1,8 +1,8 @@
 import { useRef, useState } from "react";
 import { Download, FileBox, Keyboard, Redo2, Undo2, Upload } from "lucide-react";
 import { fromJson, toJson } from "@/geometry/export";
-import { toIfc } from "@/geometry/ifc";
 import type { ImportError } from "@/geometry/export";
+import { toIfc } from "@/geometry/ifc";
 import { useT } from "@/i18n/useT";
 import type { MessageKey } from "@/i18n";
 import { formatArea } from "@/lib/format";
@@ -13,7 +13,8 @@ import {
   selectRoomCount,
   selectTotalFloorArea,
 } from "@/store/selectors";
-import { Button, IconButton } from "./controls/Button";
+import { CustomButton } from "@/components/CustomButton";
+import { CustomIconButton } from "@/components/CustomIconButton";
 import { ShortcutSheet } from "./ShortcutSheet";
 
 function fileName(name: string, extension: string): string {
@@ -40,6 +41,7 @@ interface Props {
   actor: { actor: string; color: string } | null;
 }
 
+/** Status line in mono: undo and redo, export and import, presence, counts, shortcuts. */
 export function BottomBar({ actor }: Props) {
   const t = useT();
   const presence = useEditorStore((s) => s.presence);
@@ -56,14 +58,6 @@ export function BottomBar({ actor }: Props) {
   const [error, setError] = useState<ImportError | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
-  const onExport = () => {
-    download(toJson(building), fileName(building.name, "json"), "application/json");
-  };
-  const onExportIfc = () => {
-    const name = fileName(building.name, "ifc");
-    download(toIfc(building, { fileName: name }), name, "application/x-step");
-  };
-
   const onImportFile = async (file: File) => {
     const result = fromJson(await file.text(), language);
     if (result.ok) {
@@ -75,29 +69,42 @@ export function BottomBar({ actor }: Props) {
   };
 
   return (
-    <footer className="flex h-10 items-center gap-2 border-t border-border bg-panel px-2">
-      <IconButton label={t("bar.undo")} disabled={!canUndo} onClick={undo}>
-        <Undo2 size={16} />
-      </IconButton>
-      <IconButton label={t("bar.redo")} disabled={!canRedo} onClick={redo}>
-        <Redo2 size={16} />
-      </IconButton>
-      <span className="mx-1 h-5 w-px bg-border" />
-      <Button variant="ghost" icon={<Download size={14} />} onClick={onExport}>
+    <footer className="flex h-10 items-center gap-1 border-t border-line bg-panel px-2 font-mono text-xs">
+      <CustomIconButton label={t("bar.undo")} size="sm" disabled={!canUndo} onClick={undo}>
+        <Undo2 size={15} />
+      </CustomIconButton>
+      <CustomIconButton label={t("bar.redo")} size="sm" disabled={!canRedo} onClick={redo}>
+        <Redo2 size={15} />
+      </CustomIconButton>
+      <span aria-hidden className="mx-1 h-5 w-px bg-line" />
+      <CustomButton
+        variant="quiet"
+        icon={<Download size={14} />}
+        onClick={() => {
+          download(toJson(building), fileName(building.name, "json"), "application/json");
+        }}
+      >
         {t("bar.export")}
-      </Button>
-      <Button variant="ghost" icon={<FileBox size={14} />} onClick={onExportIfc}>
+      </CustomButton>
+      <CustomButton
+        variant="quiet"
+        icon={<FileBox size={14} />}
+        onClick={() => {
+          const name = fileName(building.name, "ifc");
+          download(toIfc(building, { fileName: name }), name, "application/x-step");
+        }}
+      >
         {t("bar.exportIfc")}
-      </Button>
-      <Button
-        variant="ghost"
+      </CustomButton>
+      <CustomButton
+        variant="quiet"
         icon={<Upload size={14} />}
         onClick={() => {
           fileInput.current?.click();
         }}
       >
         {t("bar.import")}
-      </Button>
+      </CustomButton>
       <input
         ref={fileInput}
         type="file"
@@ -111,7 +118,7 @@ export function BottomBar({ actor }: Props) {
         }}
       />
       {error && (
-        <span role="alert" className="truncate text-xs text-warning">
+        <span role="alert" className="truncate font-sans text-xs text-mark">
           {t(`import.error.${error.code}` as MessageKey, { path: error.path ?? "" })}
         </span>
       )}
@@ -123,7 +130,7 @@ export function BottomBar({ actor }: Props) {
           aria-label={t("presence.title")}
         >
           <span
-            className="h-3 w-3 rounded-full ring-2 ring-fg"
+            className="h-3 w-3 rounded-full ring-2 ring-ink"
             style={{ background: actor.color }}
             title={actor.actor}
           />
@@ -135,22 +142,23 @@ export function BottomBar({ actor }: Props) {
               title={p.actor}
             />
           ))}
-          <span className="ml-1 font-mono text-xs text-muted">{actor.actor}</span>
+          <span className="ml-1 text-muted">{actor.actor}</span>
         </div>
       )}
-      <dl className="flex items-center gap-4 font-mono text-xs text-muted">
+      <dl className="flex items-center gap-4 text-muted" aria-label={t("bar.status")}>
         <Stat label={t("status.storeys")} value={String(building.storeys.length)} />
         <Stat label={t("status.rooms")} value={String(roomCount)} />
         <Stat label={t("status.area")} value={formatArea(floorArea, language)} />
       </dl>
-      <IconButton
+      <CustomIconButton
         label={t("bar.shortcuts")}
+        size="sm"
         onClick={() => {
           setSheetOpen(true);
         }}
       >
-        <Keyboard size={16} />
-      </IconButton>
+        <Keyboard size={15} />
+      </CustomIconButton>
       {sheetOpen && (
         <ShortcutSheet
           onClose={() => {
@@ -166,7 +174,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-baseline gap-1.5">
       <dt className="font-sans">{label}</dt>
-      <dd className="text-fg">{value}</dd>
+      <dd className="text-ink">{value}</dd>
     </div>
   );
 }

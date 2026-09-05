@@ -3,13 +3,14 @@ import { ImagePlus, Trash2 } from "lucide-react";
 import { distance } from "@/geometry/polygon";
 import { useT } from "@/i18n/useT";
 import { useEditorStore } from "@/store/building";
-import { Button } from "./controls/Button";
-import { Section } from "./controls/Field";
-import { NumberField } from "./controls/NumberField";
+import { CustomButton } from "@/components/CustomButton";
+import { CustomSection } from "@/components/CustomField";
+import { CustomNumberInput } from "@/components/CustomNumberInput";
 
 /** Floor plan image on the ground for tracing. Local UI state only. */
 export function UnderlaySection() {
   const t = useT();
+  const language = useEditorStore((s) => s.language);
   const underlay = useEditorStore((s) => s.underlay);
   const setUnderlay = useEditorStore((s) => s.setUnderlay);
   const measurement = useEditorStore((s) => s.measurement);
@@ -40,21 +41,26 @@ export function UnderlaySection() {
     setUnderlay({ ...underlay, widthMetres: (underlay.widthMetres * knownLength) / measured });
   };
 
+  const m = t("common.metres");
+  const set = (patch: Partial<NonNullable<typeof underlay>>) => {
+    if (underlay) setUnderlay({ ...underlay, ...patch });
+  };
+
   return (
-    <Section title={t("underlay.title")}>
-      <div className="flex gap-2">
-        <Button
-          variant="ghost"
+    <CustomSection title={t("underlay.title")}>
+      <div className="flex flex-wrap gap-2">
+        <CustomButton
+          variant="quiet"
           icon={<ImagePlus size={14} />}
           onClick={() => {
             fileInput.current?.click();
           }}
         >
           {t("underlay.load")}
-        </Button>
+        </CustomButton>
         {underlay && (
-          <Button
-            variant="ghost"
+          <CustomButton
+            variant="quiet"
             icon={<Trash2 size={14} />}
             onClick={() => {
               URL.revokeObjectURL(underlay.url);
@@ -62,7 +68,7 @@ export function UnderlaySection() {
             }}
           >
             {t("underlay.remove")}
-          </Button>
+          </CustomButton>
         )}
       </div>
       <input
@@ -79,66 +85,71 @@ export function UnderlaySection() {
       />
       {underlay && (
         <>
-          <NumberField
+          <CustomNumberInput
             label={t("underlay.width")}
             value={underlay.widthMetres}
             min={1}
             max={200}
             step={0.1}
-            unit={t("common.metres")}
-            onCommit={(widthMetres) => {
-              setUnderlay({ ...underlay, widthMetres });
+            unit={m}
+            language={language}
+            onChange={(widthMetres) => {
+              set({ widthMetres });
             }}
           />
-          <NumberField
+          <CustomNumberInput
             label={t("underlay.x")}
             value={underlay.x}
             min={-100}
             max={100}
             step={0.1}
-            unit={t("common.metres")}
-            onCommit={(x) => {
-              setUnderlay({ ...underlay, x });
+            unit={m}
+            language={language}
+            onChange={(x) => {
+              set({ x });
             }}
           />
-          <NumberField
+          <CustomNumberInput
             label={t("underlay.y")}
             value={underlay.y}
             min={-100}
             max={100}
             step={0.1}
-            unit={t("common.metres")}
-            onCommit={(y) => {
-              setUnderlay({ ...underlay, y });
+            unit={m}
+            language={language}
+            onChange={(y) => {
+              set({ y });
             }}
           />
-          <NumberField
+          <CustomNumberInput
             label={t("underlay.opacity")}
             value={underlay.opacity}
             min={0.1}
             max={1}
             step={0.05}
-            onCommit={(opacity) => {
-              setUnderlay({ ...underlay, opacity });
+            language={language}
+            onChange={(opacity) => {
+              set({ opacity });
             }}
           />
           <p className="text-xs text-muted">{t("underlay.scaleHint")}</p>
-          <NumberField
+          <CustomNumberInput
             label={t("underlay.knownLength")}
             value={knownLength}
             min={0.1}
             max={100}
             step={0.1}
-            unit={t("common.metres")}
+            unit={m}
             slider={false}
-            onCommit={setKnownLength}
+            language={language}
+            onChange={setKnownLength}
           />
-          <Button variant="default" disabled={!measurement} onClick={applyScale}>
+          <CustomButton disabled={!measurement} onClick={applyScale} className="self-start">
             {t("underlay.applyScale")}
-          </Button>
+          </CustomButton>
         </>
       )}
       <p className="text-xs text-muted">{t("underlay.local")}</p>
-    </Section>
+    </CustomSection>
   );
 }

@@ -27,11 +27,13 @@ import {
 } from "@/geometry/polygon";
 import { computeRooms } from "@/geometry/rooms";
 import { defaultRoomName, defaultStoreyName, detectLanguage } from "@/i18n";
-import { loadBuilding, loadLanguage } from "@/lib/storage";
+import { loadBuilding, loadLanguage, loadTheme } from "@/lib/storage";
 import type { Language } from "@/i18n";
 import { createId } from "@/lib/ids";
 import { history } from "./history";
 import type { HistorySlice } from "./history";
+
+export type Theme = "light" | "dark" | "system";
 
 export type Tool = "select" | "footprint" | "opening" | "interiorWall" | "zone" | "measure";
 
@@ -69,6 +71,7 @@ export interface EditorState {
   underlay: Underlay | null;
   /** Result of the measure tool. UI state. */
   measurement: { a: Vec2; b: Vec2 } | null;
+  theme: Theme;
 }
 
 export interface Underlay {
@@ -134,6 +137,7 @@ export interface EditorActions {
   setShowUValueBands: (on: boolean) => void;
   setUnderlay: (underlay: Underlay | null) => void;
   setMeasurement: (measurement: { a: Vec2; b: Vec2 } | null) => void;
+  setTheme: (theme: Theme) => void;
   /** Replaces the building with server state. Not recorded in history and clears the redo stack. */
   applyRemoteBuilding: (building: Building) => void;
   setShowGrid: (show: boolean) => void;
@@ -226,6 +230,7 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           showUValueBands: false,
           underlay: null,
           measurement: null,
+          theme: initial?.theme ?? "system",
 
           setFootprintVertex: (index, position) => {
             set((state) => {
@@ -608,6 +613,12 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             });
           },
 
+          setTheme: (theme) => {
+            set((state) => {
+              state.theme = theme;
+            });
+          },
+
           setMeasurement: (measurement) => {
             set((state) => {
               state.measurement = measurement;
@@ -678,4 +689,5 @@ const startLanguage = loadLanguage() ?? detectLanguage();
 export const useEditorStore = createEditorStore({
   language: startLanguage,
   building: loadBuilding() ?? undefined,
+  theme: loadTheme() ?? "system",
 });
