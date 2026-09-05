@@ -9,6 +9,7 @@ import { Room } from "./Room";
 import { Wall } from "./Wall";
 import { InteriorWall } from "./InteriorWall";
 import { prismGeometry } from "./three";
+import { StoreyHvac } from "./Hvac";
 
 interface Props {
   building: Building;
@@ -85,6 +86,7 @@ export function Storey({ building, storey, elevation, active }: Props) {
           active={active}
         />
       ))}
+      <StoreyHvac building={building} storey={storey} elevation={elevation} active={active} />
       {storey.rooms.map((room) => (
         <Room
           key={room.id}

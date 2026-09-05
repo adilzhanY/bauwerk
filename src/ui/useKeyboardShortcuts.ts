@@ -9,6 +9,7 @@ export const TOOL_ORDER: Tool[] = [
   "interiorWall",
   "zone",
   "measure",
+  "hvac",
 ];
 
 function inTextField(target: EventTarget | null): boolean {
@@ -50,7 +51,7 @@ export function useKeyboardShortcuts() {
       }
       const toolIndex = Number(e.key) - 1;
       const tool = TOOL_ORDER[toolIndex];
-      if (!mod && e.key >= "1" && e.key <= "6" && tool) {
+      if (!mod && e.key >= "1" && e.key <= "7" && tool) {
         s.setTool(tool);
         return;
       }

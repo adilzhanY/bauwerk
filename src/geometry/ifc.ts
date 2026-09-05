@@ -296,6 +296,53 @@ export function toIfc(building: Building, options: IfcOptions = {}): string {
       );
     });
 
+    // Heating: radiators as IfcSpaceHeater on the inner wall face, pipe runs as IfcPipeSegment per leg.
+    for (const rad of storey.radiators ?? []) {
+      const wall = walls[rad.wallIndex];
+      if (!wall) continue;
+      const t = effectiveWallThickness(building);
+      const plan = wallRect(wall, rad.offset, rad.offset + rad.width, t + 0.01, t + 0.11);
+      const heater = w.add("IFCSPACEHEATER", [
+        guid(rad.id),
+        NULL,
+        str("Radiator"),
+        NULL,
+        NULL,
+        ref(localPlacement(ctx, storeyPlacement, 0)),
+        ref(shape(ctx, extrudedSolid(ctx, plan, 0.15, 0.15 + rad.height))),
+        NULL,
+        enm("RADIATOR"),
+      ]);
+      contained.push(heater);
+      propertySet(
+        ctx,
+        `${rad.id}/pset`,
+        "Pset_SpaceHeaterTypeCommon",
+        [heater],
+        [["OutputCapacity", typed("IFCPOWERMEASURE", real(rad.power))]],
+      );
+    }
+    for (const pipe of storey.pipes ?? []) {
+      for (let i = 1; i < pipe.points.length; i++) {
+        const a = pipe.points[i - 1];
+        const b = pipe.points[i];
+        if (!a || !b) continue;
+        const plan = thickSegment(a, b, 0.05);
+        const seg = w.add("IFCPIPESEGMENT", [
+          guid(`${pipe.id}/${i}`),
+          NULL,
+          str("Pipe"),
+          NULL,
+          NULL,
+          ref(localPlacement(ctx, storeyPlacement, 0)),
+          ref(shape(ctx, extrudedSolid(ctx, plan, 0.02, 0.07))),
+          NULL,
+          enm("RIGIDSEGMENT"),
+        ]);
+        contained.push(seg);
+      }
+    }
+
     // Floor slab under the storey, roof slab over the top storey.
     const floorPlacement = localPlacement(ctx, storeyPlacement, 0);
     const floor = w.add("IFCSLAB", [
@@ -463,6 +510,46 @@ export function toIfc(building: Building, options: IfcOptions = {}): string {
       ref(ifcBuilding),
       list(storeyIds.map(ref)),
     ]);
+  }
+
+  // Heat pumps stand on the site.
+  const firstStorey = storeyIds[0];
+  for (const pump of building.heatPumps ?? []) {
+    const h = pump.kind === "air" ? 1.3 : 0.9;
+    const plan = [
+      { x: pump.position.x - 0.5, y: pump.position.y - 0.2 },
+      { x: pump.position.x + 0.5, y: pump.position.y - 0.2 },
+      { x: pump.position.x + 0.5, y: pump.position.y + 0.2 },
+      { x: pump.position.x - 0.5, y: pump.position.y + 0.2 },
+    ];
+    const unit = w.add("IFCUNITARYEQUIPMENT", [
+      guid(pump.id),
+      NULL,
+      str("Heat pump"),
+      NULL,
+      NULL,
+      ref(localPlacement(ctx, buildingPlacement, 0)),
+      ref(shape(ctx, extrudedSolid(ctx, plan, 0, h))),
+      NULL,
+      enm("AIRHANDLER"),
+    ]);
+    if (firstStorey !== undefined) {
+      w.add("IFCRELCONTAINEDINSPATIALSTRUCTURE", [
+        guid(`${pump.id}/contains`),
+        NULL,
+        NULL,
+        NULL,
+        list([ref(unit)]),
+        ref(firstStorey),
+      ]);
+    }
+    propertySet(
+      ctx,
+      `${pump.id}/pset`,
+      "Pset_UnitaryEquipmentTypeCommon",
+      [unit],
+      [["NominalHeatingCapacity", typed("IFCPOWERMEASURE", real(pump.power * 1000))]],
+    );
   }
 
   // Zones.

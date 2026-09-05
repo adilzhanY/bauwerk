@@ -10,6 +10,7 @@ import { sameSelection, useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
 import { useHover } from "./hover";
 import { mergeAll, prismGeometry } from "./three";
+import { placeRadiatorFromWallClick } from "./tools/placeRadiator";
 
 interface Props {
   storeyId: Id;
@@ -56,6 +57,11 @@ export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
       const offset = snapOffset(u - defaults.width / 2, defaults.width, wall.length);
       const id = addOpening(storeyId, { ...defaults, wallIndex: wall.index, offset });
       select({ kind: "opening", storeyId, id });
+      return;
+    }
+    if (tool === "hvac") {
+      e.stopPropagation();
+      placeRadiatorFromWallClick({ x: e.point.x, y: e.point.z }, wall.index);
       return;
     }
     if (tool === "select") {

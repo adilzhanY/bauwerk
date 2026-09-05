@@ -315,13 +315,13 @@ Goal: drop a floor plan scan and get a proposed footprint and interior walls. An
 
 Goal: the element type the posting lists and the demo left out. Answers "new element types".
 
-- [ ] Data model: `Radiator { id, storeyId, wallIndex, offset, width, height, power }`, `HeatPump { position, power, kind: "air" | "ground" }` outside the footprint, `PipeRun { storeyId, points }` on the grid. Stored on the building, validated on import (a radiator stays on its wall and never overlaps an opening).
-- [ ] Sizing: room heat load from the energy layer (transmission plus ventilation for that room at the design temperature difference, Berlin −12 °C outdoor) suggests a radiator power; the heat pump power suggests itself from the building heat load with a safety factor. Pure functions, tested.
-- [ ] Scene: radiators as slabs on the inner wall face under windows, heat pump as a box outside, pipes as lines on the floor. Selectable, with properties.
-- [ ] Tool: an HVAC tool (key 7) that places a radiator on a wall click, a heat pump on a ground click outside the footprint, and pipe runs by clicking grid points.
-- [ ] Energy tab: heat load per room versus installed radiator power, flagged when under 90 percent.
-- [ ] IFC: IfcSpaceHeater (radiators), IfcUnitaryEquipment (heat pump), IfcPipeSegment for runs, with Pset_SpaceHeaterTypeCommon OutputCapacity. Validated.
-- [ ] i18n: Heizkörper, Wärmepumpe, Rohrleitung, Heizlast, Auslegungstemperatur.
+- [x] Data model: `Radiator { id, storeyId, wallIndex, offset, width, height, power }`, `HeatPump { position, power, kind: "air" | "ground" }` outside the footprint, `PipeRun { storeyId, points }` on the grid. Stored on the building, validated on import (a radiator stays on its wall and never overlaps an opening).
+- [x] Sizing: room heat load from the energy layer (transmission plus ventilation for that room at the design temperature difference, Berlin −12 °C outdoor) suggests a radiator power; the heat pump power suggests itself from the building heat load with a safety factor. Pure functions, tested.
+- [x] Scene: radiators as slabs on the inner wall face under windows, heat pump as a box outside, pipes as lines on the floor. Selectable, with properties.
+- [x] Tool: an HVAC tool (key 7) that places a radiator on a wall click, a heat pump on a ground click outside the footprint, and pipe runs by clicking grid points.
+- [x] Energy tab: heat load per room versus installed radiator power, flagged when under 90 percent.
+- [x] IFC: IfcSpaceHeater (radiators), IfcUnitaryEquipment (heat pump), IfcPipeSegment for runs, with Pset_SpaceHeaterTypeCommon OutputCapacity. Validated.
+- [x] i18n: Heizkörper, Wärmepumpe, Rohrleitung, Heizlast, Auslegungstemperatur.
 
 ## 25. Sun and shading
 

@@ -4,9 +4,11 @@ import type {
   Building,
   GeoOrigin,
   Construction,
+  HeatPump,
   Id,
   Layer,
   Opening,
+  Radiator,
   Roof,
   Segment,
   Storey,
@@ -39,7 +41,8 @@ import type { HistorySlice } from "./history";
 
 export type Theme = "light" | "dark" | "system";
 
-export type Tool = "select" | "footprint" | "opening" | "interiorWall" | "zone" | "measure";
+export type Tool =
+  "select" | "footprint" | "opening" | "interiorWall" | "zone" | "measure" | "hvac";
 
 export type Selection =
   | { kind: "vertex"; index: number }
@@ -49,7 +52,10 @@ export type Selection =
   | { kind: "room"; storeyId: Id; id: Id }
   | { kind: "storey"; id: Id }
   | { kind: "zone"; id: Id }
-  | { kind: "roof" };
+  | { kind: "roof" }
+  | { kind: "radiator"; storeyId: Id; id: Id }
+  | { kind: "heatPump"; id: Id }
+  | { kind: "pipe"; storeyId: Id; id: Id };
 
 export interface EditorState {
   building: Building;
@@ -127,6 +133,14 @@ export interface EditorActions {
   setOrigin: (origin: GeoOrigin | undefined) => void;
   setBridgeDetail: (detail: "good" | "poor") => void;
   setRoof: (patch: Partial<Roof>) => void;
+  addRadiator: (storeyId: Id, radiator: Omit<Radiator, "id">) => Id;
+  updateRadiator: (storeyId: Id, id: Id, patch: Partial<Omit<Radiator, "id">>) => void;
+  removeRadiator: (storeyId: Id, id: Id) => void;
+  addHeatPump: (pump: Omit<HeatPump, "id">) => Id;
+  updateHeatPump: (id: Id, patch: Partial<Omit<HeatPump, "id">>) => void;
+  removeHeatPump: (id: Id) => void;
+  addPipe: (storeyId: Id, points: Vec2[]) => Id;
+  removePipe: (storeyId: Id, id: Id) => void;
   /** Replaces the footprint, for a GeoJSON import. Rooms are recomputed. */
   setFootprint: (footprint: Vec2[], origin?: GeoOrigin) => void;
   addOpening: (storeyId: Id, opening: NewOpening) => Id;
@@ -342,6 +356,15 @@ export function createEditorStore(initial?: Partial<EditorState>) {
               case "vertex":
                 actions.removeFootprintVertex(selection.index);
                 break;
+              case "radiator":
+                actions.removeRadiator(selection.storeyId, selection.id);
+                break;
+              case "heatPump":
+                actions.removeHeatPump(selection.id);
+                break;
+              case "pipe":
+                actions.removePipe(selection.storeyId, selection.id);
+                break;
               case "wall":
               case "room":
               case "roof":
@@ -387,6 +410,80 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             set((state) => {
               const storey = findStorey(state.building, storeyId);
               if (storey) storey.name = name;
+            });
+          },
+
+          addRadiator: (storeyId, radiator) => {
+            const id = createId("radiator");
+            set((state) => {
+              const storey = findStorey(state.building, storeyId);
+              if (!storey) return;
+              storey.radiators ??= [];
+              storey.radiators.push({ ...radiator, id });
+            });
+            return id;
+          },
+
+          updateRadiator: (storeyId, id, patch) => {
+            set((state) => {
+              const r = findStorey(state.building, storeyId)?.radiators?.find((x) => x.id === id);
+              if (r) Object.assign(r, patch);
+            });
+          },
+
+          removeRadiator: (storeyId, id) => {
+            set((state) => {
+              const storey = findStorey(state.building, storeyId);
+              if (!storey?.radiators) return;
+              storey.radiators = storey.radiators.filter((x) => x.id !== id);
+              if (state.selection?.kind === "radiator" && state.selection.id === id)
+                state.selection = null;
+            });
+          },
+
+          addHeatPump: (pump) => {
+            const id = createId("pump");
+            set((state) => {
+              state.building.heatPumps ??= [];
+              state.building.heatPumps.push({ ...pump, id, position: { ...pump.position } });
+            });
+            return id;
+          },
+
+          updateHeatPump: (id, patch) => {
+            set((state) => {
+              const p = state.building.heatPumps?.find((x) => x.id === id);
+              if (p) Object.assign(p, patch);
+            });
+          },
+
+          removeHeatPump: (id) => {
+            set((state) => {
+              if (!state.building.heatPumps) return;
+              state.building.heatPumps = state.building.heatPumps.filter((x) => x.id !== id);
+              if (state.selection?.kind === "heatPump" && state.selection.id === id)
+                state.selection = null;
+            });
+          },
+
+          addPipe: (storeyId, points) => {
+            const id = createId("pipe");
+            set((state) => {
+              const storey = findStorey(state.building, storeyId);
+              if (!storey || points.length < 2) return;
+              storey.pipes ??= [];
+              storey.pipes.push({ id, points: points.map((p) => ({ ...p })) });
+            });
+            return id;
+          },
+
+          removePipe: (storeyId, id) => {
+            set((state) => {
+              const storey = findStorey(state.building, storeyId);
+              if (!storey?.pipes) return;
+              storey.pipes = storey.pipes.filter((x) => x.id !== id);
+              if (state.selection?.kind === "pipe" && state.selection.id === id)
+                state.selection = null;
             });
           },
 

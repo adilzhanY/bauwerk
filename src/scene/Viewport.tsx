@@ -8,6 +8,7 @@ import { MapUnderlay } from "./MapUnderlay";
 import { ThermalBridges } from "./ThermalBridges";
 import { Roof } from "./Roof";
 import { ProposalOverlay } from "./ProposalOverlay";
+import { HeatPumps } from "./Hvac";
 import { UValueBands } from "./UValueBand";
 import { useSceneColors } from "./useSceneColors";
 import { useEditorStore } from "@/store/building";
@@ -58,6 +59,7 @@ export function Viewport() {
       <UValueBands />
       <ThermalBridges />
       {!planView && <Roof />}
+      <HeatPumps />
       <Dimensions />
       {planView && (
         <OrthographicCamera

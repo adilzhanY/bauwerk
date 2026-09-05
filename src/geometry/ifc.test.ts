@@ -245,3 +245,30 @@ describe("roof", () => {
     expect(toIfc(house())).not.toContain("IFCROOF(");
   });
 });
+
+describe("heating", () => {
+  it("radiators, pipes and heat pumps become IfcSpaceHeater, IfcPipeSegment and IfcUnitaryEquipment", () => {
+    const b = house();
+    b.storeys[0]!.radiators = [
+      { id: "rad1", wallIndex: 2, offset: 0.5, width: 1, height: 0.6, power: 1200 },
+    ];
+    b.storeys[0]!.pipes = [
+      {
+        id: "pipe1",
+        points: [
+          { x: 1, y: 1 },
+          { x: 5, y: 1 },
+          { x: 5, y: 4 },
+        ],
+      },
+    ];
+    b.heatPumps = [{ id: "hp1", position: { x: -2, y: 4 }, power: 9, kind: "air" }];
+    const text = toIfc(b);
+    const { entities } = parse(text);
+    expect(count(entities, "IFCSPACEHEATER")).toBe(1);
+    expect(count(entities, "IFCPIPESEGMENT")).toBe(2);
+    expect(count(entities, "IFCUNITARYEQUIPMENT")).toBe(1);
+    expect(text).toContain("IFCPOWERMEASURE(1200.)");
+    expect(text).toContain("IFCPOWERMEASURE(9000.)");
+  });
+});

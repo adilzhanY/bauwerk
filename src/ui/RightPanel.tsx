@@ -3,7 +3,7 @@ import { Trash2 } from "lucide-react";
 import { validateOpening } from "@/geometry/openings";
 import type { OpeningError } from "@/geometry/openings";
 import { distance, edges } from "@/geometry/polygon";
-import type { Opening, Room, Storey, Zone } from "@/geometry/types";
+import type { Opening, Radiator, Room, Storey, Zone } from "@/geometry/types";
 import { useT } from "@/i18n/useT";
 import type { MessageKey } from "@/i18n";
 import { formatArea, formatMetres, formatNumber } from "@/lib/format";
@@ -21,6 +21,13 @@ import { CustomTextInput } from "@/components/CustomTextInput";
 import { ConstructionSelect, EnergyPanel } from "./EnergyPanel";
 import { effectiveWallThickness } from "@/geometry/layers";
 import { buildRoof, roofOf } from "@/geometry/roof";
+import {
+  roomHeatLoads,
+  suggestHeatPumpPower,
+  suggestRadiatorPower,
+  validateRadiator,
+} from "@/geometry/hvac";
+import { pointInPolygon } from "@/geometry/polygon";
 
 const openingErrorKey: Record<OpeningError, MessageKey> = {
   outsideWallStart: "opening.error.outsideWallStart",
@@ -96,7 +103,226 @@ function Properties({ selection }: { selection: Selection }) {
       return <ZoneProperties zoneId={selection.id} />;
     case "roof":
       return <RoofProperties />;
+    case "radiator":
+      return <RadiatorProperties storeyId={selection.storeyId} id={selection.id} />;
+    case "heatPump":
+      return <HeatPumpProperties id={selection.id} />;
+    case "pipe":
+      return <PipeProperties storeyId={selection.storeyId} id={selection.id} />;
   }
+}
+
+function RadiatorProperties({ storeyId, id }: { storeyId: string; id: string }) {
+  const t = useT();
+  const language = useEditorStore((s) => s.language);
+  const building = useEditorStore((s) => s.building);
+  const storey = useStorey(storeyId);
+  const updateRadiator = useEditorStore((s) => s.updateRadiator);
+  const removeRadiator = useEditorStore((s) => s.removeRadiator);
+  const batch = useBatch();
+  const rad = storey?.radiators?.find((r) => r.id === id);
+  const edge = rad ? edges(building.footprint)[rad.wallIndex] : undefined;
+  if (!storey || !rad || !edge) return null;
+  const valid = validateRadiator(rad, storey, edge.length);
+  const behind = {
+    x: edge.a.x + edge.direction.x * (rad.offset + rad.width / 2) - edge.normal.x * 0.3,
+    y: edge.a.y + edge.direction.y * (rad.offset + rad.width / 2) - edge.normal.y * 0.3,
+  };
+  const room = storey.rooms.find((r) => pointInPolygon(behind, r.polygon));
+  const load = room ? roomHeatLoads(building).find((l) => l.roomId === room.id) : undefined;
+  const m = t("common.metres");
+  const patch = (p: Partial<Omit<Radiator, "id">>) => {
+    updateRadiator(storeyId, id, p);
+  };
+  return (
+    <>
+      <Title>{t("hvac.radiator")}</Title>
+      {!valid && (
+        <p
+          role="alert"
+          className="rounded-inner border border-mark bg-mark-soft px-3 py-2 text-xs text-mark"
+        >
+          {t("import.error.radiatorInvalid", { path: "" })}
+        </p>
+      )}
+      <CustomNumberInput
+        label={t("opening.offset")}
+        value={rad.offset}
+        min={0}
+        max={Math.max(0, edge.length - rad.width)}
+        step={0.1}
+        unit={m}
+        language={language}
+        invalid={!valid}
+        onChange={(offset) => {
+          patch({ offset });
+        }}
+        {...batch}
+      />
+      <CustomNumberInput
+        label={t("opening.width")}
+        value={rad.width}
+        min={0.2}
+        max={edge.length}
+        step={0.1}
+        unit={m}
+        language={language}
+        onChange={(width) => {
+          patch({ width });
+        }}
+        {...batch}
+      />
+      <CustomNumberInput
+        label={t("opening.height")}
+        value={rad.height}
+        min={0.2}
+        max={storey.height}
+        step={0.05}
+        unit={m}
+        language={language}
+        onChange={(height) => {
+          patch({ height });
+        }}
+        {...batch}
+      />
+      <CustomNumberInput
+        label={t("hvac.power")}
+        value={rad.power}
+        min={100}
+        max={5000}
+        step={50}
+        unit="W"
+        language={language}
+        onChange={(power) => {
+          patch({ power });
+        }}
+        {...batch}
+      />
+      {load && (
+        <>
+          <CustomReadOnly
+            label={`${t("hvac.heatLoad")} (${load.name})`}
+            value={`${formatNumber(load.load, language, 0)} W`}
+          />
+          <CustomReadOnly
+            label={t("hvac.suggested")}
+            value={`${formatNumber(suggestRadiatorPower(load.load), language, 0)} W`}
+          />
+        </>
+      )}
+      <RemoveButton
+        label={t("opening.remove").replace(t("opening.window"), t("hvac.radiator"))}
+        onClick={() => {
+          removeRadiator(storeyId, id);
+        }}
+      />
+    </>
+  );
+}
+
+function HeatPumpProperties({ id }: { id: string }) {
+  const t = useT();
+  const language = useEditorStore((s) => s.language);
+  const building = useEditorStore((s) => s.building);
+  const updateHeatPump = useEditorStore((s) => s.updateHeatPump);
+  const removeHeatPump = useEditorStore((s) => s.removeHeatPump);
+  const batch = useBatch();
+  const pump = building.heatPumps?.find((p) => p.id === id);
+  if (!pump) return null;
+  const suggested = suggestHeatPumpPower(building);
+  return (
+    <>
+      <Title>{t("hvac.heatPump")}</Title>
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-muted">{t("hvac.kind")}</span>
+        <CustomSegmented
+          label={t("hvac.kind")}
+          value={pump.kind}
+          options={[
+            { value: "air", label: t("hvac.air") },
+            { value: "ground", label: t("hvac.ground") },
+          ]}
+          onChange={(kind) => {
+            updateHeatPump(id, { kind });
+          }}
+        />
+      </div>
+      <CustomNumberInput
+        label={t("hvac.powerKw")}
+        value={pump.power}
+        min={2}
+        max={60}
+        step={0.5}
+        unit="kW"
+        language={language}
+        onChange={(power) => {
+          updateHeatPump(id, { power });
+        }}
+        {...batch}
+      />
+      <CustomReadOnly
+        label={t("hvac.pumpSuggestion")}
+        value={`${formatNumber(suggested, language, 1)} kW`}
+      />
+      <CustomNumberInput
+        label={t("vertex.x")}
+        value={pump.position.x}
+        min={-50}
+        max={50}
+        step={0.5}
+        unit={t("common.metres")}
+        language={language}
+        onChange={(x) => {
+          updateHeatPump(id, { position: { x, y: pump.position.y } });
+        }}
+        {...batch}
+      />
+      <CustomNumberInput
+        label={t("vertex.y")}
+        value={pump.position.y}
+        min={-50}
+        max={50}
+        step={0.5}
+        unit={t("common.metres")}
+        language={language}
+        onChange={(y) => {
+          updateHeatPump(id, { position: { x: pump.position.x, y } });
+        }}
+        {...batch}
+      />
+      <RemoveButton
+        label={t("common.remove")}
+        onClick={() => {
+          removeHeatPump(id);
+        }}
+      />
+    </>
+  );
+}
+
+function PipeProperties({ storeyId, id }: { storeyId: string; id: string }) {
+  const t = useT();
+  const language = useEditorStore((s) => s.language);
+  const storey = useStorey(storeyId);
+  const removePipe = useEditorStore((s) => s.removePipe);
+  const pipe = storey?.pipes?.find((p) => p.id === id);
+  if (!pipe) return null;
+  const length = pipe.points.reduce(
+    (s, p, i) => (i === 0 ? 0 : s + distance(pipe.points[i - 1] ?? p, p)),
+    0,
+  );
+  return (
+    <>
+      <Title>{t("hvac.pipe")}</Title>
+      <CustomReadOnly label={t("hvac.length")} value={formatMetres(length, language)} />
+      <RemoveButton
+        label={t("common.remove")}
+        onClick={() => {
+          removePipe(storeyId, id);
+        }}
+      />
+    </>
+  );
 }
 
 function RoofProperties() {

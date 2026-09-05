@@ -2,6 +2,7 @@ import { DEFAULT_ASSIGNMENT, defaultConstructions } from "./constructions";
 import { computeEnergy } from "./energy";
 import { withComputedU } from "./layers";
 import { roofOf } from "./roof";
+import { validateRadiator } from "./hvac";
 import type { EnergySummary } from "./energy";
 import { validateOpening } from "./openings";
 import { area, isCounterClockwise, isSimplePolygon, pointInPolygon, edges } from "./polygon";
@@ -40,7 +41,9 @@ export type ImportErrorCode =
   | "unknownConstruction"
   | "constructionInvalid"
   | "originInvalid"
-  | "roofInvalid";
+  | "roofInvalid"
+  | "radiatorInvalid"
+  | "heatPumpInvalid";
 
 export interface ImportError {
   code: ImportErrorCode;
@@ -210,6 +213,14 @@ export function validateBuilding(b: Building): ImportError | null {
       return { code: "unknownConstruction", path: `building.${key}` };
   }
 
+  for (const [hi, h] of (b.heatPumps ?? []).entries()) {
+    const hp = `building.heatPumps[${hi}]`;
+    const d = seen(h.id, hp);
+    if (d) return d;
+    if (!(h.power > 0) || pointInPolygon(h.position, b.footprint))
+      return { code: "heatPumpInvalid", path: hp };
+  }
+
   const wallLengths = edges(b.footprint).map((e) => e.length);
   const footprintArea = area(b.footprint);
 
@@ -233,6 +244,22 @@ export function validateBuilding(b: Building): ImportError | null {
       });
       const first = errors[0];
       if (first !== undefined) return { code: openingCode(first), path: op };
+    }
+
+    for (const [ri, rad] of (s.radiators ?? []).entries()) {
+      const rp = `${sp}.radiators[${ri}]`;
+      const d4 = seen(rad.id, rp);
+      if (d4) return d4;
+      const wallLength = wallLengths[rad.wallIndex];
+      if (wallLength === undefined || !validateRadiator(rad, s, wallLength)) {
+        return { code: "radiatorInvalid", path: rp };
+      }
+    }
+    for (const [pi, pipe] of (s.pipes ?? []).entries()) {
+      const pp = `${sp}.pipes[${pi}]`;
+      const d5 = seen(pipe.id, pp);
+      if (d5) return d5;
+      if (pipe.points.length < 2) return { code: "invalidStructure", path: pp };
     }
 
     let sum = 0;
@@ -345,6 +372,30 @@ function checkStorey(v: unknown, path: string): ImportError | null {
     const e = checkRoom(r, `${path}.rooms[${i}]`);
     if (e) return e;
   }
+  if (s.radiators !== undefined) {
+    if (!Array.isArray(s.radiators)) return bad(`${path}.radiators`);
+    for (const [i, r] of (s.radiators as unknown[]).entries()) {
+      if (
+        !isRecord(r) ||
+        !isString(r.id) ||
+        !isNumber(r.wallIndex) ||
+        !isNumber(r.offset) ||
+        !isNumber(r.width) ||
+        !isNumber(r.height) ||
+        !isNumber(r.power)
+      ) {
+        return bad(`${path}.radiators[${i}]`);
+      }
+    }
+  }
+  if (s.pipes !== undefined) {
+    if (!Array.isArray(s.pipes)) return bad(`${path}.pipes`);
+    for (const [i, p] of (s.pipes as unknown[]).entries()) {
+      if (!isRecord(p) || !isString(p.id)) return bad(`${path}.pipes[${i}]`);
+      const e = checkPolygon(p.points, `${path}.pipes[${i}].points`);
+      if (e) return e;
+    }
+  }
   return null;
 }
 
@@ -387,6 +438,21 @@ function checkBuildingShape(v: unknown, path: string): ImportError | null {
   const fp = checkPolygon(b.footprint, `${path}.footprint`);
   if (fp) return fp;
   if (!Array.isArray(b.storeys) || !Array.isArray(b.zones)) return bad(path);
+  if (b.heatPumps !== undefined) {
+    if (!Array.isArray(b.heatPumps)) return bad(`${path}.heatPumps`);
+    for (const [i, h] of (b.heatPumps as unknown[]).entries()) {
+      if (
+        !isRecord(h) ||
+        !isString(h.id) ||
+        !isNumber(h.power) ||
+        (h.kind !== "air" && h.kind !== "ground")
+      ) {
+        return bad(`${path}.heatPumps[${i}]`);
+      }
+      const e = checkVec2(h.position, `${path}.heatPumps[${i}].position`);
+      if (e) return e;
+    }
+  }
   for (const [i, s] of b.storeys.entries()) {
     const e = checkStorey(s, `${path}.storeys[${i}]`);
     if (e) return e;

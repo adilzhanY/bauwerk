@@ -4,6 +4,7 @@ import { ENERGY_CLASS_COLORS, computeEnergy } from "@/geometry/energy";
 import type { EnergyClass, EnergySummary, Orientation } from "@/geometry/energy";
 import type { ConstructionCategory } from "@/geometry/types";
 import type { BridgeType } from "@/geometry/bridges";
+import { DESIGN_OUTDOOR_TEMPERATURE, roomHeatLoads, suggestHeatPumpPower } from "@/geometry/hvac";
 import { useT } from "@/i18n/useT";
 import type { MessageKey } from "@/i18n";
 import { formatArea, formatNumber } from "@/lib/format";
@@ -99,6 +100,7 @@ export function EnergyPanel() {
         <CustomReadOnly label={t("energy.heatedVolume")} value={`${num(shown.heatedVolume)} m³`} />
       </div>
 
+      <HeatLoads />
       <Bridges summary={shown} />
       <Orientations summary={shown} />
       <Zones summary={shown} />
@@ -135,6 +137,47 @@ function Big({ label, value, unit }: { label: string; value: string; unit: strin
       <div className="text-xs text-muted">{label}</div>
       <div className="font-display text-xl font-semibold text-ink">{value}</div>
       <div className="font-num text-xs text-muted">{unit}</div>
+    </div>
+  );
+}
+
+function HeatLoads() {
+  const t = useT();
+  const language = useEditorStore((s) => s.language);
+  const building = useEditorStore((s) => s.building);
+  const loads = useMemo(() => roomHeatLoads(building), [building]);
+  if (loads.length === 0) return null;
+  const total = loads.reduce((s, l) => s + l.load, 0);
+  return (
+    <div className="flex flex-col gap-1 border-t border-line pt-3">
+      <span className="text-xs font-medium text-muted">{t("hvac.title")}</span>
+      <p className="text-xs text-muted">
+        {t("hvac.design", { inside: 20, outside: DESIGN_OUTDOOR_TEMPERATURE })}
+      </p>
+      {loads.map((l) => (
+        <div key={l.roomId} className="flex items-baseline justify-between gap-2 text-xs">
+          <span
+            className={l.installed > 0 && l.coverage < 0.9 ? "text-mark" : "text-muted"}
+            title={l.installed > 0 && l.coverage < 0.9 ? t("hvac.underSized") : undefined}
+          >
+            {l.name}
+          </span>
+          <span className="font-num text-ink">
+            {formatNumber(l.load, language, 0)} W
+            {l.installed > 0
+              ? ` · ${formatNumber(l.installed, language, 0)} W (${formatNumber(l.coverage * 100, language, 0)} %)`
+              : ""}
+          </span>
+        </div>
+      ))}
+      <CustomReadOnly
+        label={t("hvac.total")}
+        value={`${formatNumber(total / 1000, language, 1)} kW`}
+      />
+      <CustomReadOnly
+        label={t("hvac.pumpSuggestion")}
+        value={`${formatNumber(suggestHeatPumpPower(building), language, 1)} kW`}
+      />
     </div>
   );
 }

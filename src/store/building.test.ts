@@ -641,3 +641,34 @@ describe("footprint proposal", () => {
     expect(store.getState().building.storeys[0]?.interiorWalls).toHaveLength(1);
   });
 });
+
+describe("heating elements", () => {
+  it("adds, updates and removes radiators, heat pumps and pipes, all undoable", () => {
+    const sid = storeyId();
+    const rad = store
+      .getState()
+      .addRadiator(sid, { wallIndex: 0, offset: 1, width: 1, height: 0.6, power: 900 });
+    store.getState().updateRadiator(sid, rad, { power: 1200 });
+    expect(store.getState().building.storeys[0]?.radiators?.[0]?.power).toBe(1200);
+    const pump = store.getState().addHeatPump({ position: { x: -2, y: 2 }, power: 8, kind: "air" });
+    store.getState().updateHeatPump(pump, { kind: "ground" });
+    expect(store.getState().building.heatPumps?.[0]?.kind).toBe("ground");
+    const pipe = store.getState().addPipe(sid, [
+      { x: 1, y: 1 },
+      { x: 3, y: 1 },
+    ]);
+    expect(store.getState().building.storeys[0]?.pipes).toHaveLength(1);
+    store.getState().select({ kind: "pipe", storeyId: sid, id: pipe });
+    store.getState().deleteSelection();
+    expect(store.getState().building.storeys[0]?.pipes).toHaveLength(0);
+    store.getState().select({ kind: "heatPump", id: pump });
+    store.getState().deleteSelection();
+    expect(store.getState().building.heatPumps).toHaveLength(0);
+    store.getState().select({ kind: "radiator", storeyId: sid, id: rad });
+    store.getState().deleteSelection();
+    expect(store.getState().building.storeys[0]?.radiators).toHaveLength(0);
+    for (let i = 0; i < 3; i++) store.getState().undo();
+    expect(store.getState().building.storeys[0]?.pipes).toHaveLength(1);
+    expect(store.getState().building.heatPumps).toHaveLength(1);
+  });
+});

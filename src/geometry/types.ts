@@ -77,6 +77,36 @@ export interface Storey {
   /** On the grid. Define the rooms. */
   interiorWalls: Segment[];
   rooms: Room[];
+  /** Radiators on exterior walls. Optional for files written before HVAC existed. */
+  radiators?: Radiator[];
+  /** Pipe runs on the floor, polylines on the grid. */
+  pipes?: PipeRun[];
+}
+
+/** A radiator hung on the inner face of an exterior wall. */
+export interface Radiator {
+  id: Id;
+  wallIndex: number;
+  /** Metres from the wall start to the radiator's left edge. */
+  offset: number;
+  width: number;
+  height: number;
+  /** Heat output in watts at design conditions. */
+  power: number;
+}
+
+export interface PipeRun {
+  id: Id;
+  points: Vec2[];
+}
+
+export interface HeatPump {
+  id: Id;
+  /** Plan position outside the footprint. */
+  position: Vec2;
+  /** Heating capacity in kilowatts. */
+  power: number;
+  kind: "air" | "ground";
 }
 
 export interface Building {
@@ -102,6 +132,7 @@ export interface Building {
   bridgeDetail?: "good" | "poor";
   /** Roof over the top storey. Missing means a flat roof with a 0.3 m parapet. */
   roof?: Partial<Roof>;
+  heatPumps?: HeatPump[];
 }
 
 export interface Roof {
