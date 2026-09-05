@@ -8,7 +8,8 @@
     "start": "tsx src/main.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "check": "npm run typecheck && npm run test"
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "lint": "../node_modules/.bin/eslint src --max-warnings 0 --config ../eslint.config.js"
   },
   "dependencies": {
     "@nestjs/common": "^12.0.1",
