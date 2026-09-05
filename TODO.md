@@ -253,3 +253,129 @@ Goal: when a location is set, the ground shows the real surroundings from OpenSt
 - [x] Attribution: "© OpenStreetMap contributors" with a link, drawn in the viewport corner whenever a tile is visible. Required by the OSM tile usage policy.
 - [x] `INFO.md`: the external request rule gets its one exception, OSM tiles when the map is on, and the print view never includes tiles.
 - [x] Tests: tile maths, App test that the switch appears with a location and the attribution renders when on.
+
+## Phase 3
+
+The roadmap from the Phase 3 artifact, ranked by what it proves. Same rules: every geometry function pure and tested first, one commit per task, human review of the result, `DECISIONS.md` for every overrule. Sections 20 to 23 change what the project is, 24 to 27 deepen what exists, 28 to 31 are polish that gets noticed.
+
+## 20. Wall construction layers
+
+Goal: a wall is no longer one U-value but a stack of layers, the way an energy consultant describes it. Answers building physics and BIM domain knowledge.
+
+- [ ] Data model: `Layer { id, name, thickness, conductivity }` in metres and W/(m·K); `Construction` gains `layers?: Layer[]` and keeps `uValue` as the computed result. Presets get real layer stacks: brick wall 1900 (plaster 15 mm, brick 380 mm, plaster 15 mm), 1970s wall (plaster, aerated concrete 240 mm, render), insulated wall (plaster, brick 240 mm, EPS 160 mm, render), and matching roof and floor stacks. Conductivities from DIN 4108-4 values, sourced in a comment.
+- [ ] `src/geometry/layers.ts`: `uValueFromLayers(layers, rsi, rse)` with R = rsi + Σ d/λ + rse, rsi 0.13 and rse 0.04 for walls, 0.10 and 0.04 for roofs, 0.17 and 0.00 for ground floors. Total thickness. Tests against hand-computed cases: the brick wall preset gives about 1.4, the insulated preset about 0.20, a single layer of 1 m at λ 1 gives 1/(1 + 0.17).
+- [ ] Migration: a construction without layers keeps its typed U-value; a construction with layers recomputes U on every layer edit. Import validates thickness > 0 and conductivity > 0.
+- [ ] The exterior wall thickness follows the wall construction's total layer thickness when layers exist; the global thickness setting becomes the fallback for constructions without layers. Rooms and openings adjust, tests for the derived thickness.
+- [ ] Layer editor in the Energy tab: add, remove, reorder layers, edit name, thickness in mm and conductivity, the U-value updating live. Own components only.
+- [ ] Cross-section drawing: an SVG of the wall from outside to inside with each layer as a band at true relative thickness, hatched per material class (masonry, insulation, plaster), labelled with thickness and λ. Shown in the layer editor and in the print view under Bauteile.
+- [ ] IFC: IfcMaterialLayerSet with one IfcMaterialLayer per layer (material name, LayerThickness), IfcMaterialLayerSetUsage on each wall, and IfcMaterial with Pset_MaterialThermal ThermalConductivity. Validated with the IfcOpenShell script; entity counts tested.
+- [ ] Print view: the Bauteile table lists layers per construction with d, λ, R and the resulting U.
+- [ ] i18n: Schicht, Dicke, Wärmeleitfähigkeit, Wärmedurchlasswiderstand, Aufbau von außen nach innen.
+
+## 21. Thermal bridges
+
+Goal: the extra heat loss at edges and corners, computed from lengths the geometry already knows. Answers building physics.
+
+- [ ] `src/geometry/bridges.ts`, pure: extracts linear thermal bridges per storey: outer corners (footprint vertices), window and door perimeters (2 × (w + h) per opening), floor slab edge on the ground storey (footprint perimeter), roof edge on the top storey (perimeter), intermediate floor edges between storeys (perimeter per joint), interior wall to exterior wall junctions (one per interior wall end touching the footprint). Each with a type, a length and the world segment to draw.
+- [ ] Psi values per type with a source comment: the DIN 4108 Beiblatt 2 reference values as the "good detail" set (corner 0.05, window 0.04, slab edge 0.10, roof edge 0.10, intermediate floor 0.05, junction 0.03 W/(m·K)) and a "poor detail" set for uninsulated stock (0.15, 0.20, 0.50, 0.30, 0.20, 0.10). The set is a building setting; the renovated scenario switches to the good set.
+- [ ] Tests: the default rectangle has 4 corners of 3 m, a perimeter of 36 m for slab and roof, and each window adds exactly 2(w + h); a two storey building adds one intermediate floor joint; an interior wall touching two exterior walls adds two junctions; total ΔH_T = Σ ψ × l matches a hand-computed value.
+- [ ] Energy: H_T gains the bridge term Σ ψ × l, shown as its own line and as a share of the total in the Energy tab and in the print view.
+- [ ] Scene: bridges drawn as thin red lines on the model when a "Thermal bridges" view switch is on, line width by ψ × l, hover shows type and W/K in a label.
+- [ ] Bauteile table in the print view gets a Wärmebrücken block with type, length, ψ and ψ × l.
+- [ ] i18n: Wärmebrücke, längenbezogener Wärmedurchgangskoeffizient, Gebäudeecke, Fensteranschluss, Sockel, Traufe, Geschossdecke.
+
+## 22. Roof shapes
+
+Goal: a house reads as a house, and the roof area feeds the heat loss. Answers element types and geometry.
+
+- [ ] Data model: `Roof { kind: "flat" | "gable" | "hip"; pitch: number; overhang: number; ridgeAxis: "x" | "y"; parapet?: number }` on the building; default flat with 0.3 m parapet.
+- [ ] `src/geometry/roof.ts`, pure, for rectangular and general convex footprints: gable roof as two planes meeting at a ridge along the chosen axis, hip roof as the straight skeleton of the footprint (implement for convex polygons, fall back to gable for concave with a documented limitation), flat roof as a slab with parapet. Output: roof faces as 3D polygons in metres, ridge and eave lines, true surface area, enclosed attic volume.
+- [ ] Tests: gable on the 10 by 8 rectangle at 40 degrees gives two faces of equal area, surface area equals footprint area divided by cos(pitch) plus overhang strips, eave height equals storey top, ridge height equals half span times tan(pitch); hip roof faces sum to the same area as the gable for a square; flat roof area equals footprint area.
+- [ ] Scene: roof faces as meshes in a roof colour, underside not rendered, eave overhang visible, opacity follows the top storey. Clicking the roof selects it.
+- [ ] Properties: kind as segmented control, pitch and overhang as number inputs with live update, ridge axis toggle.
+- [ ] Energy: roof area in the envelope uses the true sloped area for gable and hip; the attic counts as unheated (no volume added) unless a "heated attic" switch is on.
+- [ ] IFC: IfcRoof with IfcSlab members of PredefinedType ROOF, one per face, as IfcFacetedBrep or extruded solids; ridge height exported in Pset_RoofCommon (TotalArea, ProjectedArea).
+- [ ] Print view plan gets the ridge line and the roof kind in the building fields.
+- [ ] i18n: Flachdach, Satteldach, Walmdach, Dachneigung, Dachüberstand, Firstrichtung, Attika.
+
+## 23. Footprint from a photo
+
+Goal: drop a floor plan scan and get a proposed footprint and interior walls. Answers the computer vision bullet, which has nothing behind it yet.
+
+- [ ] Pipeline in `src/geometry/vision/`, pure over pixel arrays so it runs in a worker and in tests: greyscale, adaptive threshold, morphological close, connected components, then wall line detection with a probabilistic Hough transform restricted to horizontal and vertical lines, merging of collinear segments, snapping to a detected grid pitch.
+- [ ] Outer boundary: the largest closed loop of detected lines becomes the footprint proposal; inner lines that touch the boundary or each other become interior wall proposals. Output is in image pixels with a confidence per segment.
+- [ ] Scale: the user marks one known distance on the image (reuse the underlay scale flow) or types the paper scale (1:100 at a given DPI); pixels convert to metres and snap to the 0.5 m grid.
+- [ ] Tests on synthetic plans rendered in the test: a drawn rectangle with two interior lines is recovered within one pixel; a rotated scan (2 degrees) is deskewed first and still recovered; noise speckles do not create walls.
+- [ ] Worker: the pipeline runs in a Web Worker so the interface stays responsive on a 4000 px scan; progress reported.
+- [ ] Review step in the interface: proposed lines drawn over the underlay in the selection colour, each toggleable, a confidence filter slider, "Accept" replaces the footprint and interior walls in one undo step.
+- [ ] Stretch: a small ONNX segmentation model for walls in the browser through onnxruntime-web, behind a feature flag, compared against the classical pipeline on the test plans. Only if the classical result is not good enough on real scans.
+- [ ] `DECISIONS.md` entry on classical CV versus a model and what real scans broke.
+
+## 24. HVAC as elements
+
+Goal: the element type the posting lists and the demo left out. Answers "new element types".
+
+- [ ] Data model: `Radiator { id, storeyId, wallIndex, offset, width, height, power }`, `HeatPump { position, power, kind: "air" | "ground" }` outside the footprint, `PipeRun { storeyId, points }` on the grid. Stored on the building, validated on import (a radiator stays on its wall and never overlaps an opening).
+- [ ] Sizing: room heat load from the energy layer (transmission plus ventilation for that room at the design temperature difference, Berlin −12 °C outdoor) suggests a radiator power; the heat pump power suggests itself from the building heat load with a safety factor. Pure functions, tested.
+- [ ] Scene: radiators as slabs on the inner wall face under windows, heat pump as a box outside, pipes as lines on the floor. Selectable, with properties.
+- [ ] Tool: an HVAC tool (key 7) that places a radiator on a wall click, a heat pump on a ground click outside the footprint, and pipe runs by clicking grid points.
+- [ ] Energy tab: heat load per room versus installed radiator power, flagged when under 90 percent.
+- [ ] IFC: IfcSpaceHeater (radiators), IfcUnitaryEquipment (heat pump), IfcPipeSegment for runs, with Pset_SpaceHeaterTypeCommon OutputCapacity. Validated.
+- [ ] i18n: Heizkörper, Wärmepumpe, Rohrleitung, Heizlast, Auslegungstemperatur.
+
+## 25. Sun and shading
+
+Goal: a real sun over the georeferenced model and solar gains in the energy balance. Answers physics and 3D.
+
+- [ ] `src/geometry/sun.ts`, pure: solar position (azimuth, elevation) from date, time and lat/lon using the NOAA algorithm; tests against published values for Berlin on 21 June noon and 21 December noon, sunrise and sunset within 2 minutes.
+- [ ] Scene: a directional light follows the sun, shadows on facades and ground, a date and time slider in the View section, a small sun path arc drawn over the model for the chosen day.
+- [ ] Solar gains: monthly irradiation on vertical surfaces per orientation for Berlin (DIN V 18599-10 table values, sourced), window area by orientation times g-value 0.6 times a frame factor 0.7 times a shading factor 0.9; annual gains subtracted from the heating demand with a utilisation factor of 0.95. Tests: a south window adds more than a north window; the demand never goes below zero.
+- [ ] Energy tab: gains as a separate line, before and after, and the class recomputed.
+- [ ] i18n: Sonnenstand, solare Gewinne, Einstrahlung, Uhrzeit.
+
+## 26. IFC import
+
+Goal: read an IFC file from another tool into Bauwerk. Answers export fidelity and reverse engineering.
+
+- [ ] `src/geometry/step-parse.ts`: STEP tokenizer and entity parser (ids, types, attributes, typed values, lists, X2 strings), tested on the files the exporter writes and on hand-written edge cases.
+- [ ] `src/geometry/ifc-import.ts`: walk IfcProject to storeys, read IfcBuildingStorey elevations, walls with IfcExtrudedAreaSolid over polyline profiles, openings via IfcRelVoidsElement, windows and doors via IfcRelFillsElement with OverallWidth and OverallHeight, spaces as rooms, zones via IfcRelAssignsToGroup, Pset ThermalTransmittance into constructions, IfcMapConversion into the origin.
+- [ ] Reduction to the editor's model: the footprint is the union outline of exterior walls (outer faces), interior walls become centre lines, room polygons are recomputed by the editor rather than trusted. Everything the model cannot hold (curved walls, sloped walls, non-rectangular openings) is listed in an import report shown to the user, not silently dropped.
+- [ ] Tests: export then import of the two example buildings gives an equal building up to ids; a file with a curved wall imports the rest and reports the wall; a file from another tool (a small sample checked into `docs/`) imports its storeys and walls.
+- [ ] Import button accepts `.ifc`, shows the report, loads on confirm.
+- [ ] `DECISIONS.md` entry on what was reduced and why.
+
+## 27. Renovation scenarios as saved variants
+
+Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
+
+- [ ] Data model: `Scenario { id, name, constructionOverrides: Record<targetKey, constructionId>, bridgeSet, roof?, cost }` on the building; the current state is the baseline, variants are overrides only, so a change to the baseline flows into every variant.
+- [ ] Costs: a rough €/m² per construction preset (sourced from a public cost index, named in a comment), so each variant reports an investment; saving per year from the heating demand difference at a set energy price; payback in years.
+- [ ] Energy: `computeEnergy(building, { scenario })` applies the overrides; tests that the baseline variant equals the current result and that "windows only" changes only window terms.
+- [ ] Interface: a Scenarios tab with a table of variants (class, demand, saving, investment, payback), add, rename, duplicate, delete, and a per-variant construction picker. The old renovated switch becomes the built-in "full envelope" variant.
+- [ ] Print view: a Sanierungsfahrplan page with the variants as steps in order of payback, the way the iSFP shows them.
+- [ ] Export: scenarios in the JSON and, as IfcPropertySets on the building, in the IFC.
+- [ ] i18n: Sanierungsvariante, Investition, Einsparung pro Jahr, Amortisation, Maßnahmenpaket.
+
+## 28. Section cut
+
+- [ ] A clipping plane through the model: a switch in the View section, a slider for the cut height and a segmented control for the cut axis (horizontal, along x, along y); Three.js clipping planes on every material, cap faces drawn in the mark colour so cut walls read as solid.
+- [ ] Rooms stay labelled in the cut view; the plan view reuses the horizontal cut at eye height.
+- [ ] Test: the clipping plane constant follows the slider value and the storey elevation.
+
+## 29. Walkthrough camera
+
+- [ ] First person mode: a camera at 1.6 m above the active storey floor, WASD and arrow keys to move, mouse look with pointer lock, collision with exterior and interior walls, doors passable, stairs not modelled so PageUp and PageDown teleport between storeys.
+- [ ] Enter and exit through a View switch and the Escape key; the orbit camera position is restored on exit.
+- [ ] Test: the collision helper keeps a point inside the footprint and outside interior wall thickness, and lets it through a door span.
+
+## 30. PDF report
+
+- [ ] Server endpoint `POST /reports/:projectId` renders the print view to PDF with headless Chromium (Playwright) on the server, vector plans, A4, file name from the building and date. Attribution and disclaimer included.
+- [ ] Client: a "Download PDF" button next to Print when the server is configured; the browser print path stays for local use.
+- [ ] Test: the endpoint returns a PDF whose first page contains the building name (checked with pdf-parse).
+
+## 31. Performance page
+
+- [ ] A benchmark route `?bench=1` that loads a fifty storey, twenty openings per storey building, shows a frame time graph over ten seconds, draw calls and triangle count from the renderer info, and a paragraph on the memoisation strategy (geometry per element by input hash, merged prisms per wall, throttled hover).
+- [ ] Instanced interior walls and merged room fills per storey if the benchmark falls below 60 fps on the RTX 5070 or 30 fps on integrated graphics.
+- [ ] The numbers from Adilzhan's machine written into the README.
