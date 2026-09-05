@@ -163,7 +163,7 @@ export function CustomSlider({
         {active && (
           <div
             aria-hidden
-            className="absolute -top-6 -translate-x-1/2 rounded-pill bg-ink px-1.5 py-0.5 font-num text-xs text-paper"
+            className="absolute -top-7 -translate-x-1/2 rounded-soft bg-ink px-2 py-0.5 font-num text-xs text-paper"
             style={{ left: `${ratio * 100}%` }}
           >
             {format ? format(value) : value}

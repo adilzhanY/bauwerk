@@ -118,7 +118,7 @@ function ClassBand({ value }: { value: EnergyClass }) {
         {CLASSES.map((c) => (
           <div
             key={c}
-            className={`flex h-9 flex-1 items-center justify-center rounded-pill font-num text-xs ${c === value ? "ring-2 ring-ink ring-offset-1 ring-offset-panel" : "opacity-40"}`}
+            className={`flex h-9 flex-1 items-center justify-center rounded-soft font-num text-xs font-semibold ${c === value ? "ring-2 ring-ink ring-offset-1 ring-offset-panel" : "opacity-40"}`}
             style={{ background: ENERGY_CLASS_COLORS[c], color: "#1b1d20" }}
           >
             {c}
@@ -131,7 +131,7 @@ function ClassBand({ value }: { value: EnergyClass }) {
 
 function Big({ label, value, unit }: { label: string; value: string; unit: string }) {
   return (
-    <div className="rounded-pill border border-line bg-paper p-2">
+    <div className="rounded-inner border border-line bg-paper px-3 py-2.5">
       <div className="text-xs text-muted">{label}</div>
       <div className="font-display text-xl font-semibold text-ink">{value}</div>
       <div className="font-num text-xs text-muted">{unit}</div>

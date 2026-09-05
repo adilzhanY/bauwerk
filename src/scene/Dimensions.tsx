@@ -22,7 +22,7 @@ export function Dimensions() {
       zIndexRange={[5, 0]}
       style={{ pointerEvents: "none" }}
     >
-      <span className="rounded-pill bg-paper/90 px-1 font-num text-xs text-ink select-none">
+      <span className="rounded-soft bg-paper/90 px-1.5 font-num text-xs text-ink select-none whitespace-nowrap">
         {text}
       </span>
     </Html>

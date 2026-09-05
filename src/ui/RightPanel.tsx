@@ -242,7 +242,7 @@ function OpeningProperties({ storeyId, openingId }: { storeyId: string; openingI
       {errors.length > 0 && (
         <div
           role="alert"
-          className="rounded-pill border border-mark bg-mark-soft p-2 text-xs text-mark"
+          className="rounded-inner border border-mark bg-mark-soft px-3 py-2 text-xs text-mark"
         >
           <p className="font-medium">{t("opening.invalid")}</p>
           <ul className="mt-1 list-disc pl-4">

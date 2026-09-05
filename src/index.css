@@ -107,6 +107,7 @@
   --radius-pill: 9999px;
   --radius-card: 22px;
   --radius-inner: 14px;
+  --radius-soft: 8px;
 
   --shadow-float: var(--shadow);
 }

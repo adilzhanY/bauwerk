@@ -329,7 +329,7 @@ function ZoneList() {
                   {t(zone.heated ? "zone.heated" : "zone.unheated")}
                 </span>
                 {active && (
-                  <span className="rounded-pill bg-select-soft px-1 font-num text-xs text-select">
+                  <span className="rounded-soft bg-select-soft px-1.5 font-num text-xs text-select">
                     {t("zone.active")}
                   </span>
                 )}

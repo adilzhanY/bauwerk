@@ -166,7 +166,7 @@ export function CustomNumberInput({
         )}
         <div
           className={cx(
-            "flex h-10 items-center rounded-pill border bg-paper transition-colors focus-within:border-select",
+            "flex h-10 items-center rounded-inner border bg-paper transition-colors focus-within:border-select",
             invalid || error ? "border-mark" : "border-line",
             slider ? "w-28" : "flex-1",
             disabled && "opacity-40",
@@ -185,7 +185,7 @@ export function CustomNumberInput({
             }}
             onBlur={onBlur}
             onKeyDown={onKeyDown}
-            className="h-full min-w-0 flex-1 bg-transparent px-2 font-num text-sm text-ink outline-none"
+            className="h-full min-w-0 flex-1 bg-transparent px-3 font-num text-sm text-ink outline-none"
           />
           {unit && <span className="pr-2 font-num text-xs text-muted">{unit}</span>}
         </div>

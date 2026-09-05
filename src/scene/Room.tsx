@@ -84,9 +84,14 @@ export function Room({ storeyId, room, zone, elevation, active }: Props) {
           zIndexRange={[10, 0]}
           style={{ pointerEvents: "none" }}
         >
-          <div className="rounded-pill border border-line bg-paper/90 px-2 py-0.5 text-center whitespace-nowrap select-none">
-            <div className="text-xs font-medium text-ink">{room.name}</div>
-            <div className="font-num text-xs text-muted">{formatArea(room.area, language)}</div>
+          <div
+            className="flex flex-col items-center rounded-inner border border-line bg-paper/90 px-2.5 py-1 text-center select-none"
+            style={{ whiteSpace: "nowrap" }}
+          >
+            <div className="text-xs font-medium text-ink whitespace-nowrap">{room.name}</div>
+            <div className="font-num text-xs text-muted whitespace-nowrap">
+              {formatArea(room.area, language)}
+            </div>
           </div>
         </Html>
       )}

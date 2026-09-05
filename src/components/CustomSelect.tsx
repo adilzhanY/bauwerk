@@ -167,7 +167,7 @@ export function CustomSelect<V extends string>({
           }}
           onKeyDown={onKeyDown}
           className={cx(
-            "flex h-10 w-full items-center gap-2 rounded-pill border bg-paper px-2 text-left text-sm text-ink transition-colors",
+            "flex h-10 w-full items-center gap-2 rounded-inner border bg-paper px-3 text-left text-sm text-ink transition-colors",
             open ? "border-select" : "border-line hover:border-line-strong",
             "disabled:cursor-not-allowed disabled:opacity-40",
           )}
@@ -191,7 +191,7 @@ export function CustomSelect<V extends string>({
             id={listId}
             role="listbox"
             aria-label={label}
-            className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-pill border border-line bg-paper py-1 shadow-lg"
+            className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto rounded-inner border border-line bg-paper p-1 shadow-float"
           >
             {options.map((o, i) => {
               const selected = o.value === value;
@@ -209,7 +209,7 @@ export function CustomSelect<V extends string>({
                     pick(i);
                   }}
                   className={cx(
-                    "flex cursor-pointer items-center gap-2 px-2 py-1.5 text-sm",
+                    "flex cursor-pointer items-center gap-2 rounded-soft px-2 py-2 text-sm",
                     i === highlight && "bg-panel-2",
                     o.disabled && "cursor-not-allowed opacity-40",
                   )}
