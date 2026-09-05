@@ -16,6 +16,9 @@ beforeEach(() => {
   });
   useEditorStore.getState().endBatch();
   useEditorStore.setState((s) => ({ activeStoreyId: s.building.storeys[0]?.id ?? null }));
+  // setState goes through the Immer middleware and therefore through the history
+  // wrapper, so replacing the building above recorded one entry. Clear it.
+  useEditorStore.setState({ past: [], future: [] });
 });
 
 describe("App", () => {
