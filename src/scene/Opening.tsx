@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import type { Wall } from "@/geometry/walls";
 import type { Id, Opening as OpeningData } from "@/geometry/types";
@@ -7,6 +7,10 @@ import { sameSelection, useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
 import { useHover } from "./hover";
 import { yawFor } from "./three";
+import { pointOnVertical } from "./tools/plane";
+import { useDragLock } from "./tools/useDragLock";
+import { snapOffset } from "@/geometry/openings";
+import { dot, sub } from "@/geometry/polygon";
 
 interface Props {
   storeyId: Id;
@@ -29,9 +33,14 @@ export function Opening({ storeyId, wall, opening, thickness, elevation, active,
   const selected = useEditorStore((s) => sameSelection(s.selection, target));
   const hovered = useEditorStore((s) => sameSelection(s.hovered, target));
   const select = useEditorStore((s) => s.select);
+  const tool = useEditorStore((s) => s.tool);
+  const updateOpening = useEditorStore((s) => s.updateOpening);
   const hover = useHover(target, active);
+  const lock = useDragLock();
+  const [dragOffset, setDragOffset] = useState<number | null>(null);
 
-  const u = opening.offset + opening.width / 2;
+  const offset = dragOffset ?? opening.offset;
+  const u = offset + opening.width / 2;
   const depth = thickness / 2;
   const cx = wall.outerA.x + wall.direction.x * u - wall.normal.x * depth;
   const cz = wall.outerA.y + wall.direction.y * u - wall.normal.y * depth;
@@ -44,6 +53,38 @@ export function Opening({ storeyId, wall, opening, thickness, elevation, active,
     select(target);
   };
 
+  const draggable = active && (tool === "select" || tool === "opening");
+
+  const offsetAt = (e: ThreeEvent<PointerEvent>): number | null => {
+    const hit = pointOnVertical(e, wall.outerA, wall.normal);
+    if (!hit) return null;
+    const along = dot(sub(hit, wall.outerA), wall.direction);
+    return snapOffset(along - opening.width / 2, opening.width, wall.length);
+  };
+
+  const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
+    if (!draggable || e.button !== 0) return;
+    e.stopPropagation();
+    (e.target as Element).setPointerCapture(e.pointerId);
+    lock(true);
+    select(target);
+    setDragOffset(opening.offset);
+  };
+
+  const onPointerMove = (e: ThreeEvent<PointerEvent>) => {
+    if (dragOffset === null) return;
+    const next = offsetAt(e);
+    if (next !== null) setDragOffset(next);
+  };
+
+  const onPointerUp = (e: ThreeEvent<PointerEvent>) => {
+    if (dragOffset === null) return;
+    (e.target as Element).releasePointerCapture(e.pointerId);
+    lock(false);
+    if (dragOffset !== opening.offset) updateOpening(storeyId, opening.id, { offset: dragOffset });
+    setDragOffset(null);
+  };
+
   const base = opening.kind === "door" ? colors.door : colors.window;
   const color = !valid ? colors.warning : selected ? colors.accent : base;
   const opacity = !active ? INACTIVE_OPACITY : opening.kind === "window" ? 0.55 : 1;
@@ -53,6 +94,9 @@ export function Opening({ storeyId, wall, opening, thickness, elevation, active,
       position={[cx, cy, cz]}
       rotation={[0, yaw, 0]}
       onClick={onClick}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
       raycast={active ? undefined : noRaycast}
       {...hover}
     >

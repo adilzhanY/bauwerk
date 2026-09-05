@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { immer } from "zustand/middleware/immer";
 import type { Building, Id, Opening, Segment, Storey, Vec2, Zone } from "@/geometry/types";
-import { DEFAULT_STOREY_HEIGHT, DEFAULT_WALL_THICKNESS } from "@/geometry/types";
+import { DEFAULT_STOREY_HEIGHT, DEFAULT_WALL_THICKNESS, GRID_SIZE } from "@/geometry/types";
+import { isCounterClockwise, isSimplePolygon, snapPoint } from "@/geometry/polygon";
 import { computeRooms } from "@/geometry/rooms";
 import { defaultRoomName, defaultStoreyName } from "@/i18n";
 import type { Language } from "@/i18n";
@@ -29,10 +30,19 @@ export interface EditorState {
   tool: Tool;
   language: Language;
   showGrid: boolean;
+  /** Zone the zone tool paints with. UI state. */
+  activeZoneId: Id | null;
 }
 
 export interface EditorActions {
   setFootprintVertex: (index: number, position: Vec2) => void;
+  /** Inserts a vertex at the midpoint of edge `edgeIndex`. */
+  insertFootprintVertex: (edgeIndex: number) => void;
+  /** Removes a vertex if the footprint stays a valid polygon. */
+  removeFootprintVertex: (index: number) => void;
+  moveStorey: (storeyId: Id, direction: -1 | 1) => void;
+  /** Removes whatever is selected, if it is removable. */
+  deleteSelection: () => void;
   addStorey: () => void;
   removeStorey: (storeyId: Id) => void;
   setStoreyHeight: (storeyId: Id, height: number) => void;
@@ -53,6 +63,7 @@ export interface EditorActions {
   select: (selection: Selection) => void;
   clearSelection: () => void;
   setHovered: (hovered: Selection | null) => void;
+  setActiveZone: (zoneId: Id | null) => void;
   setShowGrid: (show: boolean) => void;
   setTool: (tool: Tool) => void;
   setLanguage: (language: Language) => void;
@@ -115,7 +126,7 @@ function refreshAllRooms(building: Building, language: Language): void {
 export function createEditorStore(initial?: Partial<EditorState>) {
   return create<EditorStore>()(
     history(
-      immer((set) => {
+      immer((set, get) => {
         const language = initial?.language ?? "en";
         const building = initial?.building ?? createDefaultBuilding(language);
         return {
@@ -126,6 +137,7 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           tool: initial?.tool ?? "select",
           language,
           showGrid: initial?.showGrid ?? true,
+          activeZoneId: initial?.activeZoneId ?? null,
 
           setFootprintVertex: (index, position) => {
             set((state) => {
@@ -133,6 +145,80 @@ export function createEditorStore(initial?: Partial<EditorState>) {
               state.building.footprint[index] = { x: position.x, y: position.y };
               refreshAllRooms(state.building, state.language);
             });
+          },
+
+          insertFootprintVertex: (edgeIndex) => {
+            set((state) => {
+              const fp = state.building.footprint;
+              const a = fp[edgeIndex];
+              const b = fp[(edgeIndex + 1) % fp.length];
+              if (!a || !b) return;
+              const mid = snapPoint({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }, GRID_SIZE);
+              const next = [...fp.slice(0, edgeIndex + 1), mid, ...fp.slice(edgeIndex + 1)];
+              if (!isSimplePolygon(next)) return;
+              state.building.footprint = next;
+              state.selection = { kind: "vertex", index: edgeIndex + 1 };
+              refreshAllRooms(state.building, state.language);
+            });
+          },
+
+          removeFootprintVertex: (index) => {
+            set((state) => {
+              const fp = state.building.footprint;
+              if (fp.length <= 3 || index < 0 || index >= fp.length) return;
+              const next = fp.filter((_, i) => i !== index);
+              if (!isSimplePolygon(next) || !isCounterClockwise(next)) return;
+              state.building.footprint = next;
+              // Openings index footprint edges, so edges after the removed vertex shift down
+              // and the two edges that merged lose their openings.
+              for (const storey of state.building.storeys) {
+                storey.openings = storey.openings
+                  .filter(
+                    (o) =>
+                      o.wallIndex !== index && o.wallIndex !== (index - 1 + fp.length) % fp.length,
+                  )
+                  .map((o) => (o.wallIndex > index ? { ...o, wallIndex: o.wallIndex - 1 } : o));
+              }
+              if (state.selection?.kind === "vertex") state.selection = null;
+              refreshAllRooms(state.building, state.language);
+            });
+          },
+
+          moveStorey: (storeyId, direction) => {
+            set((state) => {
+              const list = state.building.storeys;
+              const from = list.findIndex((s) => s.id === storeyId);
+              const to = from + direction;
+              if (from === -1 || to < 0 || to >= list.length) return;
+              const [item] = list.splice(from, 1);
+              if (item) list.splice(to, 0, item);
+            });
+          },
+
+          deleteSelection: () => {
+            const { selection } = get();
+            if (!selection) return;
+            const actions = get();
+            switch (selection.kind) {
+              case "opening":
+                actions.removeOpening(selection.storeyId, selection.id);
+                break;
+              case "interiorWall":
+                actions.removeInteriorWall(selection.storeyId, selection.index);
+                break;
+              case "storey":
+                actions.removeStorey(selection.id);
+                break;
+              case "zone":
+                actions.removeZone(selection.id);
+                break;
+              case "vertex":
+                actions.removeFootprintVertex(selection.index);
+                break;
+              case "wall":
+              case "room":
+                break;
+            }
           },
 
           addStorey: () => {
@@ -274,6 +360,7 @@ export function createEditorStore(initial?: Partial<EditorState>) {
               if (state.selection?.kind === "zone" && state.selection.id === zoneId) {
                 state.selection = null;
               }
+              if (state.activeZoneId === zoneId) state.activeZoneId = null;
             });
           },
 
@@ -307,6 +394,12 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             set((state) => {
               if (sameSelection(state.hovered, hovered)) return;
               state.hovered = hovered;
+            });
+          },
+
+          setActiveZone: (zoneId) => {
+            set((state) => {
+              state.activeZoneId = zoneId;
             });
           },
 

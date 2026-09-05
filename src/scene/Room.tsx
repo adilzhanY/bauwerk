@@ -31,6 +31,8 @@ export function Room({ storeyId, room, zone, elevation, active }: Props) {
   const language = useEditorStore((s) => s.language);
   const select = useEditorStore((s) => s.select);
   const tool = useEditorStore((s) => s.tool);
+  const activeZoneId = useEditorStore((s) => s.activeZoneId);
+  const assignRoomToZone = useEditorStore((s) => s.assignRoomToZone);
   const hover = useHover(target, active);
 
   const hash = JSON.stringify(room.polygon);
@@ -46,6 +48,9 @@ export function Room({ storeyId, room, zone, elevation, active }: Props) {
     if (tool !== "select" && tool !== "zone") return;
     e.stopPropagation();
     select(target);
+    if (tool === "zone" && activeZoneId !== null) {
+      assignRoomToZone(storeyId, room.id, room.zoneId === activeZoneId ? undefined : activeZoneId);
+    }
   };
 
   const fill = zone?.color ?? colors.floor;

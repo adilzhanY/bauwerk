@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
+import { defaultOpening, snapOffset } from "@/geometry/openings";
+import { dot, sub } from "@/geometry/polygon";
 import { wallSolids } from "@/geometry/walls";
 import type { Wall as WallData } from "@/geometry/walls";
 import type { Id, Opening } from "@/geometry/types";
@@ -28,6 +30,7 @@ export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
   const hovered = useEditorStore((s) => sameSelection(s.hovered, target));
   const select = useEditorStore((s) => s.select);
   const tool = useEditorStore((s) => s.tool);
+  const addOpening = useEditorStore((s) => s.addOpening);
   const hover = useHover(target, active);
 
   // Memoised by a hash of the inputs: the wall quad, height and the openings on it.
@@ -39,9 +42,21 @@ export function Wall({ storeyId, wall, openings, elevation, active }: Props) {
   }, [hash]);
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
-    if (!active) return;
-    e.stopPropagation();
-    if (tool === "select" || tool === "opening") select(target);
+    if (!active || e.delta > 4) return;
+    if (tool === "opening") {
+      e.stopPropagation();
+      const kind = e.nativeEvent.shiftKey ? "door" : "window";
+      const defaults = defaultOpening(kind);
+      const u = dot(sub({ x: e.point.x, y: e.point.z }, wall.outerA), wall.direction);
+      const offset = snapOffset(u - defaults.width / 2, defaults.width, wall.length);
+      const id = addOpening(storeyId, { ...defaults, wallIndex: wall.index, offset });
+      select({ kind: "opening", storeyId, id });
+      return;
+    }
+    if (tool === "select") {
+      e.stopPropagation();
+      select(target);
+    }
   };
 
   const color = selected ? colors.accent : hovered ? colors.wallHover : colors.wall;

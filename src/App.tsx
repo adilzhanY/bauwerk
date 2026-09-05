@@ -1,6 +1,8 @@
 import { Viewport } from "@/scene/Viewport";
+import { useKeyboardShortcuts } from "@/ui/useKeyboardShortcuts";
 
 export function App() {
+  useKeyboardShortcuts();
   return (
     <div className="grid h-full grid-cols-[280px_1fr_300px] grid-rows-[1fr_40px]">
       <aside className="border-r border-border bg-panel" />

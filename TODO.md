@@ -49,11 +49,11 @@ Work top to bottom. Tick with `[x]`. A task is done when `npm run check` passes 
 
 ## 4. Tools and editing
 
-- [ ] Select tool: click any element, Delete removes it, Escape clears.
-- [ ] Footprint tool: vertices shown as draggable handles on the ground plane, snapped to the grid, live validation, invalid shapes shown in the warning colour and not committed.
-- [ ] Opening tool: click a wall to place a window at the click position with default size; hold Shift for a door. Then drag the opening along the wall, snapped to 0.1 m.
-- [ ] Interior wall tool: click two grid points on the active storey to add a wall segment. Preview line while placing.
-- [ ] Zone tool: click rooms to toggle them into the active zone.
+- [x] Select tool: click any element, Delete removes it, Escape clears.
+- [x] Footprint tool: vertices shown as draggable handles on the ground plane, snapped to the grid, live validation, invalid shapes shown in the warning colour and not committed.
+- [x] Opening tool: click a wall to place a window at the click position with default size; hold Shift for a door. Then drag the opening along the wall, snapped to 0.1 m.
+- [x] Interior wall tool: click two grid points on the active storey to add a wall segment. Preview line while placing.
+- [x] Zone tool: click rooms to toggle them into the active zone.
 - [ ] Keyboard shortcuts from `INFO.md`, with a small shortcut sheet behind a `?` button.
 
 ## 5. UI panels

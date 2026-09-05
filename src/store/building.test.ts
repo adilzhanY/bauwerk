@@ -328,3 +328,102 @@ describe("store behaviour", () => {
     expect(store.getState().selection).toBeNull();
   });
 });
+
+describe("footprint editing and deleteSelection", () => {
+  it("inserts a vertex at an edge midpoint and can remove it again", () => {
+    store.getState().insertFootprintVertex(0);
+    expect(store.getState().building.footprint).toHaveLength(5);
+    expect(store.getState().building.footprint[1]).toEqual({ x: 5, y: 0 });
+    expect(store.getState().selection).toEqual({ kind: "vertex", index: 1 });
+    store.getState().deleteSelection();
+    expect(store.getState().building.footprint).toHaveLength(4);
+    store.getState().undo();
+    expect(store.getState().building.footprint).toHaveLength(5);
+  });
+
+  it("refuses to remove a vertex from a triangle", () => {
+    store.getState().loadBuilding({
+      ...store.getState().building,
+      footprint: [
+        { x: 0, y: 0 },
+        { x: 6, y: 0 },
+        { x: 0, y: 6 },
+      ],
+    });
+    store.getState().removeFootprintVertex(0);
+    expect(store.getState().building.footprint).toHaveLength(3);
+  });
+
+  it("removing a vertex shifts opening wall indices and drops the merged edges' openings", () => {
+    const sid = storeyId();
+    store.getState().insertFootprintVertex(0); // edges: 0 (0,0)-(5,0), 1 (5,0)-(10,0), 2, 3, 4
+    store.getState().setFootprintVertex(1, { x: 5, y: -2 });
+    const onEdge1 = store.getState().addOpening(sid, {
+      wallIndex: 1,
+      kind: "window",
+      offset: 1,
+      width: 1,
+      height: 1,
+      sill: 1,
+    });
+    const onEdge3 = store.getState().addOpening(sid, {
+      wallIndex: 3,
+      kind: "window",
+      offset: 1,
+      width: 1,
+      height: 1,
+      sill: 1,
+    });
+    store.getState().removeFootprintVertex(1);
+    const openings = store.getState().building.storeys[0]?.openings ?? [];
+    expect(openings.find((o) => o.id === onEdge1)).toBeUndefined();
+    expect(openings.find((o) => o.id === onEdge3)?.wallIndex).toBe(2);
+  });
+
+  it("deleteSelection removes openings, walls, storeys and zones but not rooms", () => {
+    const sid = storeyId();
+    const id = store.getState().addOpening(sid, {
+      wallIndex: 0,
+      kind: "door",
+      offset: 1,
+      width: 1,
+      height: 2,
+      sill: 0,
+    });
+    store.getState().select({ kind: "opening", storeyId: sid, id });
+    store.getState().deleteSelection();
+    expect(store.getState().building.storeys[0]?.openings).toHaveLength(0);
+
+    store.getState().addInteriorWall(sid, { a: { x: 4, y: 0 }, b: { x: 4, y: 8 } });
+    store.getState().select({ kind: "interiorWall", storeyId: sid, index: 0 });
+    store.getState().deleteSelection();
+    expect(store.getState().building.storeys[0]?.interiorWalls).toHaveLength(0);
+
+    const roomId = withRoom();
+    store.getState().select({ kind: "room", storeyId: sid, id: roomId });
+    store.getState().deleteSelection();
+    expect(store.getState().building.storeys[0]?.rooms).toHaveLength(1);
+
+    const zoneId = store.getState().addZone("Heated", "#f00");
+    store.getState().setActiveZone(zoneId);
+    store.getState().select({ kind: "zone", id: zoneId });
+    store.getState().deleteSelection();
+    expect(store.getState().building.zones).toHaveLength(0);
+    expect(store.getState().activeZoneId).toBeNull();
+
+    store.getState().select({ kind: "storey", id: sid });
+    store.getState().deleteSelection();
+    expect(store.getState().building.storeys).toHaveLength(0);
+  });
+
+  it("moveStorey reorders and is undoable", () => {
+    store.getState().addStorey();
+    const [first, second] = store.getState().building.storeys.map((s) => s.id);
+    store.getState().moveStorey(first ?? "", 1);
+    expect(store.getState().building.storeys.map((s) => s.id)).toEqual([second, first]);
+    store.getState().moveStorey(first ?? "", 1);
+    expect(store.getState().building.storeys.map((s) => s.id)).toEqual([second, first]);
+    store.getState().undo();
+    expect(store.getState().building.storeys.map((s) => s.id)).toEqual([first, second]);
+  });
+});
