@@ -1,0 +1,49 @@
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+@import "tailwindcss";
+
+/* Palette and type scale from INFO.md. Tailwind v4 reads these as utilities:
+   bg-bg, bg-panel, border-border, text-fg, text-muted, text-accent, text-warning,
+   font-sans, font-mono, text-xs (12) up to text-xl (20). */
+@theme {
+  --color-*: initial;
+  --color-bg: #0f1115;
+  --color-panel: #171a21;
+  --color-border: #262a33;
+  --color-fg: #e6e8ee;
+  --color-muted: #8b93a5;
+  --color-accent: #4f8cff;
+  --color-warning: #ffb454;
+  --color-wall: #d9d4c7;
+  --color-floor: #b8b2a4;
+  --color-window: #8ecae6;
+  --color-door: #a67c52;
+  --color-white: #ffffff;
+  --color-black: #000000;
+  --color-transparent: transparent;
+
+  --font-sans: "Inter Variable", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono Variable", ui-monospace, monospace;
+
+  --text-*: initial;
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 14px;
+  --text-lg: 16px;
+  --text-xl: 20px;
+  --text-title: 28px;
+}
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    @apply bg-bg font-sans text-base text-fg antialiased;
+  }
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-accent;
+  }
+}

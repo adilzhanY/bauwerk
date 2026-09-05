@@ -4,15 +4,15 @@ Work top to bottom. Tick with `[x]`. A task is done when `npm run check` passes 
 
 ## 0. Scaffold
 
-- [ ] `npm create vite@latest . -- --template react-ts`, React 18, TypeScript strict, `noUncheckedIndexedAccess` on.
-- [ ] Install zustand, immer, three, @react-three/fiber, @react-three/drei, @types/three, lucide-react, tailwindcss @tailwindcss/vite.
-- [ ] Install dev: vitest, jsdom, @testing-library/react, eslint, typescript-eslint, prettier, eslint-config-prettier.
-- [ ] Scripts: `dev`, `build`, `preview`, `typecheck`, `lint`, `test`, `check` (typecheck plus lint plus test).
-- [ ] `vite.config.ts` with `base` set from an env var so GitHub Pages works under `/bauwerk/`.
-- [ ] Tailwind v4 set up with the palette from `INFO.md` as CSS variables, Inter and JetBrains Mono loaded locally (no external requests at runtime).
-- [ ] `.gitignore`, `.prettierrc`, ESLint config, `README.md` with a one-paragraph description and the run commands.
-- [ ] Repository layout from `INFO.md` created with empty modules and one passing smoke test.
-- [ ] First commit.
+- [x] `npm create vite@latest . -- --template react-ts`, React 18, TypeScript strict, `noUncheckedIndexedAccess` on.
+- [x] Install zustand, immer, three, @react-three/fiber, @react-three/drei, @types/three, lucide-react, tailwindcss @tailwindcss/vite.
+- [x] Install dev: vitest, jsdom, @testing-library/react, eslint, typescript-eslint, prettier, eslint-config-prettier.
+- [x] Scripts: `dev`, `build`, `preview`, `typecheck`, `lint`, `test`, `check` (typecheck plus lint plus test).
+- [x] `vite.config.ts` with `base` set from an env var so GitHub Pages works under `/bauwerk/`.
+- [x] Tailwind v4 set up with the palette from `INFO.md` as CSS variables, Inter and JetBrains Mono loaded locally (no external requests at runtime).
+- [x] `.gitignore`, `.prettierrc`, ESLint config, `README.md` with a one-paragraph description and the run commands.
+- [x] Repository layout from `INFO.md` created with empty modules and one passing smoke test.
+- [x] First commit.
 
 ## 1. Data model and store
 

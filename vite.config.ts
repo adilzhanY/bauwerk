@@ -1,0 +1,23 @@
+/// <reference types="vitest/config" />
+import { fileURLToPath, URL } from "node:url";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from "vite";
+
+// GitHub Pages serves the app under /bauwerk/. Locally the base stays "/".
+// The deploy workflow sets VITE_BASE_PATH=/bauwerk/.
+const base = process.env.VITE_BASE_PATH ?? "/";
+
+export default defineConfig({
+  base,
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+  },
+  test: {
+    globals: true,
+    environment: "jsdom",
+    include: ["src/**/*.test.{ts,tsx}"],
+    coverage: { include: ["src/geometry/**", "src/store/**"] },
+  },
+});
