@@ -262,15 +262,15 @@ The roadmap from the Phase 3 artifact, ranked by what it proves. Same rules: eve
 
 Goal: a wall is no longer one U-value but a stack of layers, the way an energy consultant describes it. Answers building physics and BIM domain knowledge.
 
-- [ ] Data model: `Layer { id, name, thickness, conductivity }` in metres and W/(m·K); `Construction` gains `layers?: Layer[]` and keeps `uValue` as the computed result. Presets get real layer stacks: brick wall 1900 (plaster 15 mm, brick 380 mm, plaster 15 mm), 1970s wall (plaster, aerated concrete 240 mm, render), insulated wall (plaster, brick 240 mm, EPS 160 mm, render), and matching roof and floor stacks. Conductivities from DIN 4108-4 values, sourced in a comment.
-- [ ] `src/geometry/layers.ts`: `uValueFromLayers(layers, rsi, rse)` with R = rsi + Σ d/λ + rse, rsi 0.13 and rse 0.04 for walls, 0.10 and 0.04 for roofs, 0.17 and 0.00 for ground floors. Total thickness. Tests against hand-computed cases: the brick wall preset gives about 1.4, the insulated preset about 0.20, a single layer of 1 m at λ 1 gives 1/(1 + 0.17).
-- [ ] Migration: a construction without layers keeps its typed U-value; a construction with layers recomputes U on every layer edit. Import validates thickness > 0 and conductivity > 0.
-- [ ] The exterior wall thickness follows the wall construction's total layer thickness when layers exist; the global thickness setting becomes the fallback for constructions without layers. Rooms and openings adjust, tests for the derived thickness.
-- [ ] Layer editor in the Energy tab: add, remove, reorder layers, edit name, thickness in mm and conductivity, the U-value updating live. Own components only.
-- [ ] Cross-section drawing: an SVG of the wall from outside to inside with each layer as a band at true relative thickness, hatched per material class (masonry, insulation, plaster), labelled with thickness and λ. Shown in the layer editor and in the print view under Bauteile.
-- [ ] IFC: IfcMaterialLayerSet with one IfcMaterialLayer per layer (material name, LayerThickness), IfcMaterialLayerSetUsage on each wall, and IfcMaterial with Pset_MaterialThermal ThermalConductivity. Validated with the IfcOpenShell script; entity counts tested.
-- [ ] Print view: the Bauteile table lists layers per construction with d, λ, R and the resulting U.
-- [ ] i18n: Schicht, Dicke, Wärmeleitfähigkeit, Wärmedurchlasswiderstand, Aufbau von außen nach innen.
+- [x] Data model: `Layer { id, name, thickness, conductivity }` in metres and W/(m·K); `Construction` gains `layers?: Layer[]` and keeps `uValue` as the computed result. Presets get real layer stacks: brick wall 1900 (plaster 15 mm, brick 380 mm, plaster 15 mm), 1970s wall (plaster, aerated concrete 240 mm, render), insulated wall (plaster, brick 240 mm, EPS 160 mm, render), and matching roof and floor stacks. Conductivities from DIN 4108-4 values, sourced in a comment.
+- [x] `src/geometry/layers.ts`: `uValueFromLayers(layers, rsi, rse)` with R = rsi + Σ d/λ + rse, rsi 0.13 and rse 0.04 for walls, 0.10 and 0.04 for roofs, 0.17 and 0.00 for ground floors. Total thickness. Tests against hand-computed cases: the brick wall preset gives about 1.4, the insulated preset about 0.20, a single layer of 1 m at λ 1 gives 1/(1 + 0.17).
+- [x] Migration: a construction without layers keeps its typed U-value; a construction with layers recomputes U on every layer edit. Import validates thickness > 0 and conductivity > 0.
+- [x] The exterior wall thickness follows the wall construction's total layer thickness when layers exist; the global thickness setting becomes the fallback for constructions without layers. Rooms and openings adjust, tests for the derived thickness.
+- [x] Layer editor in the Energy tab: add, remove, reorder layers, edit name, thickness in mm and conductivity, the U-value updating live. Own components only.
+- [x] Cross-section drawing: an SVG of the wall from outside to inside with each layer as a band at true relative thickness, hatched per material class (masonry, insulation, plaster), labelled with thickness and λ. Shown in the layer editor and in the print view under Bauteile.
+- [x] IFC: IfcMaterialLayerSet with one IfcMaterialLayer per layer (material name, LayerThickness), IfcMaterialLayerSetUsage on each wall, and IfcMaterial with Pset_MaterialThermal ThermalConductivity. Validated with the IfcOpenShell script; entity counts tested.
+- [x] Print view: the Bauteile table lists layers per construction with d, λ, R and the resulting U.
+- [x] i18n: Schicht, Dicke, Wärmeleitfähigkeit, Wärmedurchlasswiderstand, Aufbau von außen nach innen.
 
 ## 21. Thermal bridges
 

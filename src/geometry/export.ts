@@ -1,5 +1,6 @@
 import { DEFAULT_ASSIGNMENT, defaultConstructions } from "./constructions";
 import { computeEnergy } from "./energy";
+import { withComputedU } from "./layers";
 import type { EnergySummary } from "./energy";
 import { validateOpening } from "./openings";
 import { area, isCounterClockwise, isSimplePolygon, pointInPolygon, edges } from "./polygon";
@@ -117,7 +118,8 @@ type LegacyBuilding = Omit<
  * A file that already has the fields passes through unchanged.
  */
 export function migrate(b: LegacyBuilding, language: "en" | "de"): Building {
-  const constructions = b.constructions ?? defaultConstructions(language);
+  // Layered constructions carry their computed U, whatever the file says.
+  const constructions = (b.constructions ?? defaultConstructions(language)).map(withComputedU);
   const assignment = {
     wallConstructionId: b.wallConstructionId ?? DEFAULT_ASSIGNMENT.wallConstructionId,
     floorConstructionId: b.floorConstructionId ?? DEFAULT_ASSIGNMENT.floorConstructionId,
@@ -129,7 +131,7 @@ export function migrate(b: LegacyBuilding, language: "en" | "de"): Building {
     b.constructions !== undefined &&
     b.zones.every((z) => z.heated !== undefined && z.temperature !== undefined) &&
     b.storeys.every((s) => s.openings.every((o) => o.constructionId !== undefined));
-  if (complete && b.wallConstructionId !== undefined) return b as Building;
+  if (complete && b.wallConstructionId !== undefined) return { ...(b as Building), constructions };
   return {
     ...b,
     ...assignment,
@@ -181,6 +183,11 @@ export function validateBuilding(b: Building): ImportError | null {
     const d = seen(c.id, cp);
     if (d) return d;
     if (!(c.uValue > 0) || !c.name) return { code: "constructionInvalid", path: cp };
+    for (const [li, l] of (c.layers ?? []).entries()) {
+      if (!(l.thickness > 0) || !(l.conductivity > 0)) {
+        return { code: "constructionInvalid", path: `${cp}.layers[${li}]` };
+      }
+    }
     constructionIds.add(c.id);
   }
   for (const key of [
@@ -389,5 +396,19 @@ function checkConstruction(v: unknown, path: string): ImportError | null {
   if (!["wall", "window", "door", "floor", "roof"].includes(c.category as string))
     return bad(`${path}.category`);
   if (!isNumber(c.uValue)) return bad(`${path}.uValue`);
+  if (c.layers !== undefined) {
+    if (!Array.isArray(c.layers)) return bad(`${path}.layers`);
+    for (const [i, l] of (c.layers as unknown[]).entries()) {
+      if (
+        !isRecord(l) ||
+        !isString(l.id) ||
+        !isString(l.name) ||
+        !isNumber(l.thickness) ||
+        !isNumber(l.conductivity)
+      ) {
+        return bad(`${path}.layers[${i}]`);
+      }
+    }
+  }
   return null;
 }

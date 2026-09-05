@@ -453,10 +453,19 @@ describe("energy actions", () => {
       "c_glazing_triple",
     );
 
+    // Layered constructions compute their U; a typed value is overridden by the layers.
+    const before = store
+      .getState()
+      .building.constructions.find((c) => c.id === "c_wall_insulated")?.uValue;
     store.getState().updateConstruction("c_wall_insulated", { uValue: 0.2 });
     expect(
       store.getState().building.constructions.find((c) => c.id === "c_wall_insulated")?.uValue,
-    ).toBe(0.2);
+    ).toBe(before);
+    // Windows have no layers, so their U is typed.
+    store.getState().updateConstruction("c_glazing_triple", { uValue: 0.7 });
+    expect(
+      store.getState().building.constructions.find((c) => c.id === "c_glazing_triple")?.uValue,
+    ).toBe(0.7);
 
     const zoneId = store.getState().addZone("Cellar", "#000", false);
     expect(store.getState().building.zones[0]?.temperature).toBe(10);
@@ -552,5 +561,36 @@ describe("history batching", () => {
     store.getState().beginBatch();
     store.getState().endBatch();
     expect(store.getState().past).toHaveLength(0);
+  });
+});
+
+describe("layer actions", () => {
+  const wall = () => store.getState().building.constructions.find((c) => c.id === "c_wall_brick")!;
+
+  it("adding, editing, moving and removing layers recomputes U and is undoable", () => {
+    const u0 = wall().uValue;
+    store.getState().addLayer("c_wall_brick", { name: "EPS", thickness: 0.1, conductivity: 0.035 });
+    expect(wall().layers).toHaveLength(4);
+    expect(wall().uValue).toBeLessThan(u0 / 3);
+    const eps = wall().layers![3]!;
+    store.getState().updateLayer("c_wall_brick", eps.id, { thickness: 0.2 });
+    const u2 = wall().uValue;
+    expect(u2).toBeLessThan(wall().layers![3]!.thickness > 0.15 ? u0 : 0);
+    store.getState().moveLayer("c_wall_brick", eps.id, -1);
+    expect(wall().layers![2]!.id).toBe(eps.id);
+    expect(wall().uValue).toBeCloseTo(u2); // order does not change U
+    store.getState().removeLayer("c_wall_brick", eps.id);
+    expect(wall().layers).toHaveLength(3);
+    expect(wall().uValue).toBeCloseTo(u0);
+    store.getState().undo();
+    expect(wall().layers).toHaveLength(4);
+    expect(store.getState().past).toHaveLength(3);
+  });
+
+  it("removing the last layer makes the construction typed again", () => {
+    for (const l of [...wall().layers!]) store.getState().removeLayer("c_wall_brick", l.id);
+    expect(wall().layers).toBeUndefined();
+    store.getState().updateConstruction("c_wall_brick", { uValue: 0.9 });
+    expect(wall().uValue).toBe(0.9);
   });
 });

@@ -14,13 +14,25 @@ export type OpeningKind = "window" | "door";
 
 export type ConstructionCategory = "wall" | "window" | "door" | "floor" | "roof";
 
+/** One material layer of a construction, from outside to inside. */
+export interface Layer {
+  id: Id;
+  name: string;
+  /** Metres. */
+  thickness: number;
+  /** Thermal conductivity λ in W/(m·K). */
+  conductivity: number;
+}
+
 /** A building component type with its thermal transmittance. */
 export interface Construction {
   id: Id;
   name: string;
   category: ConstructionCategory;
-  /** U-value in W/(m²K). */
+  /** U-value in W/(m²K). Computed from the layers when they exist. */
   uValue: number;
+  /** Layer stack from outside to inside. Walls, roofs and floors; windows and doors have none. */
+  layers?: Layer[];
 }
 
 export interface Opening {

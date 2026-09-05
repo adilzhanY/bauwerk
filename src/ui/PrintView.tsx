@@ -7,6 +7,7 @@ import type { Building, Storey } from "@/geometry/types";
 import { useT } from "@/i18n/useT";
 import type { MessageKey } from "@/i18n";
 import { useEditorStore } from "@/store/building";
+import { LayerSection, LayerTable } from "./LayerSection";
 
 /*
   The report is a document, not an interface. It follows the conventions of
@@ -131,6 +132,7 @@ export function PrintView() {
           {t("print.section.elements")}
         </h2>
         <ElementsTable energy={energy} />
+        <ConstructionLayers building={building} />
       </div>
 
       {building.storeys.map((storey, i) => (
@@ -200,6 +202,51 @@ export function PrintView() {
           {t("print.generated", { date: dateTime(now) })}
         </p>
       </div>
+    </div>
+  );
+}
+
+function ConstructionLayers({ building }: { building: Building }) {
+  const ids = [
+    building.wallConstructionId,
+    building.roofConstructionId,
+    building.floorConstructionId,
+  ];
+  const layered = ids
+    .map((id) => findConstruction(building.constructions, id))
+    .filter((c): c is NonNullable<typeof c> => c?.layers !== undefined && c.layers.length > 0);
+  if (layered.length === 0) return null;
+  return (
+    <div style={{ marginTop: "10pt" }}>
+      {layered.map((c) => (
+        <div key={c.id} style={{ marginBottom: "10pt", breakInside: "avoid" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontSize: "10pt",
+              fontWeight: "bold",
+              borderBottom: "1px solid #000",
+              padding: "2pt 0",
+            }}
+          >
+            <span>{c.name}</span>
+            <span>U = {num(c.uValue, 3)} W/(m²·K)</span>
+          </div>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1.4fr",
+              gap: "8pt",
+              alignItems: "start",
+              marginTop: "4pt",
+            }}
+          >
+            <LayerSection layers={c.layers ?? []} language="de" plain />
+            <LayerTable layers={c.layers ?? []} language="de" />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

@@ -5,6 +5,7 @@ import type {
   GeoOrigin,
   Construction,
   Id,
+  Layer,
   Opening,
   Segment,
   Storey,
@@ -19,6 +20,7 @@ import {
   UNHEATED_TEMPERATURE,
 } from "@/geometry/types";
 import { DEFAULT_ASSIGNMENT, defaultConstructions } from "@/geometry/constructions";
+import { uValueFromLayers } from "@/geometry/layers";
 import {
   ensureCounterClockwise,
   isCounterClockwise,
@@ -123,6 +125,10 @@ export interface EditorActions {
   addZone: (name: string, color: string, heated?: boolean) => Id;
   setZoneHeated: (zoneId: Id, heated: boolean) => void;
   updateConstruction: (constructionId: Id, patch: Partial<Omit<Construction, "id">>) => void;
+  addLayer: (constructionId: Id, layer?: Omit<Layer, "id">) => void;
+  updateLayer: (constructionId: Id, layerId: Id, patch: Partial<Omit<Layer, "id">>) => void;
+  removeLayer: (constructionId: Id, layerId: Id) => void;
+  moveLayer: (constructionId: Id, layerId: Id, direction: -1 | 1) => void;
   assignConstruction: (target: ConstructionTarget, constructionId: Id) => void;
   updateZone: (zoneId: Id, patch: Partial<Omit<Zone, "id">>) => void;
   removeZone: (zoneId: Id) => void;
@@ -490,7 +496,58 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           updateConstruction: (constructionId, patch) => {
             set((state) => {
               const c = state.building.constructions.find((x) => x.id === constructionId);
-              if (c) Object.assign(c, patch);
+              if (!c) return;
+              Object.assign(c, patch);
+              if (c.layers && c.layers.length > 0)
+                c.uValue = uValueFromLayers(c.layers, c.category);
+            });
+          },
+
+          addLayer: (constructionId, layer) => {
+            set((state) => {
+              const c = state.building.constructions.find((x) => x.id === constructionId);
+              if (!c) return;
+              c.layers ??= [];
+              c.layers.push({
+                id: createId("layer"),
+                name: "",
+                thickness: 0.1,
+                conductivity: 0.5,
+                ...layer,
+              });
+              c.uValue = uValueFromLayers(c.layers, c.category);
+            });
+          },
+
+          updateLayer: (constructionId, layerId, patch) => {
+            set((state) => {
+              const c = state.building.constructions.find((x) => x.id === constructionId);
+              const l = c?.layers?.find((x) => x.id === layerId);
+              if (!c?.layers || !l) return;
+              Object.assign(l, patch);
+              c.uValue = uValueFromLayers(c.layers, c.category);
+            });
+          },
+
+          removeLayer: (constructionId, layerId) => {
+            set((state) => {
+              const c = state.building.constructions.find((x) => x.id === constructionId);
+              if (!c?.layers) return;
+              c.layers = c.layers.filter((x) => x.id !== layerId);
+              if (c.layers.length === 0) delete c.layers;
+              else c.uValue = uValueFromLayers(c.layers, c.category);
+            });
+          },
+
+          moveLayer: (constructionId, layerId, direction) => {
+            set((state) => {
+              const c = state.building.constructions.find((x) => x.id === constructionId);
+              if (!c?.layers) return;
+              const from = c.layers.findIndex((x) => x.id === layerId);
+              const to = from + direction;
+              if (from === -1 || to < 0 || to >= c.layers.length) return;
+              const [item] = c.layers.splice(from, 1);
+              if (item) c.layers.splice(to, 0, item);
             });
           },
 

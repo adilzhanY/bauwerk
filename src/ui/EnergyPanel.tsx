@@ -9,20 +9,11 @@ import { formatArea, formatNumber } from "@/lib/format";
 import { useEditorStore } from "@/store/building";
 import type { ConstructionTarget } from "@/store/building";
 import { CustomReadOnly } from "@/components/CustomField";
-import { CustomNumberInput } from "@/components/CustomNumberInput";
 import { CustomSegmented } from "@/components/CustomSegmented";
 import { CustomSelect } from "@/components/CustomSelect";
+import { LayerEditor } from "./LayerEditor";
 
 const CLASSES: EnergyClass[] = ["A+", "A", "B", "C", "D", "E", "F", "G", "H"];
-
-const categoryKey: Record<ConstructionCategory | "interiorWall", MessageKey> = {
-  wall: "category.wall",
-  window: "category.window",
-  door: "category.door",
-  floor: "category.floor",
-  roof: "category.roof",
-  interiorWall: "category.interiorWall",
-};
 
 export function EnergyPanel() {
   const t = useT();
@@ -272,33 +263,15 @@ function Assignments() {
 
 function Constructions() {
   const t = useT();
-  const language = useEditorStore((s) => s.language);
   const constructions = useEditorStore((s) => s.building.constructions);
-  const update = useEditorStore((s) => s.updateConstruction);
-  const beginBatch = useEditorStore((s) => s.beginBatch);
-  const endBatch = useEditorStore((s) => s.endBatch);
   return (
     <details className="border-t border-line pt-3">
       <summary className="cursor-pointer text-xs font-medium text-muted select-none">
-        {t("energy.constructions")} ({t("energy.uValue")}, {t("energy.uValueUnit")})
+        {t("energy.constructions")}
       </summary>
-      <div className="mt-2 flex flex-col gap-2">
+      <div className="mt-2 flex flex-col gap-3">
         {constructions.map((c) => (
-          <CustomNumberInput
-            key={c.id}
-            label={`${t(categoryKey[c.category])}: ${c.name}`}
-            value={c.uValue}
-            min={0.1}
-            max={6}
-            step={0.05}
-            slider={false}
-            language={language}
-            onChange={(uValue) => {
-              update(c.id, { uValue });
-            }}
-            onGestureStart={beginBatch}
-            onGestureEnd={endBatch}
-          />
+          <LayerEditor key={c.id} construction={c} />
         ))}
       </div>
     </details>

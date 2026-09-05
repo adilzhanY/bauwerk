@@ -6,6 +6,14 @@ import { edges } from "./polygon";
 import { computeRooms } from "./rooms";
 import type { Building, Opening, Segment } from "./types";
 
+const presets = defaultConstructions("en");
+const U = (id: string) => presets.find((c) => c.id === id)!.uValue;
+const WALL = U(PRESET_IDS.wallBrick);
+const FLOOR = U(PRESET_IDS.floorBare);
+const ROOF = U(PRESET_IDS.roofBare);
+/** Uninsulated default: walls 36 m x 3 m = 108 m², floor 80 m², roof 80 m². */
+const BASE = WALL * 108 + FLOOR * 80 + ROOF * 80;
+
 let n = 0;
 const factory = { createId: () => `room_${++n}`, defaultName: (i: number) => `Room ${i}` };
 
@@ -43,25 +51,28 @@ const window = (patch: Partial<Opening> = {}): Opening => ({
 });
 
 describe("computeEnergy on the default 10 by 8 single storey", () => {
-  // Envelope: walls 36 m x 3 m = 108 m², floor 80 m², roof 80 m².
-  // Uninsulated: H_T = 1.4 x 108 + 1.0 x 80 + 1.3 x 80 = 151.2 + 80 + 104 = 335.2 W/K.
+  // Envelope: walls 36 m x 3 m = 108 m², floor 80 m², roof 80 m², U from the preset layer stacks.
   it("hand-computed transmission loss, ventilation loss and heating demand", () => {
     const e = computeEnergy(building());
     expect(e.envelopeArea).toBeCloseTo(268);
     expect(e.wallNetArea).toBeCloseTo(108);
-    expect(e.transmissionLoss).toBeCloseTo(335.2);
-    expect(e.specificTransmissionLoss).toBeCloseTo(335.2 / 268);
+    expect(e.transmissionLoss).toBeCloseTo(BASE);
+    expect(e.specificTransmissionLoss).toBeCloseTo(BASE / 268);
     expect(e.heatedVolume).toBeCloseTo(240);
     expect(e.ventilationLoss).toBeCloseTo(0.34 * 0.5 * 240);
-    expect(e.heatingDemand).toBeCloseTo((335.2 + 40.8) * 84);
-    expect(e.specificHeatingDemand).toBeCloseTo(((335.2 + 40.8) * 84) / 80);
+    expect(e.heatingDemand).toBeCloseTo((BASE + 40.8) * 84);
+    expect(e.specificHeatingDemand).toBeCloseTo(((BASE + 40.8) * 84) / 80);
     expect(e.energyClass).toBe("H");
   });
 
-  // Insulated: 0.25 x 108 + 0.35 x 80 + 0.2 x 80 = 27 + 28 + 16 = 71 W/K.
   it("the renovated scenario swaps every construction for the best in its category", () => {
     const e = computeEnergy(building(), { renovated: true });
-    expect(e.transmissionLoss).toBeCloseTo(71);
+    const best =
+      U(PRESET_IDS.wallInsulated) * 108 +
+      U(PRESET_IDS.floorInsulated) * 80 +
+      U(PRESET_IDS.roofInsulated) * 80;
+    expect(e.transmissionLoss).toBeCloseTo(best);
+    expect(e.transmissionLoss).toBeLessThan(BASE / 3);
     expect(e.energyClass).not.toBe("H");
   });
 
@@ -70,7 +81,9 @@ describe("computeEnergy on the default 10 by 8 single storey", () => {
     const area = 1.2 * 1.4;
     expect(withDouble.windowArea).toBeCloseTo(area);
     expect(withDouble.wallNetArea).toBeCloseTo(108 - area);
-    expect(withDouble.transmissionLoss).toBeCloseTo(1.4 * (108 - area) + 2.8 * area + 184);
+    expect(withDouble.transmissionLoss).toBeCloseTo(
+      WALL * (108 - area) + 2.8 * area + FLOOR * 80 + ROOF * 80,
+    );
     const withTriple = computeEnergy(
       building([], [window({ constructionId: PRESET_IDS.glazingTriple })]),
     );
@@ -82,7 +95,7 @@ describe("computeEnergy on the default 10 by 8 single storey", () => {
   it("an invalid opening is ignored", () => {
     const e = computeEnergy(building([], [window({ offset: 9.5 })]));
     expect(e.windowArea).toBe(0);
-    expect(e.transmissionLoss).toBeCloseTo(335.2);
+    expect(e.transmissionLoss).toBeCloseTo(BASE);
   });
 
   it("window-to-wall ratio per orientation, y is north", () => {
@@ -107,10 +120,11 @@ describe("computeEnergy on the default 10 by 8 single storey", () => {
     const rooms = computeRooms(rect, split, [], factory);
     const leftIndex = rooms.findIndex((r) => r.area === 32);
     const e = computeEnergy(building(split, [], zones, { [leftIndex]: "cold" }));
-    // Heated part is 6 x 8: walls 6 + 8 + 6 = 20 m x 3 m = 60 m² x 1.4 = 84,
-    // floor 48 x 1.0 = 48, roof 48 x 1.3 = 62.4, interior wall 8 x 3 x 1.0 = 24.
+    // Heated part is 6 x 8: walls 6 + 8 + 6 = 20 m x 3 m = 60 m², floor 48 m², roof 48 m²,
+    // interior wall 8 x 3 x 1.0 = 24.
+    const heatedBase = WALL * 60 + FLOOR * 48 + ROOF * 48 + 24;
     expect(e.heatedFloorArea).toBeCloseTo(48);
-    expect(e.transmissionLoss).toBeCloseTo(84 + 48 + 62.4 + 24);
+    expect(e.transmissionLoss).toBeCloseTo(heatedBase);
     expect(e.elements.some((x) => x.category === "interiorWall")).toBe(true);
 
     const allCold = computeEnergy(building(split, [], zones, { 0: "cold", 1: "cold" }));
@@ -130,9 +144,9 @@ describe("computeEnergy on the default 10 by 8 single storey", () => {
     const warmWindow = window({ offset: 6 }); // x from 6 to 7.2, right room
     const a = computeEnergy(building(split, [coldWindow], zones, { [leftIndex]: "cold" }));
     const b = computeEnergy(building(split, [warmWindow], zones, { [leftIndex]: "cold" }));
-    const base = 84 + 48 + 62.4 + 24;
+    const base = WALL * 60 + FLOOR * 48 + ROOF * 48 + 24;
     expect(a.transmissionLoss).toBeCloseTo(base);
-    expect(b.transmissionLoss).toBeCloseTo(base - 1.4 * 1.68 + 2.8 * 1.68);
+    expect(b.transmissionLoss).toBeCloseTo(base - WALL * 1.68 + 2.8 * 1.68);
   });
 
   it("per zone breakdown sums to the total", () => {

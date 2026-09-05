@@ -1,4 +1,5 @@
-import type { Construction, ConstructionCategory } from "./types";
+import { uValueFromLayers } from "./layers";
+import type { Construction, ConstructionCategory, Layer } from "./types";
 
 /**
  * Default construction presets. Ids are stable so files written before the
@@ -66,12 +67,101 @@ const presetDefs: Record<
   roofInsulated: { category: "roof", uValue: 0.2, en: "Roof, insulated", de: "Dach, gedämmt" },
 };
 
+/**
+ * Material conductivities λ in W/(m·K), design values after DIN 4108-4 table 1
+ * and the common manufacturer values: gypsum plaster 0.70, lime cement render
+ * 1.00, solid brick (1900) 0.81, lightweight brick 0.58, aerated concrete 0.21,
+ * reinforced concrete 2.30, EPS and mineral wool 0.035, XPS 0.034, timber 0.13,
+ * plasterboard 0.25, bitumen membrane 0.17, sand and gravel 2.0.
+ */
+const materials = {
+  plasterIn: { en: "Gypsum plaster", de: "Gipsputz", lambda: 0.7 },
+  render: { en: "Lime cement render", de: "Kalkzementputz", lambda: 1.0 },
+  brickSolid: { en: "Solid brick", de: "Vollziegel", lambda: 0.81 },
+  brickLight: { en: "Lightweight brick", de: "Leichthochlochziegel", lambda: 0.58 },
+  aerated: { en: "Aerated concrete", de: "Porenbeton", lambda: 0.21 },
+  concrete: { en: "Reinforced concrete", de: "Stahlbeton", lambda: 2.3 },
+  eps: { en: "EPS insulation", de: "EPS-Dämmung", lambda: 0.035 },
+  wool: { en: "Mineral wool", de: "Mineralwolle", lambda: 0.035 },
+  xps: { en: "XPS insulation", de: "XPS-Dämmung", lambda: 0.034 },
+  timber: { en: "Timber boards", de: "Holzschalung", lambda: 0.13 },
+  plasterboard: { en: "Plasterboard", de: "Gipskartonplatte", lambda: 0.25 },
+  bitumen: { en: "Bitumen membrane", de: "Bitumenbahn", lambda: 0.17 },
+  screed: { en: "Cement screed", de: "Zementestrich", lambda: 1.4 },
+} as const;
+
+type MaterialKey = keyof typeof materials;
+
+/** Layer stacks from outside to inside, thickness in millimetres. */
+const presetLayers: Partial<Record<PresetKey, [MaterialKey, number][]>> = {
+  wallBrick: [
+    ["render", 20],
+    ["brickSolid", 380],
+    ["plasterIn", 15],
+  ],
+  wall1970: [
+    ["render", 20],
+    ["aerated", 240],
+    ["plasterIn", 15],
+  ],
+  wallInsulated: [
+    ["render", 10],
+    ["eps", 160],
+    ["brickLight", 240],
+    ["plasterIn", 15],
+  ],
+  roofBare: [
+    ["bitumen", 5],
+    ["timber", 24],
+    ["plasterboard", 12.5],
+  ],
+  roofInsulated: [
+    ["bitumen", 5],
+    ["timber", 24],
+    ["wool", 200],
+    ["plasterboard", 12.5],
+  ],
+  floorBare: [
+    ["concrete", 150],
+    ["screed", 50],
+  ],
+  floorInsulated: [
+    ["xps", 100],
+    ["concrete", 150],
+    ["screed", 50],
+  ],
+};
+
+export function layersFor(key: PresetKey, language: "en" | "de"): Layer[] | undefined {
+  const stack = presetLayers[key];
+  if (!stack) return undefined;
+  return stack.map(([m, mm], i) => ({
+    id: `${PRESET_IDS[key]}_l${i + 1}`,
+    name: materials[m][language],
+    thickness: mm / 1000,
+    conductivity: materials[m].lambda,
+  }));
+}
+
 export function defaultConstructions(language: "en" | "de"): Construction[] {
   return (Object.keys(presetDefs) as PresetKey[]).map((key) => {
     const def = presetDefs[key];
-    return { id: PRESET_IDS[key], name: def[language], category: def.category, uValue: def.uValue };
+    const layers = layersFor(key, language);
+    const c: Construction = {
+      id: PRESET_IDS[key],
+      name: def[language],
+      category: def.category,
+      uValue: def.uValue,
+    };
+    if (layers) {
+      c.layers = layers;
+      c.uValue = uValueFromLayers(layers, def.category);
+    }
+    return c;
   });
 }
+
+export const MATERIALS = materials;
 
 /** Default assignment for a building that has no energy data yet: the uninsulated stock. */
 export const DEFAULT_ASSIGNMENT = {

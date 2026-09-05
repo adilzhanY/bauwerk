@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { validateOpening } from "@/geometry/openings";
 import { buildWalls } from "@/geometry/walls";
+import { effectiveWallThickness } from "@/geometry/layers";
 import type { Building, Storey as StoreyData } from "@/geometry/types";
 import { colors, INACTIVE_OPACITY } from "@/lib/colors";
 import { Opening } from "./Opening";
@@ -19,9 +20,10 @@ interface Props {
 const SLAB = 0.2;
 
 export function Storey({ building, storey, elevation, active }: Props) {
+  const thickness = effectiveWallThickness(building);
   const walls = useMemo(
-    () => buildWalls(building.footprint, building.wallThickness, storey.height),
-    [building.footprint, building.wallThickness, storey.height],
+    () => buildWalls(building.footprint, thickness, storey.height),
+    [building.footprint, thickness, storey.height],
   );
   const slab = useMemo(
     () => prismGeometry(building.footprint, elevation - SLAB, elevation),
@@ -57,7 +59,7 @@ export function Storey({ building, storey, elevation, active }: Props) {
                 storeyId={storey.id}
                 wall={wall}
                 opening={opening}
-                thickness={building.wallThickness}
+                thickness={thickness}
                 elevation={elevation}
                 active={active}
                 valid={

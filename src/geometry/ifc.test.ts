@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { toIfc } from "./ifc";
 import { ifcGuid, real, str } from "./step";
+import { PRESET_IDS, defaultConstructions } from "./constructions";
 import { exampleBlock, exampleHouse } from "@/lib/examples";
 import { resetIds } from "@/lib/ids";
 import type { Building } from "./types";
@@ -86,7 +87,8 @@ describe("toIfc", () => {
     }
     for (const e of entities.values()) {
       const isRoot = e.type === "IFCPROJECT";
-      const isRel = e.type.startsWith("IFCREL");
+      // Relationships and material property definitions point at their targets and are not referenced themselves.
+      const isRel = e.type.startsWith("IFCREL") || e.type === "IFCMATERIALPROPERTIES";
       if (!isRoot && !isRel) expect(referenced.has(e.id)).toBe(true);
     }
   });
@@ -164,8 +166,9 @@ describe("toIfc", () => {
 
   it("writes U-values into property sets and umlauts into names", () => {
     const text = toIfc(house());
+    const wallU = defaultConstructions("de").find((c) => c.id === PRESET_IDS.wallBrick)!.uValue;
     expect(text).toContain(
-      "IFCPROPERTYSINGLEVALUE('ThermalTransmittance',$,IFCTHERMALTRANSMITTANCEMEASURE(1.4),$)",
+      `IFCPROPERTYSINGLEVALUE('ThermalTransmittance',$,IFCTHERMALTRANSMITTANCEMEASURE(${real(wallU)}),$)`,
     );
     expect(text).toContain("IFCTHERMALTRANSMITTANCEMEASURE(2.8)");
     expect(text).toContain("'K\\X2\\00FC\\X0\\che'");
@@ -206,5 +209,22 @@ describe("georeferencing", () => {
     const { entities } = parse(text);
     expect(count(entities, "IFCMAPCONVERSION")).toBe(1);
     expect(toIfc(house())).not.toContain("IFCMAPCONVERSION");
+  });
+});
+
+describe("material layers", () => {
+  it("writes one shared layer set for the wall construction and associates every exterior wall", () => {
+    const b = house();
+    const { entities } = parse(toIfc(b));
+    const wallLayers = b.constructions.find((c) => c.id === b.wallConstructionId)!.layers!.length;
+    expect(count(entities, "IFCMATERIALLAYERSET")).toBe(1);
+    expect(count(entities, "IFCMATERIALLAYER")).toBe(wallLayers);
+    expect(count(entities, "IFCMATERIAL")).toBe(wallLayers);
+    expect(count(entities, "IFCMATERIALPROPERTIES")).toBe(wallLayers);
+    const exteriorWalls = b.footprint.length * b.storeys.length;
+    expect(count(entities, "IFCMATERIALLAYERSETUSAGE")).toBe(exteriorWalls);
+    expect(count(entities, "IFCRELASSOCIATESMATERIAL")).toBe(exteriorWalls);
+    const layer = [...entities.values()].find((e) => e.type === "IFCMATERIALLAYER")!;
+    expect(layer.args).toMatch(/^#\d+,0\.02,/); // render, 20 mm, outside first
   });
 });

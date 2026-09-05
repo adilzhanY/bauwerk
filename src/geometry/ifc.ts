@@ -20,6 +20,7 @@
  * IsExternal and ThermalTransmittance; Pset_SpaceCommon with NetPlannedArea.
  */
 import { findConstruction } from "./constructions";
+import { effectiveWallThickness } from "./layers";
 import { epsgForZone, northInPlan, toUtm } from "./geo";
 import { validateOpening } from "./openings";
 import { area, sub } from "./polygon";
@@ -197,9 +198,10 @@ export function toIfc(building: Building, options: IfcOptions = {}): string {
     ]);
     storeyIds.push(ifcStorey);
     const contained: number[] = [];
-    const walls = buildWalls(building.footprint, building.wallThickness, storey.height);
+    const walls = buildWalls(building.footprint, effectiveWallThickness(building), storey.height);
     const wallU = findConstruction(building.constructions, building.wallConstructionId)?.uValue;
 
+    const wallLayerSet = materialLayerSet(ctx, building, building.wallConstructionId);
     // Exterior walls with their openings.
     for (const wall of walls) {
       const placement = localPlacement(ctx, storeyPlacement, 0);
@@ -216,6 +218,23 @@ export function toIfc(building: Building, options: IfcOptions = {}): string {
         enm("SOLIDWALL"),
       ]);
       contained.push(ifcWall);
+      if (wallLayerSet !== null) {
+        const usage = w.add("IFCMATERIALLAYERSETUSAGE", [
+          ref(wallLayerSet),
+          enm("AXIS2"),
+          enm("NEGATIVE"),
+          real(0),
+          NULL,
+        ]);
+        w.add("IFCRELASSOCIATESMATERIAL", [
+          guid(`${storey.id}/wall/${wall.index}/mat`),
+          NULL,
+          NULL,
+          NULL,
+          list([ref(ifcWall)]),
+          ref(usage),
+        ]);
+      }
       propertySet(
         ctx,
         `${storey.id}/wall/${wall.index}/pset`,
@@ -386,6 +405,53 @@ export function toIfc(building: Building, options: IfcOptions = {}): string {
   });
 }
 
+/**
+ * IfcMaterialLayerSet for a layered construction, written once per export and
+ * shared by every wall through IfcMaterialLayerSetUsage. Each layer carries its
+ * material with Pset_MaterialThermal ThermalConductivity. Returns null for a
+ * construction without layers.
+ */
+const layerSetCache = new WeakMap<Context, Map<string, number | null>>();
+function materialLayerSet(ctx: Context, building: Building, constructionId: string): number | null {
+  const cache = layerSetCache.get(ctx) ?? new Map<string, number | null>();
+  layerSetCache.set(ctx, cache);
+  const hit = cache.get(constructionId);
+  if (hit !== undefined) return hit;
+  const c = findConstruction(building.constructions, constructionId);
+  if (!c?.layers || c.layers.length === 0) {
+    cache.set(constructionId, null);
+    return null;
+  }
+  const w = ctx.w;
+  const layerIds = c.layers.map((l) => {
+    const material = w.add("IFCMATERIAL", [str(l.name || "Layer"), NULL, NULL]);
+    const conductivity = w.add("IFCPROPERTYSINGLEVALUE", [
+      str("ThermalConductivity"),
+      NULL,
+      typed("IFCTHERMALCONDUCTIVITYMEASURE", real(l.conductivity)),
+      NULL,
+    ]);
+    w.add("IFCMATERIALPROPERTIES", [
+      str("Pset_MaterialThermal"),
+      NULL,
+      list([ref(conductivity)]),
+      ref(material),
+    ]);
+    return w.add("IFCMATERIALLAYER", [
+      ref(material),
+      real(l.thickness),
+      NULL,
+      str(l.name || "Layer"),
+      NULL,
+      NULL,
+      NULL,
+    ]);
+  });
+  const set = w.add("IFCMATERIALLAYERSET", [list(layerIds.map(ref)), str(c.name), NULL]);
+  cache.set(constructionId, set);
+  return set;
+}
+
 function localPlacement(ctx: Context, parent: number | null, z: number): number {
   const point =
     z === 0 ? ctx.origin3d : ctx.w.add("IFCCARTESIANPOINT", [list([real(0), real(0), real(z)])]);
@@ -483,7 +549,7 @@ function addOpening(
   ifcWall: number,
 ): number {
   const w = ctx.w;
-  const t = building.wallThickness;
+  const t = effectiveWallThickness(building);
   const u0 = opening.offset;
   const u1 = opening.offset + opening.width;
   const openingPlan = wallRect(wall, u0, u1, -0.01, t + 0.01);

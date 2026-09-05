@@ -19,6 +19,7 @@ import { CustomSwatches } from "@/components/CustomSwatches";
 import { CustomTabPanel, CustomTabs } from "@/components/CustomTabs";
 import { CustomTextInput } from "@/components/CustomTextInput";
 import { ConstructionSelect, EnergyPanel } from "./EnergyPanel";
+import { effectiveWallThickness } from "@/geometry/layers";
 
 const openingErrorKey: Record<OpeningError, MessageKey> = {
   outsideWallStart: "opening.error.outsideWallStart",
@@ -189,7 +190,7 @@ function WallProperties({ storeyId, wallIndex }: { storeyId: string; wallIndex: 
   const t = useT();
   const language = useEditorStore((s) => s.language);
   const footprint = useEditorStore((s) => s.building.footprint);
-  const thickness = useEditorStore((s) => s.building.wallThickness);
+  const thickness = useEditorStore((s) => effectiveWallThickness(s.building));
   const wallConstructionId = useEditorStore((s) => s.building.wallConstructionId);
   const storey = useStorey(storeyId);
   const edge = edges(footprint)[wallIndex];
