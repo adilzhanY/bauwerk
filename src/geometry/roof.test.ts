@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_ASSIGNMENT, defaultConstructions } from "./constructions";
 import { lShape, rect } from "./fixtures";
 import { area } from "./polygon";
-import { buildRoof, offsetPolygon } from "./roof";
+import { buildRoof, decomposeRectilinear, isRectilinear, offsetPolygon } from "./roof";
 import type { Building, Roof } from "./types";
 
 const b = (roof: Partial<Roof>, footprint = rect): Building => ({
@@ -60,11 +60,43 @@ describe("gable roof", () => {
     expect(r.ridge?.b.y).toBeCloseTo(8);
   });
 
-  it("works as a folded plate on the L shape", () => {
+  it("becomes a cross gable on the L shape: one gable per wing, eaves on every wall", () => {
     const r = buildRoof(b({ kind: "gable", pitch: 30, overhang: 0, ridgeAxis: "x" }, lShape), 3);
-    expect(r.faces.length).toBeGreaterThanOrEqual(2);
+    // L: 10 by 5 lower block and 6 by 3 upper block along x.
+    expect(r.faces).toHaveLength(4);
+    expect(r.ridges).toHaveLength(2);
     expect(r.faces.reduce((s, f) => s + f.planArea, 0)).toBeCloseTo(area(lShape));
-    expect(r.area).toBeGreaterThan(area(lShape));
+    expect(r.area).toBeCloseTo(area(lShape) / Math.cos(deg(30)));
+    // Every outer eave point sits on the storey top; no wing floats above its wall.
+    const eavePoints = r.faces
+      .flatMap((f) => f.points)
+      .filter((p) => Math.abs(p.y) < 1e-9 || Math.abs(p.y - 8) < 1e-9 || Math.abs(p.y - 5) < 1e-9);
+    expect(eavePoints.length).toBeGreaterThan(0);
+    expect(eavePoints.every((p) => Math.abs(p.z - 3) < 1e-9)).toBe(true);
+    expect(r.ridgeHeight).toBeCloseTo(2.5 * Math.tan(deg(30)));
+    expect(r.atticVolume).toBeCloseTo(
+      0.5 * 5 * 2.5 * Math.tan(deg(30)) * 10 + 0.5 * 3 * 1.5 * Math.tan(deg(30)) * 6,
+    );
+  });
+
+  it("decomposes rectilinear polygons into maximal strips along the axis", () => {
+    expect(decomposeRectilinear(rect, "x")).toEqual([
+      { min: { x: 0, y: 0 }, max: { x: 10, y: 8 } },
+    ]);
+    const l = decomposeRectilinear(lShape, "x");
+    expect(l).toHaveLength(2);
+    expect(
+      l.map((r) => (r.max.x - r.min.x) * (r.max.y - r.min.y)).reduce((s, v) => s + v, 0),
+    ).toBeCloseTo(68);
+    expect(decomposeRectilinear(lShape, "y")).toHaveLength(2);
+    expect(isRectilinear(lShape)).toBe(true);
+    expect(
+      isRectilinear([
+        { x: 0, y: 0 },
+        { x: 4, y: 1 },
+        { x: 0, y: 3 },
+      ]),
+    ).toBe(false);
   });
 });
 

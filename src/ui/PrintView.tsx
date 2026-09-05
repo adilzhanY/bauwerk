@@ -604,8 +604,8 @@ function StoreyPlan({ storey }: { storey: Storey }) {
   const py = (y: number) => max.y - y + pad;
   const pt = (p: { x: number; y: number }) => `${px(p.x)},${py(p.y)}`;
   const es = edges(building.footprint);
-  const ridge =
-    storey === building.storeys[building.storeys.length - 1] ? buildRoof(building, 0).ridge : null;
+  const ridges =
+    storey === building.storeys[building.storeys.length - 1] ? buildRoof(building, 0).ridges : [];
   return (
     <svg
       viewBox={`0 0 ${w} ${h}`}
@@ -652,8 +652,9 @@ function StoreyPlan({ storey }: { storey: Storey }) {
           />
         );
       })}
-      {ridge && (
+      {ridges.map((ridge, i) => (
         <line
+          key={i}
           x1={px(ridge.a.x)}
           y1={py(ridge.a.y)}
           x2={px(ridge.b.x)}
@@ -662,7 +663,7 @@ function StoreyPlan({ storey }: { storey: Storey }) {
           strokeWidth={0.12}
           strokeDasharray="0.6 0.3"
         />
-      )}
+      ))}
       {storey.rooms.map((r) => {
         const c = r.polygon.reduce(
           (s, p) => ({ x: s.x + p.x / r.polygon.length, y: s.y + p.y / r.polygon.length }),

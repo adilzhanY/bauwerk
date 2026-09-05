@@ -49,7 +49,10 @@ export interface RoofGeometry {
   /** The kind actually built; a hip on a non-rectangular footprint falls back to gable. */
   builtKind: Roof["kind"];
   faces: RoofFace[];
+  /** The main ridge, for callers that want one line. */
   ridge: { a: Vec3; b: Vec3 } | null;
+  /** Every ridge; a cross gable over an L shape has one per wing. */
+  ridges: { a: Vec3; b: Vec3 }[];
   /** Outline of the roof at eave level, footprint plus overhang. */
   eaves: Vec2[];
   area: number;
@@ -153,6 +156,7 @@ export function buildRoof(building: Building, topElevation: number): RoofGeometr
       builtKind: "flat",
       faces: [f],
       ridge: null,
+      ridges: [],
       eaves: [...fp],
       area: f.area,
       ridgeHeight: 0,
@@ -161,6 +165,35 @@ export function buildRoof(building: Building, topElevation: number): RoofGeometr
   }
   const eaves = offsetPolygon(fp, roof.overhang);
   const tan = Math.tan(rad(roof.pitch));
+  const alongXAxis = roof.ridgeAxis === "x";
+  const useHipRoof = roof.kind === "hip" && isAxisAlignedRectangle(fp);
+  // Cross gable: a rectilinear footprint that is not a rectangle gets one gable per
+  // rectangle of its decomposition along the ridge axis, each with its own ridge.
+  if (!useHipRoof && isRectilinear(eaves) && !isAxisAlignedRectangle(eaves)) {
+    const rects = decomposeRectilinear(eaves, alongXAxis ? "x" : "y");
+    const faces: RoofFace[] = [];
+    const ridges: { a: Vec3; b: Vec3 }[] = [];
+    let atticVolume = 0;
+    let ridgeHeight = 0;
+    for (const r of rects) {
+      const g = gableOverRectangle(r, alongXAxis, tan, topElevation);
+      faces.push(...g.faces);
+      ridges.push(g.ridge);
+      atticVolume += g.atticVolume;
+      ridgeHeight = Math.max(ridgeHeight, g.ridgeHeight);
+    }
+    return {
+      kind: roof.kind,
+      builtKind: "gable",
+      faces,
+      ridge: ridges[0] ?? null,
+      ridges,
+      eaves,
+      area: faces.reduce((s, f) => s + f.area, 0),
+      ridgeHeight,
+      atticVolume,
+    };
+  }
   const { min, max } = bounds(eaves);
   const centre = { x: (min.x + max.x) / 2, y: (min.y + max.y) / 2 };
   const useHip = roof.kind === "hip" && isAxisAlignedRectangle(fp);
@@ -233,8 +266,112 @@ export function buildRoof(building: Building, topElevation: number): RoofGeometr
     builtKind: useHip ? "hip" : "gable",
     faces,
     ridge,
+    ridges: [ridge],
     eaves,
     area: faces.reduce((s, f) => s + f.area, 0),
+    ridgeHeight,
+    atticVolume,
+  };
+}
+
+/** Every edge is axis aligned. */
+export function isRectilinear(polygon: readonly Vec2[]): boolean {
+  return polygon.every((p, i) => {
+    const q = polygon[(i + 1) % polygon.length];
+    return q !== undefined && (Math.abs(p.x - q.x) < 1e-9 || Math.abs(p.y - q.y) < 1e-9);
+  });
+}
+
+export interface Rect {
+  min: Vec2;
+  max: Vec2;
+}
+
+/**
+ * Splits a rectilinear polygon into rectangles that are long along `axis`: cut it
+ * into strips across the axis at every vertex coordinate, then merge neighbouring
+ * strips with the same extent. An L shape gives its two wings.
+ */
+export function decomposeRectilinear(polygon: readonly Vec2[], axis: "x" | "y"): Rect[] {
+  const cross = (p: Vec2) => (axis === "x" ? p.y : p.x);
+  const along = (p: Vec2) => (axis === "x" ? p.x : p.y);
+  const levels = [...new Set(polygon.map((p) => Math.round(cross(p) * 1e6) / 1e6))].sort(
+    (a, b) => a - b,
+  );
+  const strips: { c0: number; c1: number; a0: number; a1: number }[] = [];
+  for (let i = 0; i + 1 < levels.length; i++) {
+    const c0 = levels[i];
+    const c1 = levels[i + 1];
+    if (c0 === undefined || c1 === undefined) continue;
+    const mid = (c0 + c1) / 2;
+    // A line through the strip middle crosses the polygon at edges running across the axis.
+    const xs: number[] = [];
+    for (let k = 0; k < polygon.length; k++) {
+      const p = polygon[k];
+      const q = polygon[(k + 1) % polygon.length];
+      if (!p || !q) continue;
+      const lo = Math.min(cross(p), cross(q));
+      const hi = Math.max(cross(p), cross(q));
+      if (Math.abs(cross(p) - cross(q)) < 1e-9) continue;
+      if (mid > lo && mid < hi) xs.push(along(p));
+    }
+    xs.sort((a, b) => a - b);
+    for (let k = 0; k + 1 < xs.length; k += 2) {
+      const a0 = xs[k];
+      const a1 = xs[k + 1];
+      if (a0 !== undefined && a1 !== undefined) strips.push({ c0, c1, a0, a1 });
+    }
+  }
+  // Merge strips stacked across the axis with the same along-extent.
+  const merged: typeof strips = [];
+  for (const s of strips.sort((p, q) => p.a0 - q.a0 || p.c0 - q.c0)) {
+    const prev = merged.find(
+      (m) =>
+        Math.abs(m.a0 - s.a0) < 1e-9 &&
+        Math.abs(m.a1 - s.a1) < 1e-9 &&
+        Math.abs(m.c1 - s.c0) < 1e-9,
+    );
+    if (prev) prev.c1 = s.c1;
+    else merged.push({ ...s });
+  }
+  return merged.map((m) =>
+    axis === "x"
+      ? { min: { x: m.a0, y: m.c0 }, max: { x: m.a1, y: m.c1 } }
+      : { min: { x: m.c0, y: m.a0 }, max: { x: m.c1, y: m.a1 } },
+  );
+}
+
+function gableOverRectangle(r: Rect, alongX: boolean, tan: number, top: number) {
+  const centre = { x: (r.min.x + r.max.x) / 2, y: (r.min.y + r.max.y) / 2 };
+  const halfSpan = alongX ? (r.max.y - r.min.y) / 2 : (r.max.x - r.min.x) / 2;
+  const ridgeHeight = halfSpan * tan;
+  const zOf = (p: Vec2) => {
+    const dist = alongX ? Math.abs(p.y - centre.y) : Math.abs(p.x - centre.x);
+    return top + Math.max(0, halfSpan - dist) * tan;
+  };
+  const a = r.min;
+  const b = { x: r.max.x, y: r.min.y };
+  const c = r.max;
+  const d = { x: r.min.x, y: r.max.y };
+  const halves: Vec2[][] = alongX
+    ? [
+        [a, b, { x: r.max.x, y: centre.y }, { x: r.min.x, y: centre.y }],
+        [{ x: r.min.x, y: centre.y }, { x: r.max.x, y: centre.y }, c, d],
+      ]
+    : [
+        [a, { x: centre.x, y: r.min.y }, { x: centre.x, y: r.max.y }, d],
+        [{ x: centre.x, y: r.min.y }, b, c, { x: centre.x, y: r.max.y }],
+      ];
+  const faces = halves.map((h) => face(h, zOf));
+  const ra = alongX ? { x: r.min.x, y: centre.y } : { x: centre.x, y: r.min.y };
+  const rb = alongX ? { x: r.max.x, y: centre.y } : { x: centre.x, y: r.max.y };
+  const atticVolume = faces.reduce(
+    (s, f) => s + f.planArea * (zOf(centroid(f.points.map((p) => ({ x: p.x, y: p.y })))) - top),
+    0,
+  );
+  return {
+    faces,
+    ridge: { a: { ...ra, z: top + ridgeHeight }, b: { ...rb, z: top + ridgeHeight } },
     ridgeHeight,
     atticVolume,
   };
