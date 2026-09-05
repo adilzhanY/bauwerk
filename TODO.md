@@ -102,3 +102,92 @@ Work top to bottom. Tick with `[x]`. A task is done when `npm run check` passes 
 - [ ] `DECISIONS.md` has at least five real entries from the build. Pick the two best to tell.
 - [ ] One minute explanations ready for: how openings cut the wall, how undo works, why geometry has no Three.js imports, what was cut and why.
 - [ ] Read the Three.js basics once: scene, camera, mesh, BufferGeometry, raycasting, so the questions on the call land.
+
+## Phase 2
+
+Everything below extends the demo toward the other three bullets of the posting: the full stack slice, IFC export fidelity, and collaboration, plus the energy language 20grad's customers speak. Same rules as above: pure functions with tests first, one commit per task, `DECISIONS.md` entry for every correction. Order is by value. Stop after any section and the demo still works.
+
+## 11. Building physics
+
+Goal: the model answers "what does this tell me about the building's energy?" Pure functions in `src/geometry/energy.ts`, no UI dependency, every number traceable to a formula in a comment.
+
+- [ ] Data model: `Construction { id, name, uValue }` presets for exterior walls, windows, doors, floor slab and roof. Default set: uninsulated brick wall 1.4, 1970s wall 1.0, insulated wall 0.25, single glazing 5.0, double glazing 2.8, triple glazing 0.8, old door 3.0, insulated door 1.3, uninsulated floor 1.0, insulated floor 0.35, uninsulated roof 1.3, insulated roof 0.2 W/(m²K). Values editable, presets stored in the building JSON.
+- [ ] Building gets `constructions: Construction[]`, `wallConstructionId`, `floorConstructionId`, `roofConstructionId`. Each opening gets `constructionId`. Existing JSON without these fields imports with the uninsulated defaults (migration in `export.ts`, test it).
+- [ ] Zones get `heated: boolean` and an indoor design temperature (default 20 °C heated, 10 °C unheated).
+- [ ] `envelope.ts`: for every storey compute exterior wall net area (gross minus openings), window area, door area, floor area on the ground storey, roof area on the top storey. Envelope area per storey and per building. Window-to-wall ratio per orientation (N, E, S, W from the wall normal).
+- [ ] Tests: rectangle with two windows gives gross minus opening areas exactly; L shape orientation buckets are right; a storey with no openings has ratio 0.
+- [ ] `heatLoss.ts`: transmission heat loss coefficient H_T = Σ U·A over the envelope of heated rooms, in W/K. Interior walls between a heated and an unheated room count with a fixed U of 1.0 (document the simplification). Ventilation loss H_V = 0.34 · n · V with n = 0.5 1/h and V the heated volume. Specific transmission loss H_T' = H_T / A_envelope.
+- [ ] Tests: hand-computed H_T for the default building with all presets uninsulated versus all insulated; swapping one window preset changes H_T by exactly U difference times area; unheated rooms contribute nothing.
+- [ ] Simple annual heating demand: Q_h = (H_T + H_V) · G_t with G_t = 84 kKh for Berlin (heating degree hours, DIN V 4108-6 style, document the source and that it ignores solar and internal gains). Output kWh/a and kWh/(m²a) over heated floor area.
+- [ ] Energy class band from kWh/(m²a) using the Energieausweis scale A+ to H. Pure lookup, tested at the boundaries.
+- [ ] Store actions: `setConstruction`, `assignConstruction`, `setZoneHeated`. Undoable, tests.
+- [ ] Energy panel in the right panel when nothing is selected, and an Energy tab: envelope area, window-to-wall ratio, H_T, H_T', heating demand, energy class with the coloured band. Per zone breakdown.
+- [ ] Before and after: a "Scenario" toggle that swaps every construction to its insulated counterpart without touching the model, shows both columns side by side, and the difference in percent. Not stored in history, it is a view.
+- [ ] Opening and wall properties show the construction select and the resulting U·A for that element.
+- [ ] Export JSON includes constructions and the computed energy summary block (marked derived).
+- [ ] i18n for every new string, German checked: Wärmedurchgangskoeffizient, Transmissionswärmeverlust, Lüftungswärmeverlust, Heizwärmebedarf, Hüllfläche, Fensterflächenanteil, Energieeffizienzklasse.
+
+## 12. IFC export
+
+Goal: a file that opens in a real IFC viewer with correct storeys, walls, openings, windows, doors and spaces. STEP physical file, IFC4. Written by hand in `src/geometry/ifc.ts`, no library, so the schema knowledge is visible in the code.
+
+- [ ] Read the IFC4 spatial structure once: IfcProject, IfcSite, IfcBuilding, IfcBuildingStorey, IfcRelAggregates, IfcRelContainedInSpatialStructure. Note the entity list and required attributes in a comment block at the top of `ifc.ts`.
+- [ ] STEP writer: entity id counter, `#12=IFCWALL(...)` line encoding, string escaping, enum and typed value formatting (`IFCLABEL('x')`, `IFCLENGTHMEASURE(1.)`), `$` for null, `*` for derived. Header section with FILE_DESCRIPTION, FILE_NAME, FILE_SCHEMA (('IFC4')).
+- [ ] Tests for the writer: escaping of apostrophes and non-ASCII (German umlauts use the `\X2\` encoding), number formatting always with a dot and a trailing point for integers written as REAL, ids unique and monotonic.
+- [ ] Units: IfcUnitAssignment with metres, square metres, cubic metres, radians. Geometric context with world coordinate system and precision 1e-5.
+- [ ] Spatial tree: one IfcProject, one IfcSite, one IfcBuilding, one IfcBuildingStorey per storey with Elevation set to the storey elevation. Aggregation relationships in the right direction.
+- [ ] Walls: one IfcWall per exterior wall per storey with an IfcExtrudedAreaSolid from the mitred plan quad (IfcArbitraryClosedProfileDef over an IfcPolyline) extruded by the storey height. Placement relative to the storey.
+- [ ] Openings: one IfcOpeningElement per opening as an extruded rectangle through the wall thickness, related with IfcRelVoidsElement to its wall. One IfcWindow or IfcDoor filling it with IfcRelFillsElement, with OverallHeight and OverallWidth set.
+- [ ] Interior walls as IfcWall with a 0.1 m thick box solid.
+- [ ] Rooms as IfcSpace with the room polygon extruded by the storey height, contained in the storey, LongName from the room name. Zones as IfcZone grouping their spaces through IfcRelAssignsToGroup.
+- [ ] Slabs: one IfcSlab per storey floor (0.2 m, PredefinedType FLOOR), roof slab on the top storey (PredefinedType ROOF).
+- [ ] Property sets: Pset_WallCommon with ThermalTransmittance from section 11 when present, Pset_WindowCommon and Pset_DoorCommon likewise, Pset_SpaceCommon with the floor area. Skip when section 11 is not done.
+- [ ] Tests: entity counts match the model (walls, openings, windows, doors, spaces, storeys); every referenced `#id` exists; every wall has exactly one representation; file parses with a small STEP tokenizer written in the test.
+- [ ] Manual verification by Adilzhan: open the export of the two example buildings in an IFC viewer (BlenderBIM, or a web viewer such as ifc.js), check storeys, holes in walls, room volumes. Screenshot into `docs/ifc-verification.png` and reference it in the README. Any mismatch goes into `DECISIONS.md`.
+- [ ] Export IFC button next to Export JSON, file name `bauwerk-<name>-<date>.ifc`.
+- [ ] README section "IFC export": what is written, what is left out (no materials layers, no IfcCurtainWall, no georeferencing until section 14), and the viewer screenshot.
+
+## 13. Full stack slice: server and live collaboration
+
+Goal: two browser tabs edit the same building and see each other's changes, with a Postgres project store behind a NestJS API. The client keeps working alone with localStorage when no server is configured, so GitHub Pages still works.
+
+- [ ] `server/` folder, own `package.json`, NestJS 10, TypeScript strict, Prisma or plain `pg` (decide, record in `DECISIONS.md`), Vitest for unit tests, `docker-compose.yml` with Postgres 16. Same lint and format rules as the client.
+- [ ] Schema: `projects (id uuid pk, name text, building jsonb, version integer not null, updated_at timestamptz)`, `project_events (id bigserial pk, project_id uuid fk, version integer, actor text, patch jsonb, created_at)`. Migration checked in. The building JSON is validated on write with the same `validateBuilding` as the client (share `src/geometry` through a workspace or a build step, decide and record).
+- [ ] REST: `POST /projects` creates from a building, `GET /projects/:id` returns building and version, `PUT /projects/:id` takes `{ building, baseVersion }` and applies it in one transaction with `UPDATE ... WHERE version = baseVersion`; zero rows updated returns 409 with the current version and building. `GET /projects` lists id, name, updated_at.
+- [ ] Tests: concurrent PUTs against a real Postgres in a test container, only one wins, the loser gets 409, the version increases by exactly one per accepted write, the events table has one row per accepted write.
+- [ ] WebSocket gateway: clients join a project room, every accepted PUT broadcasts `{ version, building, actor }` to the room, presence list of connected actors with a colour.
+- [ ] Client: `src/sync/` module with a `SyncClient` that loads the project, sends each committed history entry as a PUT with the base version, applies incoming versions from other actors, and on 409 reloads and reapplies the local change on top (last write wins, document why CRDT was not done). Reconnect with backoff, offline queue of one pending write.
+- [ ] Undo and redo stay local: undo sends the previous building as a new write. Test that undo after a remote change does not undo the remote change (history middleware compares against the snapshot it stored).
+- [ ] Presence in the UI: coloured dots in the bottom bar with actor names, the remote actor's selection highlighted with their colour in the viewport.
+- [ ] Project switcher: open, create, rename projects; the URL carries the project id so a link opens the same project in another tab.
+- [ ] Manual verification by Adilzhan: two tabs, add an opening in one, see it in the other within a second, drag the same opening in both at once, confirm the 409 path recovers without losing either change. Record what broke in `DECISIONS.md`.
+- [ ] `docker-compose up` starts Postgres, server and a static client build; README section "Run with the server".
+- [ ] CI: server tests run in `check.yml` with a Postgres service container.
+
+## 14. Geo placement
+
+Goal: the footprint knows where it is on the earth, in the coordinate systems German planning uses.
+
+- [ ] Building gets `origin?: { lat, lon, rotation }` for the footprint origin in WGS84 and the rotation of the local x axis against east, in degrees.
+- [ ] `src/geometry/geo.ts`: WGS84 to UTM conversion (Krüger series, zone from longitude, EPSG 258xx for ETRS89 UTM, Berlin is EPSG 25833 zone 33) and back. Pure, no library.
+- [ ] Tests against known points: Brandenburger Tor 52.5163 N 13.3777 E is 33 U 389 xxx E 5 819 xxx N (look up the exact reference values, write them in the test with their source), round trip error under 1 mm, zone boundary at 12 °E handled.
+- [ ] Footprint to world: every footprint vertex to UTM and to WGS84 using origin and rotation. Wall orientations in section 11 use the true rotation.
+- [ ] GeoJSON export: a FeatureCollection with the footprint as a Polygon in WGS84 (right hand rule, closed ring), one feature per storey with height properties, the building properties from section 11 if present. Tests: valid GeoJSON structure, ring closed, coordinates in lon lat order.
+- [ ] Import: read a GeoJSON polygon as a new footprint, project to local metres around its centroid, snap to the grid, reject self-intersecting rings with the existing message.
+- [ ] IFC: IfcMapConversion and IfcProjectedCRS (EPSG:25833) in the IFC export when an origin is set.
+- [ ] UI: Location section in Settings with latitude, longitude, rotation inputs, a compass arrow in the viewport, north indicated on the grid.
+- [ ] i18n: Breitengrad, Längengrad, Ausrichtung, Norden.
+
+## 15. Editor polish for consultants
+
+Only what an energy consultant needs on a site visit. No decoration.
+
+- [ ] Dimension lines: length labels on every exterior wall and every interior wall, in the footprint and interior wall tools, in the locale's number format.
+- [ ] 2D plan view: a toggle that switches to an orthographic top-down camera on the active storey with the other storeys hidden, same tools work. Test the projection math for picking with a unit test on the camera setup.
+- [ ] Wall construction shown in the viewport: a thin coloured band along the top of each wall keyed to its construction's U-value (cold red to good green), toggle in Settings.
+- [ ] Room list in the left panel per storey: name, area, zone, click to select and focus the camera.
+- [ ] Measure tool (key 6): click two points, see the distance; Escape clears. Pure distance, snapped to grid.
+- [ ] Storey duplication: copy a storey with its openings and walls above itself, useful for repeated floors. Undoable, ids regenerated, tested.
+- [ ] Photo underlay: drop an image of a floor plan onto the ground plane, scale it by marking a known distance, trace the footprint over it. Image stays local, not exported.
+- [ ] Print view: a static page with plan per storey, the energy summary and the room table, for the customer meeting. Uses the browser's print to PDF.
+- [ ] Performance check after all of the above: the five storey, twenty openings per storey model still above 60 fps on the RTX 5070; measure with the browser's frame counter and write the number here.
