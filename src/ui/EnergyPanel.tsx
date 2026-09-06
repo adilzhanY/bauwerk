@@ -53,7 +53,6 @@ export function EnergyPanel() {
         onChange={(v) => {
           setViewScenario(v === "current" ? null : v);
         }}
-        wrap
       />
       <div className="flex flex-col gap-1">
         <span className="text-xs font-medium text-muted">{t("energy.energyClass")}</span>

@@ -140,32 +140,17 @@ describe("App", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("tab", { name: "Energy" }));
     expect(screen.getByRole("heading", { name: "Energy" })).toBeTruthy();
-    expect(screen.getByLabelText(/Energy efficiency class: H/)).toBeTruthy();
+    const currentScale = screen.getByLabelText(/Energy efficiency class: H/);
+    expect(currentScale.getAttribute("viewBox")).toBe("0 0 400 82");
+    expect(currentScale.querySelector("rect")?.getAttribute("height")).toBe("24");
     fireEvent.click(screen.getByRole("radio", { name: "Renovated" }));
-    expect(screen.getByLabelText(/Energy efficiency class: (A\+|A|B|C|D|E|F|G)$/)).toBeTruthy();
+    const renovatedScale = screen.getByLabelText(/Energy efficiency class: (A\+|A|B|C|D|E|F|G)$/);
+    expect(renovatedScale.getAttribute("viewBox")).toBe("0 0 400 112");
     expect(screen.getByText("Saving")).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "Scenarios" }));
     fireEvent.click(screen.getByRole("button", { name: "New scenario" }));
     expect(useEditorStore.getState().building.scenarios).toHaveLength(1);
     expect(screen.getByRole("button", { name: "Remove scenario" })).toBeTruthy();
-  });
-
-  it("shows all Altbau energy scenarios in a readable two-column selector", () => {
-    act(() => {
-      useEditorStore.getState().loadBuilding(exampleAltbau("en"));
-    });
-    render(<App />);
-    fireEvent.click(screen.getByRole("tab", { name: "Energy" }));
-    const scenarios = screen.getByRole("radiogroup", { name: "Energy" });
-    expect(scenarios.className).toContain("grid-cols-2");
-    expect(within(scenarios).getByRole("radio", { name: "Current" }).title).toBe("Current");
-    expect(within(scenarios).getByRole("radio", { name: "Renovated" }).title).toBe("Renovated");
-    expect(within(scenarios).getByRole("radio", { name: "Windows and roof" }).title).toBe(
-      "Windows and roof",
-    );
-    expect(within(scenarios).getByRole("radio", { name: "Insulate the facade" }).title).toBe(
-      "Insulate the facade",
-    );
   });
 
   it("renders the print view as a plain document with German conventions", () => {

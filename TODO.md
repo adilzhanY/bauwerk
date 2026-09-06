@@ -441,9 +441,10 @@ Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 - [x] Test the long German Altbau name against the bounded single-line chip contract.
 - [ ] Manual check: load Altbau Kreuzberg in German and inspect the name chip at normal and narrow viewport sizes.
 
-## 39. Readable energy scenario selector
+## 39. Readable energy efficiency scale
 
-- [x] Give the Energy panel scenario selector two rows and two columns instead of squeezing four long labels into one row.
-- [x] Keep full size labels, selection styling, tooltips and keyboard navigation.
-- [x] Test the four Altbau scenario labels in the wrapped segmented control.
-- [ ] Manual check: open the Altbau Energy panel in English and German and confirm every scenario name is readable.
+- [x] Restore the scenario selector after the user's clarification showed it was not the reported problem.
+- [x] Give the Energy panel scale its own larger proportions while leaving the print scale unchanged.
+- [x] Increase the colored band, class letters, marker label and tick labels together.
+- [x] Test the panel view box and band height in both current and renovated views.
+- [ ] Manual check: inspect the Energy efficiency class scale at the normal panel width.

@@ -26,12 +26,16 @@ interface Props {
 export function EnergyScale({ current, compare, compareLabel, variant }: Props) {
   const t = useT();
   const language = useEditorStore((s) => s.language);
+  const panel = variant === "panel";
   const num = (v: number) =>
     variant === "print" ? formatNumber(v, "de", 0) : formatNumber(v, language, 0);
-  const w = 560;
-  const h = compare ? 82 : 60;
-  const barY = 26;
-  const barH = 18;
+  const w = panel ? 400 : 560;
+  const h = compare ? (panel ? 112 : 82) : panel ? 82 : 60;
+  const barY = panel ? 34 : 26;
+  const barH = panel ? 24 : 18;
+  const markerFont = panel ? 12 : 10;
+  const classFont = panel ? 12 : 9.5;
+  const tickFont = panel ? 9 : 7.5;
   const ink = variant === "print" ? "#000" : "currentColor";
   const x = (v: number) => (Math.min(v, ENERGY_SCALE_MAX) / ENERGY_SCALE_MAX) * w;
   const segments = ENERGY_CLASSES.map((c, i) => ({
@@ -41,7 +45,8 @@ export function EnergyScale({ current, compare, compareLabel, variant }: Props) 
   }));
   const ticks = [0, 50, 100, 150, 200, 250, 300];
   const marker = (v: number, label: string, above: boolean) => {
-    const px = Math.max(24, Math.min(w - 24, x(v)));
+    const markerInset = panel ? 34 : 24;
+    const px = Math.max(markerInset, Math.min(w - markerInset, x(v)));
     const y = above ? barY - 3 : barY + barH + 3;
     const dir = above ? -1 : 1;
     return (
@@ -49,8 +54,8 @@ export function EnergyScale({ current, compare, compareLabel, variant }: Props) 
         <path d={`M${x(v)} ${y} l${-5} ${dir * 7} h10 z`} fill={ink} />
         <text
           x={px}
-          y={above ? y - 10 : y + 17}
-          fontSize="10"
+          y={above ? y - (panel ? 12 : 10) : y + (panel ? 20 : 17)}
+          fontSize={markerFont}
           fontWeight="600"
           textAnchor="middle"
           fill={ink}
@@ -81,8 +86,8 @@ export function EnergyScale({ current, compare, compareLabel, variant }: Props) 
           />
           <text
             x={(s.x0 + s.x1) / 2}
-            y={barY + barH - 5}
-            fontSize="9.5"
+            y={barY + barH - (panel ? 6 : 5)}
+            fontSize={classFont}
             fontWeight="600"
             textAnchor="middle"
             fill="#1b1d20"
@@ -104,8 +109,8 @@ export function EnergyScale({ current, compare, compareLabel, variant }: Props) 
           <text
             x={x(v)}
             y={h - 2}
-            fontSize="7.5"
-            textAnchor={v === 300 ? "end" : "middle"}
+            fontSize={tickFont}
+            textAnchor={v === 0 ? "start" : v === 300 ? "end" : "middle"}
             fill={ink}
             opacity="0.7"
           >
@@ -113,7 +118,14 @@ export function EnergyScale({ current, compare, compareLabel, variant }: Props) 
           </text>
         </g>
       ))}
-      <text x={w - 26} y={h - 2} fontSize="7.5" textAnchor="end" fill={ink} opacity="0.7">
+      <text
+        x={w - (panel ? 34 : 26)}
+        y={h - 2}
+        fontSize={tickFont}
+        textAnchor="end"
+        fill={ink}
+        opacity="0.7"
+      >
         {"kWh/(m²·a)"}
       </text>
       {marker(current.specificHeatingDemand, t("energy.scenario.current"), true)}

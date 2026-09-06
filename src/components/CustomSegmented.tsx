@@ -15,8 +15,6 @@ interface Props<V extends string> {
   onChange: (value: V) => void;
   /** Stack vertically, for the tool rail. */
   vertical?: boolean;
-  /** Use two columns when several text labels need more room than one row provides. */
-  wrap?: boolean;
   /** Icon-only buttons with the label as tooltip. */
   iconsOnly?: boolean;
 }
@@ -28,22 +26,19 @@ export function CustomSegmented<V extends string>({
   options,
   onChange,
   vertical = false,
-  wrap = false,
   iconsOnly = false,
 }: Props<V>) {
   const index = options.findIndex((o) => o.value === value);
   const onKeyDown = (e: KeyboardEvent) => {
-    const delta = wrap
-      ? { ArrowRight: 1, ArrowDown: 2, ArrowLeft: -1, ArrowUp: -2 }[e.key]
-      : {
-          [vertical ? "ArrowDown" : "ArrowRight"]: 1,
-          [vertical ? "ArrowRight" : "ArrowDown"]: 1,
-          [vertical ? "ArrowUp" : "ArrowLeft"]: -1,
-          [vertical ? "ArrowLeft" : "ArrowUp"]: -1,
-        }[e.key];
-    if (delta === undefined) return;
+    const forward =
+      e.key === (vertical ? "ArrowDown" : "ArrowRight") ||
+      e.key === (vertical ? "ArrowRight" : "ArrowDown");
+    const back =
+      e.key === (vertical ? "ArrowUp" : "ArrowLeft") ||
+      e.key === (vertical ? "ArrowLeft" : "ArrowUp");
+    if (!forward && !back) return;
     e.preventDefault();
-    const next = options[(index + delta + options.length) % options.length];
+    const next = options[(index + (forward ? 1 : -1) + options.length) % options.length];
     if (next) {
       onChange(next.value);
       (
@@ -56,9 +51,8 @@ export function CustomSegmented<V extends string>({
       role="radiogroup"
       aria-label={label}
       className={cx(
-        "gap-1 border border-line bg-panel p-1",
-        wrap ? "grid grid-cols-2 rounded-card" : "flex rounded-pill",
-        vertical && !wrap && "flex-col",
+        "flex gap-1 rounded-pill border border-line bg-panel p-1",
+        vertical && "flex-col",
       )}
     >
       {options.map((o) => {
@@ -85,9 +79,7 @@ export function CustomSegmented<V extends string>({
                 ? o.hint
                   ? "h-11 px-3 text-sm"
                   : "h-11 w-11 text-sm"
-                : wrap
-                  ? "h-9 min-w-0 px-3 text-sm"
-                  : cx("h-9 min-w-0 flex-1", options.length > 3 ? "px-2 text-xs" : "px-3 text-sm"),
+                : cx("h-9 min-w-0 flex-1", options.length > 3 ? "px-2 text-xs" : "px-3 text-sm"),
               selected ? "bg-ink text-paper" : "text-muted hover:bg-panel-2 hover:text-ink",
             )}
           >
