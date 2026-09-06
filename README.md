@@ -1,6 +1,19 @@
 # Bauwerk
 
-A browser-based 3D building editor. Draw a footprint, stack storeys, cut windows and doors into the walls, split storeys into rooms, group rooms into zones, undo anything, and export the model as JSON. Built with Vite, React 18, TypeScript, Zustand, Three.js (react-three-fiber) and Tailwind CSS v4. Every geometry function is pure TypeScript with Vitest tests, and the UI ships in English and German.
+A browser-based 3D building editor for energy consultants, built as an interview demo for the 20° GmbH Full-Stack Engineer role. Draw a footprint, stack storeys, cut windows and doors into exterior and interior walls, derive rooms from the walls, group rooms into heated and unheated zones, put a roof on top, place the building on the map, and read the energy balance, the heat loads, the GEG check and the renovation scenarios live while you edit. Undo anything. Export JSON, IFC4, GeoJSON and a German building report.
+
+Built by Adilzhan Yerzhan in three weeks with Claude Code as the primary way code is produced, reviewed and steered by a human. `DECISIONS.md` logs every place the human overruled the agent; it is part of the deliverable.
+
+## Numbers
+
+|                  |                                                                                                                                         |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Client code      | about 23,000 lines of TypeScript in `src/`                                                                                              |
+| Server code      | about 860 lines in `server/src/`                                                                                                        |
+| Tests            | 301 client tests in 50 files, 8 server tests against a real Postgres                                                                    |
+| Logged overrules | 40 entries in `DECISIONS.md`                                                                                                            |
+| Languages        | English and German, a missing key is a type error                                                                                       |
+| Stack            | Vite, React 18, TypeScript strict, Zustand, Three.js via react-three-fiber, Tailwind CSS v4, Vitest; NestJS and Postgres for the server |
 
 ## Run
 
@@ -12,40 +25,33 @@ npm run build      # production build in dist/
 npm run preview    # serve the production build
 ```
 
-The `--legacy-peer-deps` flag works around an npm 10 crash while resolving Vitest's optional peers.
+The `--legacy-peer-deps` flag works around an npm 10 crash while resolving Vitest's optional peers. The eight-minute demo script is in `DEMO.md`; load "Kreuzberg apartment house (demo)" from Settings, Examples.
 
 ## How it fits together
 
-- `src/geometry/` holds pure functions over numbers and arrays: polygon checks, wall offsets and mitres, opening validation, room extraction from interior walls, JSON export and import. No Three.js in here, so it is tested in Vitest without WebGL.
-- `src/store/` is one Zustand store with Immer. A small history middleware records every change to the building and gives exact undo and redo. UI state such as selection and tool is never recorded.
-- `src/scene/` turns geometry output into meshes. Openings do not use CSG: each wall is split into prisms around its openings and the prisms are merged into one mesh.
-- `src/ui/` holds the panels. Every string goes through `src/i18n/`, where a missing German key is a type error.
+- `src/geometry/` holds pure functions over numbers and arrays: polygon checks, wall offsets and mitres, opening validation, room extraction from interior walls, roofs, the energy balance, thermal bridges, heat loads, scenarios, the GEG check, UTM projection, map tiles, IFC export and import, JSON export and import. No Three.js in here, enforced by a lint rule, so everything is tested in Vitest without WebGL.
+- `src/store/` is one Zustand store with Immer. A small history middleware records every change to the building and gives exact undo and redo; a drag or a typing burst is one step. UI state such as selection, tool and view settings is never recorded.
+- `src/scene/` turns geometry output into meshes. Openings do not use CSG: each wall is split into prisms around its openings and the prisms are merged into one mesh. Storeys other than the active one draw as outlines, ghosts or not at all, per a view setting.
+- `src/components/` are the form controls, built from scratch so nothing native shows: slider, number input with label scrubbing, select, switch, segmented control, dialog, tabs. Each has its own test.
+- `src/ui/` holds the panels and the print view. Every string goes through `src/i18n/`.
+- `server/` is a NestJS API with plain `pg`, optimistic concurrency and a WebSocket room per project, plus PDF printing of the report through headless Chromium.
 
-## Beyond the editor
+## What it computes, and against what
 
-- **Energy**: every wall, window, door, floor and roof has a construction with a U-value. The Energy panel shows envelope area, window-to-wall ratio by orientation, transmission and ventilation heat loss, heating demand and the Energieausweis class, with a renovated scenario next to the current state. The formulas and their simplifications are documented in `src/geometry/energy.ts` and checked against hand-computed values.
-- **IFC**: an IFC4 export written by hand and validated with IfcOpenShell, see below.
-- **Server and live editing**: a NestJS and Postgres backend with optimistic concurrency and WebSocket rooms, see below.
-- **Geo**: place the footprint on the earth, see the UTM easting and northing (EPSG 258xx), export GeoJSON, import a GeoJSON footprint. The projection is checked against PROJ to 1 mm.
-- **Consultant tools**: dimension labels, a 2D plan view, walls coloured by U-value, a room list, a measure tool, storey duplication, a floor plan image underlay for tracing, and a print view with plans, the room table and the energy summary.
+- **U-values** from layer stacks after DIN EN ISO 6946, with the standard surface resistances. Presets follow the IWU building typology for the German stock.
+- **Energy balance** with the heating period method of DIN V 4108-6: 66 kKh degree hours of the German reference climate, ventilation 0.34 · 0.5 · V, temperature correction factors 0.6 for the floor slab and 0.5 for walls to unheated rooms, solar gains by orientation with the EnEV irradiation values, internal gains of 22 kWh/(m²a), thermal bridges as ψ times length from the geometry. The Energieausweis class is applied to the heating demand and labelled as the approximation it is.
+- **Heat loads** room by room after DIN EN 12831 simplified, with −14 °C for Berlin, and radiator and heat pump sizing from them.
+- **GEG check** of every assigned construction against Annex 7 for existing buildings.
+- **Scenarios** as override sets with investment, saving and payback from documented starting prices.
+- **Geo** with a fourth-order Krüger UTM projection checked against PROJ to a millimetre, OpenStreetMap tiles at true scale, sun position after NOAA with shadows.
+
+## The audit
+
+The day before the interview the agent was asked to check every formula against its source. It found five errors in its own physics, all under green tests, because the tests had pinned the agent's numbers instead of the standard's: 84 instead of 66 kKh, no internal gains, no ground and unheated-room correction factors, −12 instead of −14 °C, and uninsulated presets whose layer stacks computed U-values two to three times their labels. The example house moved from 324 to 252 kWh/(m²a), which is where the typology puts an uninsulated pre-1918 house. The full list is in `DECISIONS.md` under 2026-09-06.
 
 ## Performance
 
-Open `/?bench=1` for a fifty storey tower with twenty openings per storey, a frame time graph over the last ten seconds and the renderer's draw call and triangle counts. Geometry is built once per element and memoised by a hash of its inputs; each wall is a single merged mesh of prisms; hover writes to the store at most once per frame; inactive storeys are excluded from raycasting. Measured numbers on the RTX 5070 and on integrated graphics: to be recorded by Adilzhan.
-
-## Demo path
-
-About three minutes, from an empty browser tab.
-
-1. Open the app. The default building is a 10 by 8 m ground floor.
-2. Click the plus button next to Storeys. A first floor appears and becomes active. Press PageDown to go back to the ground floor.
-3. Choose the Opening tool (key 3). Shift+click the front wall to place a door. Click the same wall twice more to place two windows. Drag one window along the wall.
-4. Press PageUp, then click a wall on the first floor to add a window there too.
-5. Press PageDown. Choose the Interior wall tool (key 4). Click two grid points to draw a wall across the floor, then another wall to split one half again. Three rooms appear with their areas.
-6. Click the plus button next to Zones. A zone called Zone 1 is created and the Zone tool is active. Click two rooms to paint them. Select the zone in the left panel and rename it to Heated.
-7. Press Ctrl+Z four times and watch the zone assignments and the last wall disappear. Press Ctrl+Shift+Z four times to bring them back.
-8. Click Export JSON in the bottom bar. Open the file: storeys, walls, openings, rooms and zones, in metres.
-9. Switch the language to Deutsch in Settings. Every label, hint and error message changes.
+Open `/?bench=1` for a fifty storey tower with twenty openings per storey, a frame time graph over the last ten seconds and the renderer's draw call and triangle counts. Geometry is built once per element and memoised by a hash of its inputs; each wall is a single merged mesh of prisms; hover writes to the store at most once per frame; inactive storeys are excluded from raycasting.
 
 ## IFC export
 

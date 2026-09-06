@@ -40,6 +40,7 @@ export const de: Messages = {
   "settings.example": "Beispiel laden",
   "settings.reset": "Auf Beispiel zurücksetzen",
   "settings.examplePlaceholder": "Beispiel wählen",
+  "example.altbau": "Altbau Kreuzberg (Demo)",
   "example.house": "Zweigeschossiges Haus",
   "example.block": "L-förmiger Block",
 

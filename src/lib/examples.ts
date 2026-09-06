@@ -1,12 +1,13 @@
+import { pointInPolygon } from "@/geometry/polygon";
 import { computeRooms } from "@/geometry/rooms";
-import type { Building, Segment, Storey, Vec2 } from "@/geometry/types";
+import type { Building, Radiator, Segment, Storey, Vec2 } from "@/geometry/types";
 import { DEFAULT_WALL_THICKNESS, HEATED_TEMPERATURE, UNHEATED_TEMPERATURE } from "@/geometry/types";
 import { DEFAULT_ASSIGNMENT, PRESET_IDS, defaultConstructions } from "@/geometry/constructions";
 import { defaultRoomName, defaultStoreyName } from "@/i18n";
 import type { Language } from "@/i18n";
 import { createId } from "./ids";
 
-export type ExampleId = "house" | "block";
+export type ExampleId = "house" | "block" | "altbau";
 
 function storey(
   index: number,
@@ -186,6 +187,209 @@ export function exampleBlock(language: Language): Building {
   };
 }
 
+/** Names and zones by a point inside the room, so face order does not matter. */
+function nameRooms(s: Storey, labels: { at: Vec2; name: string; zone: string }[]) {
+  for (const room of s.rooms) {
+    const label = labels.find((l) => pointInPolygon(l.at, room.polygon));
+    if (!label) continue;
+    room.name = label.name;
+    room.zoneId = label.zone;
+  }
+}
+
+/**
+ * The demo project: an unrenovated 1905 apartment house in Berlin Kreuzberg, two
+ * full storeys plus a heated attic under a gable roof, placed on the map, with a
+ * shop on the ground floor, doors between the rooms, radiators, and two
+ * renovation scenarios. Everything the eight-minute demo in DEMO.md touches.
+ */
+export function exampleAltbau(language: Language): Building {
+  const de = language === "de";
+  const footprint: Vec2[] = [
+    { x: 0, y: 0 },
+    { x: 14, y: 0 },
+    { x: 14, y: 11 },
+    { x: 0, y: 11 },
+  ];
+  const living = createId("zone");
+  const shop = createId("zone");
+  const stair = createId("zone");
+  const window = (wallIndex: number, offset: number, width = 1.2) => ({
+    wallIndex,
+    kind: "window" as const,
+    offset,
+    width,
+    height: 1.6,
+    sill: 0.85,
+  });
+  const interiorDoor = (wallIndex: number, offset: number) => ({
+    wallIndex,
+    kind: "door" as const,
+    interior: true,
+    offset,
+    width: 0.9,
+    height: 2.05,
+    sill: 0,
+  });
+  // Ground floor: shop at the street, hall and two flats behind it.
+  const groundWalls: Segment[] = [
+    { a: { x: 0, y: 5 }, b: { x: 14, y: 5 } },
+    { a: { x: 6, y: 5 }, b: { x: 6, y: 11 } },
+    { a: { x: 8, y: 5 }, b: { x: 8, y: 11 } },
+  ];
+  const ground = storey(
+    0,
+    language,
+    footprint,
+    3.4,
+    [
+      { wallIndex: 0, kind: "door", offset: 6.5, width: 1.1, height: 2.3, sill: 0 },
+      window(0, 1.2, 1.8),
+      window(0, 3.8, 1.8),
+      window(0, 8.6, 1.8),
+      window(0, 11.2, 1.8),
+      window(2, 1.5),
+      window(2, 4.0),
+      window(2, 9.0),
+      window(2, 11.5),
+      interiorDoor(0, 6.6),
+      interiorDoor(1, 2.5),
+      interiorDoor(2, 2.5),
+    ],
+    groundWalls,
+  );
+  nameRooms(ground, [
+    { at: { x: 7, y: 2.5 }, name: de ? "Ladenlokal" : "Shop", zone: shop },
+    { at: { x: 3, y: 8 }, name: de ? "Wohnung links" : "Flat left", zone: living },
+    { at: { x: 7, y: 8 }, name: de ? "Treppenhaus" : "Stairwell", zone: stair },
+    { at: { x: 11, y: 8 }, name: de ? "Wohnung rechts" : "Flat right", zone: living },
+  ]);
+  // Upper floors: two flats around the stairwell.
+  const upperWalls: Segment[] = [
+    { a: { x: 6, y: 0 }, b: { x: 6, y: 11 } },
+    { a: { x: 8, y: 0 }, b: { x: 8, y: 11 } },
+    { a: { x: 0, y: 5.5 }, b: { x: 6, y: 5.5 } },
+    { a: { x: 8, y: 5.5 }, b: { x: 14, y: 5.5 } },
+  ];
+  const upper = (index: number, height: number) =>
+    storey(
+      index,
+      language,
+      footprint,
+      height,
+      [
+        window(0, 1.2),
+        window(0, 3.6),
+        window(0, 6.4, 1.0),
+        window(0, 9.2),
+        window(0, 11.6),
+        window(2, 1.5),
+        window(2, 4.0),
+        window(2, 9.0),
+        window(2, 11.5),
+        window(1, 2.0),
+        window(1, 7.5),
+        window(3, 2.0),
+        window(3, 7.5),
+        interiorDoor(0, 2.0),
+        interiorDoor(0, 8.0),
+        interiorDoor(1, 2.0),
+        interiorDoor(1, 8.0),
+        interiorDoor(2, 3.0),
+        interiorDoor(3, 3.0),
+      ],
+      upperWalls,
+    );
+  const first = upper(1, 3.2);
+  const second = upper(2, 3.2);
+  for (const s of [first, second])
+    nameRooms(s, [
+      { at: { x: 3, y: 2.5 }, name: de ? "Wohnen links" : "Living left", zone: living },
+      { at: { x: 3, y: 8 }, name: de ? "Schlafen links" : "Bedroom left", zone: living },
+      { at: { x: 7, y: 5 }, name: de ? "Treppenhaus" : "Stairwell", zone: stair },
+      { at: { x: 11, y: 2.5 }, name: de ? "Wohnen rechts" : "Living right", zone: living },
+      { at: { x: 11, y: 8 }, name: de ? "Schlafen rechts" : "Bedroom right", zone: living },
+    ]);
+  // One radiator under a street window of every flat.
+  const radiator = (wallIndex: number, offset: number, power: number): Radiator => ({
+    id: createId("radiator"),
+    wallIndex,
+    offset,
+    width: 1.2,
+    height: 0.6,
+    power,
+  });
+  ground.radiators = [radiator(0, 1.2, 2200), radiator(2, 1.5, 1800), radiator(2, 9.0, 1800)];
+  first.radiators = [
+    radiator(0, 1.2, 1800),
+    radiator(0, 9.2, 1800),
+    radiator(2, 1.5, 1500),
+    radiator(2, 9.0, 1500),
+  ];
+  second.radiators = [
+    radiator(0, 1.2, 1800),
+    radiator(0, 9.2, 1800),
+    radiator(2, 1.5, 1500),
+    radiator(2, 9.0, 1500),
+  ];
+  return {
+    id: createId("building"),
+    name: de ? "Altbau Kreuzberg, Baujahr 1905" : "Kreuzberg apartment house, built 1905",
+    footprint,
+    wallThickness: 0.415,
+    origin: { lat: 52.4993, lon: 13.4197, rotation: 24 },
+    roof: {
+      kind: "gable",
+      pitch: 42,
+      overhang: 0.4,
+      ridgeAxis: "x",
+      parapet: 0,
+      heatedAttic: true,
+    },
+    bridgeDetail: "poor",
+    zones: [
+      {
+        id: living,
+        name: de ? "Wohnen" : "Living",
+        color: "#e76f51",
+        heated: true,
+        temperature: HEATED_TEMPERATURE,
+      },
+      {
+        id: shop,
+        name: de ? "Laden" : "Shop",
+        color: "#2a9d8f",
+        heated: true,
+        temperature: HEATED_TEMPERATURE,
+      },
+      {
+        id: stair,
+        name: de ? "Treppenhaus" : "Stairwell",
+        color: "#6c8ef5",
+        heated: false,
+        temperature: UNHEATED_TEMPERATURE,
+      },
+    ],
+    constructions: defaultConstructions(language),
+    ...DEFAULT_ASSIGNMENT,
+    scenarios: [
+      {
+        id: "windows-roof",
+        name: de ? "Fenster und Dach" : "Windows and roof",
+        overrides: { window: PRESET_IDS.glazingTriple, roof: PRESET_IDS.roofInsulated },
+      },
+      {
+        id: "facade",
+        name: de ? "Fassade dämmen" : "Insulate the facade",
+        overrides: { wall: PRESET_IDS.wallInsulated },
+        bridgeDetail: "good",
+      },
+    ],
+    storeys: [ground, first, second],
+  };
+}
+
 export function example(id: ExampleId, language: Language): Building {
+  if (id === "altbau") return exampleAltbau(language);
   return id === "house" ? exampleHouse(language) : exampleBlock(language);
 }

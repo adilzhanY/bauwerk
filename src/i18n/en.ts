@@ -37,6 +37,7 @@ export const en = {
   "settings.example": "Load example",
   "settings.reset": "Reset to example",
   "settings.examplePlaceholder": "Choose an example",
+  "example.altbau": "Kreuzberg apartment house (demo)",
   "example.house": "Two-storey house",
   "example.block": "L-shaped block",
 
