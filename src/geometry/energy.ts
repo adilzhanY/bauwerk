@@ -3,7 +3,7 @@ import type { BridgeSummary } from "./bridges";
 import { bestInCategory, findConstruction } from "./constructions";
 import { buildRoof, roofOf } from "./roof";
 import { solarGains } from "./sun";
-import { validateOpening } from "./openings";
+import { openingsOn, validateOpening } from "./openings";
 import { area, edges, pointInPolygon, pointOnSegment, sub, distance } from "./polygon";
 import type { Edge } from "./polygon";
 import type {
@@ -213,7 +213,7 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
     for (const edge of footprintEdges) {
       const spans = heatedSpans(edge, storey.rooms, building.zones);
       const heatedLength = storey.rooms.length === 0 ? edge.length : spanLength(spans);
-      const onWall = storey.openings.filter((o) => o.wallIndex === edge.index);
+      const onWall = openingsOn(storey.openings, edge.index);
       const valid = onWall.filter(
         (o) =>
           validateOpening(o, {

@@ -54,4 +54,30 @@ describe("constrainWalk", () => {
     const p = constrainWalk(building, storey, { x: 3, y: 4 }, { x: 3.9, y: 4 }, 0.3);
     expect(Math.abs(p.x - 4)).toBeGreaterThanOrEqual(BODY_RADIUS - 1e-9);
   });
+
+  it("lets the walker through a door in an interior wall", () => {
+    const withDoor: Storey = {
+      ...storey,
+      openings: [
+        ...storey.openings,
+        {
+          id: "i",
+          wallIndex: 0,
+          interior: true,
+          kind: "door",
+          offset: 3.5,
+          width: 1,
+          height: 2.1,
+          sill: 0,
+          constructionId: PRESET_IDS.doorOld,
+        },
+      ],
+    };
+    // Through the door span at y = 4.
+    const through = constrainWalk(building, withDoor, { x: 3.5, y: 4 }, { x: 4.1, y: 4 }, 0.3);
+    expect(through.x).toBeCloseTo(4.1, 6);
+    // Next to it the wall still pushes back.
+    const blocked = constrainWalk(building, withDoor, { x: 3.5, y: 6 }, { x: 4.1, y: 6 }, 0.3);
+    expect(Math.abs(blocked.x - 4)).toBeGreaterThanOrEqual(BODY_RADIUS - 1e-9);
+  });
 });

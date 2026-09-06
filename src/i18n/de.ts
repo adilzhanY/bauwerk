@@ -12,7 +12,8 @@ export const de: Messages = {
 
   "hint.select": "Element anklicken, um es auszuwählen. Öffnungen entlang der Wand ziehen.",
   "hint.footprint": "Eckpunkt ziehen. Kleinen Mittelpunkt anklicken, um eine Ecke hinzuzufügen.",
-  "hint.opening": "Auf eine Wand klicken für ein Fenster. Umschalt gedrückt halten für eine Tür.",
+  "hint.opening":
+    "Außenwand anklicken für ein Fenster, Innenwand für eine Tür. Shift tauscht beides.",
   "hint.interiorWall": "Zwei Rasterpunkte anklicken, um eine Wand zu zeichnen. Escape bricht ab.",
   "hint.zone":
     "Unten eine Zone wählen, dann Räume anklicken, um sie hinzuzufügen oder zu entfernen.",
@@ -86,6 +87,8 @@ export const de: Messages = {
   "interiorWall.title": "Innenwand",
   "interiorWall.length": "Länge",
   "interiorWall.remove": "Wand entfernen",
+  "interiorWall.hint":
+    "Mit dem Öffnungswerkzeug auf die Wand klicken für eine Tür, Shift+Klick für ein Fenster.",
 
   "vertex.title": "Grundrissecke {n}",
   "vertex.x": "X",

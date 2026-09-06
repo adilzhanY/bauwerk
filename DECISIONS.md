@@ -159,3 +159,7 @@ The roof display switch was the first segmented control with four options, and t
 ## 2026-09-05: Storey list broke the design system
 
 The storey chooser was still a stacked list of bordered boxes with a blue left edge, a leftover from the first interface. The user pointed out it did not follow the rounded design and asked for a switch. The agent first built it horizontal; the user corrected that to vertical. It is now a rounded track with one pill per storey, top storey first like the building, and the actions for the active storey in a row underneath. Drag reordering went with it, the arrow buttons cover that.
+
+## 2026-09-05: Doors only worked on the envelope
+
+Rooms could be drawn but never connected: the Opening tool only accepted footprint walls, an agent simplification from the first spec. The user asked for openings on any wall. Openings now carry an `interior` flag and index the storey's interior walls, which share the exterior wall solids code. Energy and IFC deliberately skip them, since a door between two heated rooms is not an envelope loss.

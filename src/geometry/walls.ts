@@ -1,7 +1,7 @@
 import { add, edges, lineIntersection, scale, sub } from "./polygon";
 import type { Edge } from "./polygon";
 import { isOpeningValid } from "./openings";
-import type { Opening, Vec2 } from "./types";
+import type { Opening, Segment, Vec2 } from "./types";
 
 /**
  * An exterior wall as a footprint quad. The building footprint is the outer
@@ -66,6 +66,42 @@ export function buildWalls(footprint: readonly Vec2[], thickness: number, height
       quad: [e.a, e.b, innerB, innerA],
     };
   });
+}
+
+export const INTERIOR_WALL_THICKNESS = 0.1;
+
+/**
+ * An interior wall in the same shape as an exterior one, so openings, solids and
+ * the scene treat both alike. The segment is the wall's centre line; the "outer"
+ * face is on the left of a to b and opening offsets run from a.
+ */
+export function interiorWallAsWall(
+  segment: Segment,
+  index: number,
+  height: number,
+  thickness = INTERIOR_WALL_THICKNESS,
+): Wall {
+  const d = sub(segment.b, segment.a);
+  const length = Math.hypot(d.x, d.y);
+  const direction = length > 0 ? { x: d.x / length, y: d.y / length } : { x: 1, y: 0 };
+  const normal = { x: direction.y, y: -direction.x };
+  const half = scale(normal, thickness / 2);
+  const outerA = add(segment.a, half);
+  const outerB = add(segment.b, half);
+  const innerA = sub(segment.a, half);
+  const innerB = sub(segment.b, half);
+  return {
+    index,
+    outerA,
+    outerB,
+    innerA,
+    innerB,
+    length,
+    direction,
+    normal,
+    height,
+    quad: [outerA, outerB, innerB, innerA],
+  };
 }
 
 /** Perpendicular distance between the outer and inner face at a point along the wall. */

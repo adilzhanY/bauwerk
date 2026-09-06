@@ -5,6 +5,9 @@ import {
   snapOffset,
   validateOpening,
   wallProfile,
+  exteriorOpenings,
+  openingsOn,
+  sameWall,
 } from "./openings";
 import { area } from "./polygon";
 import type { Opening } from "./types";
@@ -131,5 +134,32 @@ describe("wallProfile", () => {
   it("skips invalid openings instead of cutting broken holes", () => {
     const profile = wallProfile(10, 3, [window({ offset: 9.5 })]);
     expect(profile.holes).toHaveLength(0);
+  });
+});
+
+describe("interior openings", () => {
+  const base = {
+    id: "a",
+    wallIndex: 0,
+    kind: "door" as const,
+    offset: 1,
+    width: 1,
+    height: 2.1,
+    sill: 0,
+    constructionId: "c",
+  };
+  it("only openings on the same wall kind overlap", () => {
+    const interior = { ...base, id: "b", interior: true };
+    expect(sameWall(base, interior)).toBe(false);
+    expect(sameWall(interior, { ...interior, id: "c" })).toBe(true);
+    const ctx = { wallLength: 5, storeyHeight: 3, siblings: [base, interior] };
+    expect(validateOpening(base, ctx)).toEqual([]);
+    expect(validateOpening({ ...interior, id: "c" }, ctx)).toContain("overlaps");
+  });
+  it("filters exterior and per wall openings", () => {
+    const interior = { ...base, id: "b", interior: true };
+    expect(exteriorOpenings([base, interior])).toEqual([base]);
+    expect(openingsOn([base, interior], 0)).toEqual([base]);
+    expect(openingsOn([base, interior], 0, true)).toEqual([interior]);
   });
 });

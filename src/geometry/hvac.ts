@@ -1,7 +1,7 @@
 import { computeEnergy } from "./energy";
 import { AIR_CHANGE_RATE, AIR_HEAT_CAPACITY, isRoomHeated } from "./energy";
 import { findConstruction } from "./constructions";
-import { validateOpening } from "./openings";
+import { openingsOn, validateOpening } from "./openings";
 import { area, distance, edges, pointInPolygon, pointOnSegment } from "./polygon";
 import { buildRoof } from "./roof";
 import type { Building, Radiator, Room, Storey } from "./types";
@@ -54,7 +54,7 @@ export function roomEnvelopeLoss(building: Building, storey: Storey, room: Room)
     }
     if (spans.length === 0) continue;
     const length = spans.reduce((s, [x0, x1]) => s + (x1 - x0), 0);
-    const onWall = storey.openings.filter((o) => o.wallIndex === e.index);
+    const onWall = openingsOn(storey.openings, e.index);
     let openingArea = 0;
     for (const o of onWall) {
       if (
@@ -156,7 +156,7 @@ export function validateRadiator(rad: Radiator, storey: Storey, wallLength: numb
     return false;
   const end = rad.offset + rad.width;
   for (const o of storey.openings) {
-    if (o.wallIndex !== rad.wallIndex) continue;
+    if (o.interior || o.wallIndex !== rad.wallIndex) continue;
     // Below a window is fine; a door or a window reaching the floor is not.
     const reachesRadiator = o.sill < rad.height + 0.1;
     if (reachesRadiator && rad.offset < o.offset + o.width - 1e-6 && o.offset < end - 1e-6)

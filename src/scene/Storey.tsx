@@ -1,6 +1,6 @@
 import { useMemo } from "react";
-import { validateOpening } from "@/geometry/openings";
-import { buildWalls } from "@/geometry/walls";
+import { openingsOn, validateOpening } from "@/geometry/openings";
+import { INTERIOR_WALL_THICKNESS, buildWalls, interiorWallAsWall } from "@/geometry/walls";
 import { effectiveWallThickness } from "@/geometry/layers";
 import type { Building, Storey as StoreyData } from "@/geometry/types";
 import { colors } from "@/lib/colors";
@@ -52,7 +52,7 @@ export function Storey({ building, storey, elevation, active, display, ghostOpac
         </mesh>
       )}
       {walls.map((wall) => {
-        const onWall = storey.openings.filter((o) => o.wallIndex === wall.index);
+        const onWall = openingsOn(storey.openings, wall.index);
         return (
           <group key={wall.index}>
             <Wall
@@ -87,19 +87,45 @@ export function Storey({ building, storey, elevation, active, display, ghostOpac
           </group>
         );
       })}
-      {storey.interiorWalls.map((segment, index) => (
-        <InteriorWall
-          key={`${segment.a.x},${segment.a.y},${segment.b.x},${segment.b.y}`}
-          storeyId={storey.id}
-          index={index}
-          segment={segment}
-          height={storey.height}
-          elevation={elevation}
-          active={active}
-          display={display}
-          ghostOpacity={ghostOpacity}
-        />
-      ))}
+      {storey.interiorWalls.map((segment, index) => {
+        const onWall = openingsOn(storey.openings, index, true);
+        const wall = interiorWallAsWall(segment, index, storey.height);
+        return (
+          <group key={`${segment.a.x},${segment.a.y},${segment.b.x},${segment.b.y}`}>
+            <InteriorWall
+              storeyId={storey.id}
+              index={index}
+              segment={segment}
+              openings={onWall}
+              height={storey.height}
+              elevation={elevation}
+              active={active}
+              display={display}
+              ghostOpacity={ghostOpacity}
+            />
+            {onWall.map((opening) => (
+              <Opening
+                key={opening.id}
+                storeyId={storey.id}
+                wall={wall}
+                opening={opening}
+                thickness={INTERIOR_WALL_THICKNESS}
+                elevation={elevation}
+                active={active}
+                display={display}
+                ghostOpacity={ghostOpacity}
+                valid={
+                  validateOpening(opening, {
+                    wallLength: wall.length,
+                    storeyHeight: storey.height,
+                    siblings: onWall,
+                  }).length === 0
+                }
+              />
+            ))}
+          </group>
+        );
+      })}
       <StoreyHvac building={building} storey={storey} elevation={elevation} active={active} />
       {storey.rooms.map((room) => (
         <Room

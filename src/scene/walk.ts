@@ -1,7 +1,7 @@
-import { buildWalls } from "@/geometry/walls";
+import { buildWalls, interiorWallAsWall } from "@/geometry/walls";
 import { edges, pointInPolygon, pointOnSegment, sub, dot } from "@/geometry/polygon";
-import { validateOpening } from "@/geometry/openings";
-import type { Building, Storey, Vec2 } from "@/geometry/types";
+import { openingsOn, validateOpening } from "@/geometry/openings";
+import type { Building, Segment, Storey, Vec2 } from "@/geometry/types";
 
 export const EYE_HEIGHT = 1.6;
 export const BODY_RADIUS = 0.25;
@@ -24,10 +24,10 @@ export function constrainWalk(
   if (!pointInPolygon(p, inner)) {
     if (!throughDoor(building, storey, p)) p = slide(from, to, inner);
   }
-  // Interior walls: keep a body radius away from every segment.
-  for (const wall of storey.interiorWalls) {
+  // Interior walls: keep a body radius away from every segment, except in a door span.
+  for (const [index, wall] of storey.interiorWalls.entries()) {
     const d = distanceToSegment(p, wall.a, wall.b);
-    if (d < BODY_RADIUS) {
+    if (d < BODY_RADIUS && !throughInteriorDoor(storey, index, wall, p)) {
       const n = normalAwayFrom(p, wall.a, wall.b);
       p = { x: p.x + n.x * (BODY_RADIUS - d), y: p.y + n.y * (BODY_RADIUS - d) };
     }
@@ -43,7 +43,7 @@ function innerFootprint(building: Building, thickness: number): Vec2[] {
 function throughDoor(building: Building, storey: Storey, p: Vec2): boolean {
   const es = edges(building.footprint);
   for (const o of storey.openings) {
-    if (o.kind !== "door") continue;
+    if (o.kind !== "door" || o.interior) continue;
     const e = es[o.wallIndex];
     if (!e) continue;
     if (
@@ -65,6 +65,22 @@ function throughDoor(building: Building, storey: Storey, p: Vec2): boolean {
       return true;
   }
   return false;
+}
+
+function throughInteriorDoor(storey: Storey, index: number, wall: Segment, p: Vec2): boolean {
+  const w = interiorWallAsWall(wall, index, storey.height);
+  const along = dot(sub(p, w.outerA), w.direction);
+  return openingsOn(storey.openings, index, true).some(
+    (o) =>
+      o.kind === "door" &&
+      validateOpening(o, {
+        wallLength: w.length,
+        storeyHeight: storey.height,
+        siblings: storey.openings,
+      }).length === 0 &&
+      along >= o.offset - BODY_RADIUS &&
+      along <= o.offset + o.width + BODY_RADIUS,
+  );
 }
 
 /** Tries the full move, then each axis alone, else stays. */

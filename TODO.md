@@ -389,3 +389,13 @@ Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 - [x] Pure helper `storeyDisplay` with tests, UI strings in both languages
 - [x] Roof display switch: hidden, outline, ghost, solid (default outline, a selected roof is always solid)
 - [ ] Manual check: two storeys, ground floor active, rooms and windows readable
+
+## 33. Openings in interior walls
+
+- [x] Opening model: `interior` flag makes `wallIndex` point at the storey's interior walls
+- [x] Interior walls drawn as prisms with holes, same solids code as exterior walls
+- [x] Opening tool on an interior wall adds a door, Shift adds a window
+- [x] Validation, JSON round trip, overlap check per wall kind, removal renumbers openings
+- [x] Energy, IFC, bridges and HVAC ignore interior openings, walkthrough passes through interior doors
+- [x] Opening editor and print plan handle interior openings
+- [ ] Manual check: door between two rooms, walk through it

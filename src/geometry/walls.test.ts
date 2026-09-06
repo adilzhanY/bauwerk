@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { area, equals } from "./polygon";
 import { lShape, rect } from "./fixtures";
-import { buildWalls, wallSolids, wallThicknessAt } from "./walls";
+import { buildWalls, interiorWallAsWall, wallSolids, wallThicknessAt } from "./walls";
 import type { WallPrism } from "./walls";
 import type { Opening } from "./types";
 
@@ -121,5 +121,36 @@ describe("wallSolids", () => {
     const prisms = wallSolids(wall(), [{ ...doorOpening, offset: 0 }]);
     expect(prisms).toHaveLength(2);
     expect(prisms[0]?.plan[3]).toEqual(wall().innerA);
+  });
+});
+
+describe("interiorWallAsWall", () => {
+  it("centres the thickness on the segment and cuts openings like an exterior wall", () => {
+    const wall = interiorWallAsWall({ a: { x: 0, y: 0 }, b: { x: 4, y: 0 } }, 2, 3, 0.1);
+    expect(wall.index).toBe(2);
+    expect(wall.length).toBe(4);
+    expect(wall.height).toBe(3);
+    expect(wall.direction).toEqual({ x: 1, y: 0 });
+    expect(wall.outerA.y).toBeCloseTo(-0.05);
+    expect(wall.innerA.y).toBeCloseTo(0.05);
+    const door = {
+      id: "d",
+      wallIndex: 2,
+      interior: true,
+      kind: "door" as const,
+      offset: 1,
+      width: 1,
+      height: 2.1,
+      sill: 0,
+      constructionId: "c",
+    };
+    const prisms = wallSolids(wall, [door]);
+    const volume = prisms.reduce((v, p) => {
+      const [a, b, c] = p.plan;
+      const w = Math.hypot(b.x - a.x, b.y - a.y);
+      const t = Math.hypot(c.x - b.x, c.y - b.y);
+      return v + w * t * (p.top - p.bottom);
+    }, 0);
+    expect(volume).toBeCloseTo(4 * 3 * 0.1 - 1 * 2.1 * 0.1, 6);
   });
 });

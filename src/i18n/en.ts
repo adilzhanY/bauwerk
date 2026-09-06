@@ -10,7 +10,8 @@ export const en = {
 
   "hint.select": "Click an element to select it. Drag an opening along its wall.",
   "hint.footprint": "Drag a corner handle. Click a small midpoint handle to add a corner.",
-  "hint.opening": "Click a wall to add a window. Hold Shift for a door.",
+  "hint.opening":
+    "Click an exterior wall for a window or an interior wall for a door. Shift swaps the two.",
   "hint.interiorWall": "Click two grid points to draw a wall. Escape cancels.",
   "hint.zone": "Pick a zone below, then click rooms to add or remove them.",
 
@@ -82,6 +83,8 @@ export const en = {
   "interiorWall.title": "Interior wall",
   "interiorWall.length": "Length",
   "interiorWall.remove": "Remove wall",
+  "interiorWall.hint":
+    "Use the Opening tool and click the wall to add a door, Shift+click for a window.",
 
   "vertex.title": "Footprint corner {n}",
   "vertex.x": "X",

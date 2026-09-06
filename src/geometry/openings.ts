@@ -1,5 +1,22 @@
 import type { Opening, Vec2 } from "./types";
 
+/** Two openings share a wall when both the index and the interior flag agree. */
+export const sameWall = (
+  a: Pick<Opening, "wallIndex" | "interior"> & Partial<Opening>,
+  b: Pick<Opening, "wallIndex" | "interior"> & Partial<Opening>,
+): boolean => a.wallIndex === b.wallIndex && (a.interior ?? false) === (b.interior ?? false);
+
+/** Openings in the building envelope, the ones that matter for energy and IFC. */
+export const exteriorOpenings = (openings: readonly Opening[]): Opening[] =>
+  openings.filter((o) => !o.interior);
+
+/** Openings on one wall, exterior by default. */
+export const openingsOn = (
+  openings: readonly Opening[],
+  wallIndex: number,
+  interior = false,
+): Opening[] => openings.filter((o) => sameWall(o, { wallIndex, interior }));
+
 export const OPENING_SNAP = 0.1;
 export const MIN_OPENING_SIZE = 0.1;
 
@@ -32,9 +49,7 @@ export function validateOpening(opening: Opening, ctx: OpeningContext): OpeningE
   if (opening.kind === "door" && Math.abs(opening.sill) > eps) errors.push("doorNotOnFloor");
   const overlapping = ctx.siblings.some(
     (other) =>
-      other.id !== opening.id &&
-      other.wallIndex === opening.wallIndex &&
-      openingsOverlap(opening, other),
+      other.id !== opening.id && sameWall(other, opening) && openingsOverlap(opening, other),
   );
   if (overlapping) errors.push("overlaps");
   return errors;

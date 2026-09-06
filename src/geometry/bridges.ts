@@ -1,4 +1,4 @@
-import { validateOpening } from "./openings";
+import { openingsOn, validateOpening } from "./openings";
 import { edges, pointOnSegment } from "./polygon";
 import type { Building, Storey, Vec2 } from "./types";
 
@@ -81,9 +81,10 @@ export function extractBridges(building: Building): Bridge[] {
     }
     // Window and door perimeters.
     for (const o of storey.openings) {
+      if (o.interior) continue;
       const e = es[o.wallIndex];
       if (!e) continue;
-      const onWall = storey.openings.filter((x) => x.wallIndex === o.wallIndex);
+      const onWall = openingsOn(storey.openings, o.wallIndex);
       if (
         validateOpening(o, { wallLength: e.length, storeyHeight: storey.height, siblings: onWall })
           .length > 0

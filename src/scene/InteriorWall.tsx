@@ -1,19 +1,24 @@
-import { useMemo } from "react";
-import { Mesh } from "three";
+import { useMemo, useRef } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
-import { distance, normalize, sub } from "@/geometry/polygon";
-import type { Id, Segment } from "@/geometry/types";
+import { Mesh } from "three";
+import { defaultOpening, snapOffset } from "@/geometry/openings";
+import { dot, sub } from "@/geometry/polygon";
+import { interiorWallAsWall, wallSolids } from "@/geometry/walls";
+import type { Id, Opening, Segment } from "@/geometry/types";
 import { colors } from "@/lib/colors";
 import type { StoreyDisplay } from "./display";
 import { sameSelection, useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
 import { useHover } from "./hover";
-import { yawFor } from "./three";
+import { mergeAll, prismGeometry } from "./three";
+
+export { INTERIOR_WALL_THICKNESS } from "@/geometry/walls";
 
 interface Props {
   storeyId: Id;
   index: number;
   segment: Segment;
+  openings: readonly Opening[];
   height: number;
   elevation: number;
   active: boolean;
@@ -21,19 +26,20 @@ interface Props {
   ghostOpacity: number;
 }
 
-export const INTERIOR_WALL_THICKNESS = 0.1;
-// Passing `undefined` to switch the override off writes undefined onto the mesh and every
-// later pointer event throws inside the raycaster, killing all interaction until reload.
+// Writing `undefined` to a mesh's raycast prop removes the method entirely, and the
+// next pointer event throws inside the raycaster, killing all interaction until reload.
 // Switch between the real Mesh raycast and a no-op instead.
 const meshRaycast: Mesh["raycast"] = function raycast(this: Mesh, raycaster, intersects) {
   Mesh.prototype.raycast.call(this, raycaster, intersects);
 };
 const noRaycast = () => null;
 
+/** A thin wall inside the footprint, with holes for its openings. Clicking it with the Opening tool adds one. */
 export function InteriorWall({
   storeyId,
   index,
   segment,
+  openings,
   height,
   elevation,
   active,
@@ -48,30 +54,61 @@ export function InteriorWall({
   const hovered = useEditorStore((s) => sameSelection(s.hovered, target));
   const select = useEditorStore((s) => s.select);
   const tool = useEditorStore((s) => s.tool);
+  const addOpening = useEditorStore((s) => s.addOpening);
   const hover = useHover(target, active);
 
-  const length = distance(segment.a, segment.b);
-  const yaw = yawFor(normalize(sub(segment.b, segment.a)));
-  const cx = (segment.a.x + segment.b.x) / 2;
-  const cz = (segment.a.y + segment.b.y) / 2;
+  const wall = useMemo(() => interiorWallAsWall(segment, index, height), [segment, index, height]);
+  const hash = JSON.stringify([segment, height, openings]);
+  const geometry = useMemo(() => {
+    const prisms = wallSolids(wall, openings);
+    return mergeAll(prisms.map((p) => prismGeometry(p.plan, p.bottom, p.top)));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hash]);
 
-  const onClick = (e: ThreeEvent<MouseEvent>) => {
-    if (!active || (tool !== "select" && tool !== "interiorWall")) return;
-    e.stopPropagation();
-    select(target);
+  // Same press-and-release bookkeeping as the exterior wall.
+  const down = useRef<{ x: number; y: number } | null>(null);
+  const onPointerDown = (e: ThreeEvent<PointerEvent>) => {
+    if (!active || e.button !== 0) return;
+    down.current = { x: e.nativeEvent.clientX, y: e.nativeEvent.clientY };
+  };
+  const onPointerUp = (e: ThreeEvent<PointerEvent>) => {
+    const start = down.current;
+    down.current = null;
+    if (!start || !active || e.button !== 0) return;
+    if (Math.hypot(e.nativeEvent.clientX - start.x, e.nativeEvent.clientY - start.y) > 6) return;
+    if (tool === "opening") {
+      e.stopPropagation();
+      // Between rooms a door is the common case, so the default flips: Shift makes a window.
+      const kind = e.nativeEvent.shiftKey ? "window" : "door";
+      const defaults = defaultOpening(kind);
+      const u = dot(sub({ x: e.point.x, y: e.point.z }, wall.outerA), wall.direction);
+      const offset = snapOffset(u - defaults.width / 2, defaults.width, wall.length);
+      const id = addOpening(storeyId, {
+        ...defaults,
+        wallIndex: index,
+        interior: true,
+        offset,
+      });
+      select({ kind: "opening", storeyId, id });
+      return;
+    }
+    if (tool === "select" || tool === "interiorWall") {
+      e.stopPropagation();
+      select(target);
+    }
   };
 
   if (display === "outline") return null;
   return (
     <mesh
-      position={[cx, elevation + height / 2, cz]}
-      rotation={[0, yaw, 0]}
-      onClick={onClick}
+      geometry={geometry}
+      position={[0, elevation, 0]}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
       raycast={active ? meshRaycast : noRaycast}
       castShadow
       {...hover}
     >
-      <boxGeometry args={[length, height, INTERIOR_WALL_THICKNESS]} />
       <meshStandardMaterial
         color={selected ? colors.accent : hovered ? colors.wallHover : colors.interiorWall}
         emissive={selected ? colors.accent : "#000000"}

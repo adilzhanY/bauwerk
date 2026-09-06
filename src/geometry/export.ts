@@ -5,7 +5,14 @@ import { roofOf } from "./roof";
 import { validateRadiator } from "./hvac";
 import type { EnergySummary } from "./energy";
 import { validateOpening } from "./openings";
-import { area, isCounterClockwise, isSimplePolygon, pointInPolygon, edges } from "./polygon";
+import {
+  area,
+  distance,
+  isCounterClockwise,
+  isSimplePolygon,
+  pointInPolygon,
+  edges,
+} from "./polygon";
 import type { Building, Construction, Opening, Room, Storey, Zone } from "./types";
 import { HEATED_TEMPERATURE } from "./types";
 
@@ -244,7 +251,10 @@ export function validateBuilding(b: Building): ImportError | null {
       const op = `${sp}.openings[${oi}]`;
       const d2 = seen(o.id, op);
       if (d2) return d2;
-      const wallLength = wallLengths[o.wallIndex];
+      const segment = s.interiorWalls[o.wallIndex];
+      const wallLength = o.interior
+        ? segment && distance(segment.a, segment.b)
+        : wallLengths[o.wallIndex];
       if (wallLength === undefined) return { code: "wallIndexOutOfRange", path: op };
       if (!constructionIds.has(o.constructionId)) return { code: "unknownConstruction", path: op };
       const errors = validateOpening(o, {
@@ -343,6 +353,7 @@ function checkOpening(v: unknown, path: string): ImportError | null {
   if (!isString(o.id)) return bad(`${path}.id`);
   if (!isNumber(o.wallIndex) || !Number.isInteger(o.wallIndex)) return bad(`${path}.wallIndex`);
   if (o.kind !== "window" && o.kind !== "door") return bad(`${path}.kind`);
+  if (o.interior !== undefined && typeof o.interior !== "boolean") return bad(`${path}.interior`);
   for (const k of ["offset", "width", "height", "sill"] as const) {
     if (!isNumber(o[k])) return bad(`${path}.${k}`);
   }

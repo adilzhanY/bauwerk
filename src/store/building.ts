@@ -612,6 +612,11 @@ export function createEditorStore(initial?: Partial<EditorState>) {
               const storey = findStorey(state.building, storeyId);
               if (!storey || index < 0 || index >= storey.interiorWalls.length) return;
               storey.interiorWalls.splice(index, 1);
+              storey.openings = storey.openings
+                .filter((o) => !(o.interior && o.wallIndex === index))
+                .map((o) =>
+                  o.interior && o.wallIndex > index ? { ...o, wallIndex: o.wallIndex - 1 } : o,
+                );
               refreshRooms(storey, state.building.footprint, state.language);
               if (state.selection?.kind === "interiorWall" && state.selection.index === index) {
                 state.selection = null;

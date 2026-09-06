@@ -24,7 +24,7 @@ import { effectiveWallThickness } from "./layers";
 import { buildRoof } from "./roof";
 import { evaluateAll } from "./scenarios";
 import { epsgForZone, northInPlan, toUtm } from "./geo";
-import { validateOpening } from "./openings";
+import { openingsOn, validateOpening } from "./openings";
 import { area, sub } from "./polygon";
 import { NULL, DERIVED, StepWriter, bool, enm, ifcGuid, list, real, ref, str, typed } from "./step";
 import type { Attr } from "./step";
@@ -255,7 +255,7 @@ export function toIfc(building: Building, options: IfcOptions = {}): string {
         ],
       );
 
-      const onWall = storey.openings.filter((o) => o.wallIndex === wall.index);
+      const onWall = openingsOn(storey.openings, wall.index);
       for (const opening of onWall) {
         const valid =
           validateOpening(opening, {

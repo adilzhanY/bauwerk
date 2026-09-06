@@ -260,6 +260,29 @@ describe("UI state and history", () => {
 });
 
 describe("store behaviour", () => {
+  it("removing an interior wall drops its openings and renumbers the rest", () => {
+    const sid = storeyId();
+    store.getState().addInteriorWall(sid, { a: { x: 3, y: 0 }, b: { x: 3, y: 8 } });
+    store.getState().addInteriorWall(sid, { a: { x: 6, y: 0 }, b: { x: 6, y: 8 } });
+    const door = {
+      kind: "door" as const,
+      offset: 1,
+      width: 1,
+      height: 2.1,
+      sill: 0,
+      interior: true,
+    };
+    store.getState().addOpening(sid, { ...door, wallIndex: 0 });
+    const kept = store.getState().addOpening(sid, { ...door, wallIndex: 1 });
+    store
+      .getState()
+      .addOpening(sid, { kind: "window", offset: 1, width: 1, height: 1, sill: 1, wallIndex: 0 });
+    store.getState().removeInteriorWall(sid, 0);
+    const openings = store.getState().building.storeys[0]?.openings ?? [];
+    expect(openings).toHaveLength(2);
+    expect(openings.find((o) => o.id === kept)?.wallIndex).toBe(0);
+    expect(openings.find((o) => !o.interior)?.wallIndex).toBe(0);
+  });
   it("derives rooms when interior walls change and keeps names", () => {
     const sid = storeyId();
     expect(store.getState().building.storeys[0]?.rooms).toHaveLength(1);

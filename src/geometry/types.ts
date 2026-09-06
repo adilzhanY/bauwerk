@@ -37,8 +37,13 @@ export interface Construction {
 
 export interface Opening {
   id: Id;
-  /** Index into the footprint edges. Edge i runs from vertex i to vertex i + 1. */
+  /**
+   * Index into the footprint edges (edge i runs from vertex i to vertex i + 1), or,
+   * when `interior` is set, into the storey's interior walls.
+   */
   wallIndex: number;
+  /** The opening sits in an interior wall instead of the building envelope. */
+  interior?: boolean;
   kind: OpeningKind;
   /** Metres from the wall start to the opening's left edge. */
   offset: number;

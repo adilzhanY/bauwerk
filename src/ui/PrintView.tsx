@@ -635,7 +635,15 @@ function StoreyPlan({ storey }: { storey: Storey }) {
         />
       ))}
       {storey.openings.map((o) => {
-        const e = es[o.wallIndex];
+        const e = o.interior
+          ? (() => {
+              const seg = storey.interiorWalls[o.wallIndex];
+              if (!seg) return undefined;
+              const d = { x: seg.b.x - seg.a.x, y: seg.b.y - seg.a.y };
+              const len = Math.hypot(d.x, d.y) || 1;
+              return { a: seg.a, direction: { x: d.x / len, y: d.y / len } };
+            })()
+          : es[o.wallIndex];
         if (!e) return null;
         const a = { x: e.a.x + e.direction.x * o.offset, y: e.a.y + e.direction.y * o.offset };
         const b = { x: a.x + e.direction.x * o.width, y: a.y + e.direction.y * o.width };

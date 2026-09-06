@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Trash2 } from "lucide-react";
-import { validateOpening } from "@/geometry/openings";
+import { openingsOn, validateOpening } from "@/geometry/openings";
 import type { OpeningError } from "@/geometry/openings";
 import { distance, edges } from "@/geometry/polygon";
 import type { Opening, Radiator, Room, Storey, Zone } from "@/geometry/types";
@@ -541,7 +541,7 @@ function WallProperties({ storeyId, wallIndex }: { storeyId: string; wallIndex: 
   const storey = useStorey(storeyId);
   const edge = edges(footprint)[wallIndex];
   if (!edge || !storey) return null;
-  const onWall = storey.openings.filter((o) => o.wallIndex === wallIndex);
+  const onWall = openingsOn(storey.openings, wallIndex);
   const netArea = edge.length * storey.height - onWall.reduce((a, o) => a + o.width * o.height, 0);
   return (
     <>
@@ -571,10 +571,18 @@ function OpeningProperties({ storeyId, openingId }: { storeyId: string; openingI
   const doorConstructionId = useEditorStore((s) => s.building.doorConstructionId);
   const batch = useBatch();
   const opening = storey?.openings.find((o) => o.id === openingId);
-  const edge = opening ? edges(footprint)[opening.wallIndex] : undefined;
-  if (!storey || !opening || !edge) return null;
+  const wallLength =
+    !opening || !storey
+      ? undefined
+      : opening.interior
+        ? (() => {
+            const seg = storey.interiorWalls[opening.wallIndex];
+            return seg ? distance(seg.a, seg.b) : undefined;
+          })()
+        : edges(footprint)[opening.wallIndex]?.length;
+  if (!storey || !opening || wallLength === undefined) return null;
   const errors = validateOpening(opening, {
-    wallLength: edge.length,
+    wallLength,
     storeyHeight: storey.height,
     siblings: storey.openings,
   });
@@ -618,7 +626,7 @@ function OpeningProperties({ storeyId, openingId }: { storeyId: string; openingI
         label={t("opening.offset")}
         value={opening.offset}
         min={0}
-        max={Math.max(0, edge.length - opening.width)}
+        max={Math.max(0, wallLength - opening.width)}
         step={0.1}
         unit={m}
         language={language}
@@ -632,7 +640,7 @@ function OpeningProperties({ storeyId, openingId }: { storeyId: string; openingI
         label={t("opening.width")}
         value={opening.width}
         min={0.1}
-        max={edge.length}
+        max={wallLength}
         step={0.1}
         unit={m}
         language={language}
@@ -702,6 +710,11 @@ function InteriorWallProperties({ storeyId, index }: { storeyId: string; index: 
         label={t("interiorWall.length")}
         value={formatMetres(distance(segment.a, segment.b), language)}
       />
+      <CustomReadOnly
+        label={t("wall.openings")}
+        value={String(openingsOn(storey.openings, index, true).length)}
+      />
+      <p className="text-xs text-muted">{t("interiorWall.hint")}</p>
       <RemoveButton
         label={t("interiorWall.remove")}
         onClick={() => {

@@ -34,7 +34,7 @@ describe("App", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("radio", { name: /Opening/ }));
     expect(useEditorStore.getState().tool).toBe("opening");
-    expect(screen.getByText(/Click a wall to add a window/)).toBeTruthy();
+    expect(screen.getByText(/Click an exterior wall for a window/)).toBeTruthy();
   });
 
   it("adds a storey with the button and undoes it from the bottom bar", () => {

@@ -117,6 +117,30 @@ describe("validateBuilding", () => {
     expect(validateBuilding(sample())).toBeNull();
   });
 
+  it("checks interior openings against their interior wall and round trips them", () => {
+    const b = sample();
+    const storey = b.storeys[0];
+    if (!storey) throw new Error("missing storey");
+    storey.interiorWalls.push({ a: { x: 3, y: 0 }, b: { x: 3, y: 4 } });
+    const door = {
+      id: "door-in",
+      wallIndex: storey.interiorWalls.length - 1,
+      interior: true,
+      kind: "door" as const,
+      offset: 1,
+      width: 1,
+      height: 2.1,
+      sill: 0,
+      constructionId: storey.openings[0]!.constructionId,
+    };
+    storey.openings.push(door);
+    expect(validateBuilding(b)).toBeNull();
+    const back = fromJson(toJson(b));
+    expect(back.ok && back.building.storeys[0]?.openings.some((o) => o.interior)).toBe(true);
+    storey.openings[storey.openings.length - 1] = { ...door, wallIndex: 7 };
+    expect(validateBuilding(b)?.code).toBe("wallIndexOutOfRange");
+  });
+
   it("rejects a bowtie footprint and a clockwise footprint", () => {
     const bowtie = { ...sample(), footprint: [rect[0]!, rect[2]!, rect[1]!, rect[3]!] };
     expect(validateBuilding(bowtie)?.code).toBe("footprintInvalid");
