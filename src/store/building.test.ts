@@ -66,6 +66,12 @@ const cases: ActionCase[] = [
     },
   },
   {
+    name: "resizeFootprint",
+    act: (s) => {
+      s.resizeFootprint(12, 9);
+    },
+  },
+  {
     name: "addOpening",
     act: (s) =>
       s.addOpening(storeyId(), {

@@ -3,6 +3,7 @@ import type { KeyboardEvent } from "react";
 import {
   ArrowDown,
   ArrowUp,
+  Box,
   Building2,
   Copy,
   Image as ImageIcon,
@@ -25,6 +26,7 @@ import { CustomSection } from "@/components/CustomField";
 import { ZONE_COLORS } from "@/lib/colors";
 import { cx } from "@/components/cx";
 import { LocationSection } from "./LocationSection";
+import { NewBuildingDialog } from "./NewBuildingDialog";
 import { ProjectSwitcher } from "./ProjectSwitcher";
 import { SettingsSection } from "./SettingsSection";
 import { toolHint } from "./tools";
@@ -106,6 +108,7 @@ function StoreyList() {
   const duplicateStorey = useEditorStore((s) => s.duplicateStorey);
   const active = storeys.find((s) => s.id === activeStoreyId);
   const activeIndex = active ? storeys.indexOf(active) : -1;
+  const [newBuilding, setNewBuilding] = useState(false);
 
   const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
     if (activeIndex === -1) return;
@@ -124,11 +127,29 @@ function StoreyList() {
     <CustomSection
       title={t("panel.storeys")}
       action={
-        <CustomIconButton label={t("storey.add")} size="sm" onClick={addStorey}>
-          <Plus size={16} />
-        </CustomIconButton>
+        <span className="flex items-center gap-0.5">
+          <CustomIconButton
+            label={t("newBuilding.title")}
+            size="sm"
+            onClick={() => {
+              setNewBuilding(true);
+            }}
+          >
+            <Box size={16} />
+          </CustomIconButton>
+          <CustomIconButton label={t("storey.add")} size="sm" onClick={addStorey}>
+            <Plus size={16} />
+          </CustomIconButton>
+        </span>
       }
     >
+      {newBuilding && (
+        <NewBuildingDialog
+          onClose={() => {
+            setNewBuilding(false);
+          }}
+        />
+      )}
       {storeys.length === 0 && <p className="text-sm text-muted">{t("empty.body")}</p>}
       {storeys.length > 0 && (
         <div className="flex flex-col gap-3">

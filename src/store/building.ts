@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { planToLatLon } from "@/geometry/geo";
+import { resizeRectangle } from "@/geometry/box";
 import {
   buildingCentre,
   rotateBuilding,
@@ -169,6 +170,8 @@ export interface EditorActions {
   removePipe: (storeyId: Id, id: Id) => void;
   /** Replaces the footprint, for a GeoJSON import. Rooms are recomputed. */
   setFootprint: (footprint: Vec2[], origin?: GeoOrigin) => void;
+  /** Resizes a rectangular footprint about its centre; openings are clamped into their walls. */
+  resizeFootprint: (width: number, depth: number) => void;
   /** Slides the whole building on the plan; the geo origin stays. */
   translateBuilding: (delta: Vec2) => void;
   /** Turns the whole building about its footprint centre. */
@@ -546,6 +549,13 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             });
           },
 
+          resizeFootprint: (width, depth) => {
+            set((state) => {
+              state.building = resizeRectangle(state.building, width, depth);
+              refreshAllRooms(state.building, state.language);
+            });
+          },
+
           translateBuilding: (delta) => {
             set((state) => {
               state.building = translateBuilding(state.building, delta);
@@ -829,7 +839,9 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             set((state) => {
               state.building = next;
               state.activeStoreyId = next.storeys[0]?.id ?? null;
+              state.activeZoneId = next.zones[0]?.id ?? null;
               state.selection = null;
+              state.hovered = null;
             });
           },
 

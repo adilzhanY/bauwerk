@@ -473,6 +473,21 @@ export const de: Messages = {
   "location.recentre": "Mitte zum Ursprung machen",
   "location.recentreHint":
     "Setzt den Planursprung auf die Gebäudemitte und die Karte mit, damit die eingegebenen Koordinaten das Gebäude selbst beschreiben.",
+  "newBuilding.title": "Neues Gebäude",
+  "newBuilding.defaultName": "Neues Gebäude",
+  "newBuilding.create": "Gebäude anlegen",
+  "newBuilding.era": "Baujahr",
+  "newBuilding.era.pre1918": "vor 1918",
+  "newBuilding.era.1970s": "1970er",
+  "newBuilding.era.insulated": "gedämmt",
+  "newBuilding.hint":
+    "Ersetzt das aktuelle Gebäude durch einen leeren Quader mit diesen Maßen, mittig an der Stelle des aktuellen. Ein Rückgängig-Schritt.",
+  "building.width": "Breite",
+  "building.depth": "Tiefe",
+  "building.notRectangle":
+    "Breite und Tiefe sind editierbar, solange der Grundriss ein Rechteck ist. Andere Formen über das Grundriss-Werkzeug.",
+  "footprint.area": "Grundfläche",
+  "common.cancel": "Abbrechen",
   "common.metres": "m",
   "common.squareMetres": "m²",
   "common.remove": "Entfernen",

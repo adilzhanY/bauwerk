@@ -464,6 +464,21 @@ export const en = {
   "location.recentre": "Make the centre the origin",
   "location.recentreHint":
     "Moves the plan origin to the building centre and the map with it, so the coordinates you type describe the building itself.",
+  "newBuilding.title": "New building",
+  "newBuilding.defaultName": "New building",
+  "newBuilding.create": "Create building",
+  "newBuilding.era": "Built",
+  "newBuilding.era.pre1918": "before 1918",
+  "newBuilding.era.1970s": "1970s",
+  "newBuilding.era.insulated": "insulated",
+  "newBuilding.hint":
+    "Replaces the current building with an empty box of these dimensions, centred where the current one stands. One undo step.",
+  "building.width": "Width",
+  "building.depth": "Depth",
+  "building.notRectangle":
+    "Width and depth are editable while the footprint is a rectangle. Use the Footprint tool for other shapes.",
+  "footprint.area": "Footprint area",
+  "common.cancel": "Cancel",
   "common.metres": "m",
   "common.squareMetres": "m²",
   "common.remove": "Remove",

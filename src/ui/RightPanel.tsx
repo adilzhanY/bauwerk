@@ -2,9 +2,10 @@ import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { openingsOn, validateOpening } from "@/geometry/openings";
 import type { OpeningError } from "@/geometry/openings";
-import { distance, edges } from "@/geometry/polygon";
+import { area, distance, edges } from "@/geometry/polygon";
 import type { Opening, Radiator, Room, Storey, Zone } from "@/geometry/types";
 import { useT } from "@/i18n/useT";
+import { BOX_LIMITS, rectangleOf } from "@/geometry/box";
 import type { MessageKey } from "@/i18n";
 import { formatArea, formatMetres, formatNumber } from "@/lib/format";
 import { useEditorStore } from "@/store/building";
@@ -71,11 +72,7 @@ export function RightPanel() {
         {tab === "properties" ? (
           <CustomTabPanel value="properties">
             <CustomSection title={t("panel.properties")} first>
-              {selection ? (
-                <Properties selection={selection} />
-              ) : (
-                <p className="text-sm text-muted">{t("properties.empty")}</p>
-              )}
+              {selection ? <Properties selection={selection} /> : <BuildingCard />}
             </CustomSection>
           </CustomTabPanel>
         ) : tab === "energy" ? (
@@ -93,6 +90,61 @@ export function RightPanel() {
         )}
       </div>
     </aside>
+  );
+}
+
+/** Nothing selected: the building itself, with width and depth editable while it is a box. */
+function BuildingCard() {
+  const t = useT();
+  const language = useEditorStore((s) => s.language);
+  const building = useEditorStore((s) => s.building);
+  const renameBuilding = useEditorStore((s) => s.renameBuilding);
+  const resizeFootprint = useEditorStore((s) => s.resizeFootprint);
+  const batch = useBatch();
+  const box = rectangleOf(building.footprint);
+  const m = t("common.metres");
+  return (
+    <>
+      <p className="text-sm text-muted">{t("properties.empty")}</p>
+      <CustomTextInput label={t("building.name")} value={building.name} onCommit={renameBuilding} />
+      {box ? (
+        <>
+          <CustomNumberInput
+            label={t("building.width")}
+            value={box.width}
+            min={BOX_LIMITS.width.min}
+            max={BOX_LIMITS.width.max}
+            step={0.1}
+            unit={m}
+            language={language}
+            onChange={(width) => {
+              resizeFootprint(width, box.depth);
+            }}
+            {...batch}
+          />
+          <CustomNumberInput
+            label={t("building.depth")}
+            value={box.depth}
+            min={BOX_LIMITS.depth.min}
+            max={BOX_LIMITS.depth.max}
+            step={0.1}
+            unit={m}
+            language={language}
+            onChange={(depth) => {
+              resizeFootprint(box.width, depth);
+            }}
+            {...batch}
+          />
+        </>
+      ) : (
+        <p className="text-xs text-muted">{t("building.notRectangle")}</p>
+      )}
+      <CustomReadOnly
+        label={t("footprint.area")}
+        value={formatArea(area(building.footprint), language)}
+      />
+      <CustomReadOnly label={t("status.storeys")} value={String(building.storeys.length)} />
+    </>
   );
 }
 

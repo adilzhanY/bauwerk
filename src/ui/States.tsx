@@ -1,5 +1,7 @@
-import { Plus } from "lucide-react";
+import { Box, Plus } from "lucide-react";
+import { useState } from "react";
 import type { ReactNode } from "react";
+import { NewBuildingDialog } from "./NewBuildingDialog";
 import { useT } from "@/i18n/useT";
 import { useEditorStore } from "@/store/building";
 import { CustomButton } from "@/components/CustomButton";
@@ -25,11 +27,30 @@ function Centered({
 export function EmptyState() {
   const t = useT();
   const addStorey = useEditorStore((s) => s.addStorey);
+  const [open, setOpen] = useState(false);
   return (
     <Centered title={t("empty.title")} body={t("empty.body")}>
-      <CustomButton variant="primary" icon={<Plus size={14} />} onClick={addStorey}>
-        {t("storey.add")}
-      </CustomButton>
+      <div className="flex gap-2">
+        <CustomButton variant="primary" icon={<Plus size={14} />} onClick={addStorey}>
+          {t("storey.add")}
+        </CustomButton>
+        <CustomButton
+          variant="quiet"
+          icon={<Box size={14} />}
+          onClick={() => {
+            setOpen(true);
+          }}
+        >
+          {t("newBuilding.title")}
+        </CustomButton>
+      </div>
+      {open && (
+        <NewBuildingDialog
+          onClose={() => {
+            setOpen(false);
+          }}
+        />
+      )}
     </Centered>
   );
 }

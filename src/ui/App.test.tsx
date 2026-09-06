@@ -47,6 +47,27 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Redo" })).not.toHaveProperty("disabled", true);
   });
 
+  it("creates a named building from dimensions as one undo step", () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "New building" }));
+    const dialog = screen.getByRole("dialog", { name: "New building" });
+    const name = within(dialog).getByLabelText("Building name", { selector: "input" });
+    fireEvent.change(name, { target: { value: "Garden house" } });
+    fireEvent.blur(name);
+    const storeys = within(dialog).getByLabelText("Storeys", { selector: "input" });
+    fireEvent.focus(storeys);
+    fireEvent.change(storeys, { target: { value: "3" } });
+    fireEvent.blur(storeys);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Create building" }));
+
+    expect(useEditorStore.getState().building.name).toBe("Garden house");
+    expect(useEditorStore.getState().building.storeys).toHaveLength(3);
+    expect(useEditorStore.getState().past).toHaveLength(1);
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(useEditorStore.getState().building.name).toBe("Bauwerk");
+    expect(useEditorStore.getState().building.storeys).toHaveLength(1);
+  });
+
   it("switches the whole UI to German", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("radio", { name: "Settings" }));

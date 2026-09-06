@@ -175,3 +175,7 @@ The user asked for a check of all numbers before accepting that the tool works. 
 - The uninsulated floor and roof presets claimed U-values of 1.0 and 1.3 while their layer stacks computed 3.7 and 2.5, and the stack wins. The stacks now land on the IWU typology values, and the typed fallbacks match.
 
 Before the fix the example house came out at 324 kWh/(m²a); after it, 252, which is where the IWU typology puts an uninsulated pre-1918 single-family house. The assumptions text on the Energy panel and in the print report also claimed that solar gains and thermal bridges were not included while the code included both; both texts now describe the method as computed.
+
+## 2026-09-06: Building dimensions stay in geometry and survive rotation
+
+The first implementation put rectangle detection and resizing in `src/lib/box.ts`, although the project rule keeps every geometry operation in `src/geometry/` with tests. It also recognised only rectangles aligned to the world axes, so rotating a building with the new Move tool immediately disabled its width and depth fields. The code moved to `src/geometry/box.ts`, rectangle detection now checks side lengths and right angles, and resizing preserves the centre and orientation. The building factory takes its id generator as an input so its result remains controlled in tests. Creating a replacement building also keeps the existing map origin, and loading it resets stale selection, hover and active zone state.
