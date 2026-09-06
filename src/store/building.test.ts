@@ -4,6 +4,7 @@ import type { EditorStore } from "./building";
 import { HISTORY_LIMIT } from "./history";
 import { isCounterClockwise } from "@/geometry/polygon";
 import { resetIds } from "@/lib/ids";
+import { exampleAltbau } from "@/lib/examples";
 import type { Building } from "@/geometry/types";
 
 type Store = ReturnType<typeof createEditorStore>;
@@ -253,6 +254,30 @@ describe("UI state and history", () => {
     expect(s.selection).toEqual({ kind: "storey", id: storeyId() });
     expect(s.tool).toBe("opening");
     expect(s.language).toBe("de");
+    expect(s.building.storeys[0]?.name).toBe("Erdgeschoss");
+  });
+
+  it("localizes known model names in both directions without changing custom names", () => {
+    store.getState().renameBuilding("Haus Müller");
+    store.getState().setLanguage("de");
+    expect(store.getState().building.name).toBe("Haus Müller");
+    expect(store.getState().building.storeys[0]?.name).toBe("Erdgeschoss");
+    store.getState().setLanguage("en");
+    expect(store.getState().building.name).toBe("Haus Müller");
+    expect(store.getState().building.storeys[0]?.name).toBe("Ground floor");
+  });
+
+  it("localizes known names when buildings enter a German store", () => {
+    const germanStore = createEditorStore({ language: "de", building: exampleAltbau("en") });
+    expect(germanStore.getState().building.name).toBe("Altbau Kreuzberg, Baujahr 1905");
+
+    germanStore.getState().loadBuilding(exampleAltbau("en"));
+    expect(germanStore.getState().building.storeys[0]?.rooms.map((room) => room.name)).toContain(
+      "Ladenlokal",
+    );
+
+    germanStore.getState().applyRemoteBuilding(exampleAltbau("en"));
+    expect(germanStore.getState().building.scenarios?.[0]?.name).toBe("Fenster und Dach");
   });
 
   it("clearSelection and setActiveStorey do not create history", () => {
@@ -336,7 +361,7 @@ describe("store behaviour", () => {
     store.getState().addStorey();
     store.getState().addStorey();
     const names = store.getState().building.storeys.map((s) => s.name);
-    expect(names).toEqual(["Ground floor", "1. Obergeschoss", "2. Obergeschoss"]);
+    expect(names).toEqual(["Erdgeschoss", "1. Obergeschoss", "2. Obergeschoss"]);
   });
 
   it("removing the active storey moves the active storey to a neighbour", () => {

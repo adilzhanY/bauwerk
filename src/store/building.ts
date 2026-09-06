@@ -42,6 +42,7 @@ import {
 } from "@/geometry/polygon";
 import { computeRooms } from "@/geometry/rooms";
 import { defaultRoomName, defaultStoreyName, detectLanguage } from "@/i18n";
+import { localizeBuilding } from "@/i18n/localizeBuilding";
 import { loadBuilding, loadLanguage, loadTheme } from "@/lib/storage";
 import type { Language } from "@/i18n";
 import { createId } from "@/lib/ids";
@@ -302,7 +303,10 @@ export function createEditorStore(initial?: Partial<EditorState>) {
     history(
       immer((set, get) => {
         const language = initial?.language ?? "en";
-        const building = initial?.building ?? createDefaultBuilding(language);
+        const building = localizeBuilding(
+          initial?.building ?? createDefaultBuilding(language),
+          language,
+        );
         return {
           building,
           activeStoreyId: initial?.activeStoreyId ?? building.storeys[0]?.id ?? null,
@@ -837,7 +841,7 @@ export function createEditorStore(initial?: Partial<EditorState>) {
 
           loadBuilding: (next) => {
             set((state) => {
-              state.building = next;
+              state.building = localizeBuilding(next, state.language);
               state.activeStoreyId = next.storeys[0]?.id ?? null;
               state.activeZoneId = next.zones[0]?.id ?? null;
               state.selection = null;
@@ -1018,7 +1022,7 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             // withoutHistory and future belong to the history slice wrapped around this initializer.
             (get() as unknown as EditorStore).withoutHistory(() => {
               set((state) => {
-                state.building = building;
+                state.building = localizeBuilding(building, state.language);
                 if (!state.building.storeys.some((s) => s.id === state.activeStoreyId)) {
                   state.activeStoreyId = state.building.storeys[0]?.id ?? null;
                 }
@@ -1094,8 +1098,18 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           },
 
           setLanguage: (language) => {
-            set((state) => {
-              state.language = language;
+            (get() as unknown as EditorStore).withoutHistory(() => {
+              set((state) => {
+                state.building = localizeBuilding(state.building, language);
+                const historyState = state as unknown as HistorySlice;
+                historyState.past = historyState.past.map((building) =>
+                  localizeBuilding(building, language),
+                );
+                historyState.future = historyState.future.map((building) =>
+                  localizeBuilding(building, language),
+                );
+                state.language = language;
+              });
             });
           },
         };

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { App } from "@/App";
+import { exampleAltbau } from "@/lib/examples";
 import { resetIds } from "@/lib/ids";
 import { createDefaultBuilding, useEditorStore } from "@/store/building";
 
@@ -164,6 +165,27 @@ describe("App", () => {
     // German number format regardless of the English interface: 80 m² floor, 268 m² envelope shown as "268".
     expect(screen.getAllByText(/1\.234|268 m²|80 m²/).length).toBeGreaterThan(0);
     vi.useRealTimers();
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("prints all known document names in the selected German language", () => {
+    act(() => {
+      useEditorStore.getState().loadBuilding(exampleAltbau("en"));
+      useEditorStore.getState().setLanguage("de");
+    });
+    window.history.replaceState(null, "", "/?print=1");
+    render(<App />);
+
+    expect(screen.getAllByText("Altbau Kreuzberg, Baujahr 1905").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Ladenlokal").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Treppenhaus").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Ziegelwand, ungedämmt").length).toBeGreaterThan(0);
+    expect(screen.getByText("Fenster und Dach")).toBeTruthy();
+    expect(screen.queryByText("Kreuzberg apartment house, built 1905")).toBeNull();
+    expect(screen.queryByText("Shop")).toBeNull();
+    expect(screen.queryByText("Brick wall, uninsulated")).toBeNull();
+    expect(screen.queryByText("Windows and roof")).toBeNull();
+
     window.history.replaceState(null, "", "/");
   });
 

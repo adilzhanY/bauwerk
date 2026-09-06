@@ -425,3 +425,11 @@ Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 - [x] Building properties: edit the name, width and depth when the footprint is rectangular. Preserve the centre and rotation, clamp openings to the resized walls, and recompute rooms.
 - [x] Show the building name over the model, allow direct renaming, use it in the Storeys heading and keep the browser tab title current.
 - [ ] Manual check: create a building, resize it, move it, rotate it, rename it and undo each operation.
+
+## 37. Complete document language switching
+
+- [x] Translate every known generated and example name when the interface language changes: building, storeys, rooms, zones, constructions, material layers and renovation scenarios.
+- [x] Preserve names entered by the user and translate known names in both directions.
+- [x] Keep restored, imported, synchronized and undo history snapshots in the active language.
+- [x] Test the German print route with the Altbau Kreuzberg example and reject its English model names.
+- [ ] Manual check: switch Altbau Kreuzberg to German, open Print and inspect every page.
