@@ -118,6 +118,11 @@ export function energyClass(specificDemand: number): EnergyClass {
   return "H";
 }
 
+export const ENERGY_CLASSES: EnergyClass[] = ["A+", "A", "B", "C", "D", "E", "F", "G", "H"];
+/** Upper bound of each class on the Energieausweis scale, the last one is the drawn maximum. */
+export const ENERGY_CLASS_UPPER = [30, 50, 75, 100, 130, 160, 200, 250, 300];
+export const ENERGY_SCALE_MAX = 300;
+
 export const ENERGY_CLASS_COLORS: Record<EnergyClass, string> = {
   "A+": "#1a9850",
   A: "#66bd63",

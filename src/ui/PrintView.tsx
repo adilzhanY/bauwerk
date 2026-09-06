@@ -1,16 +1,17 @@
-import { computeEnergy, ENERGY_CLASS_COLORS } from "@/geometry/energy";
-import type { EnergyClass, EnergySummary } from "@/geometry/energy";
+import { computeEnergy } from "@/geometry/energy";
+import type { EnergySummary } from "@/geometry/energy";
 import { findConstruction } from "@/geometry/constructions";
 import { epsgForZone, toUtm } from "@/geometry/geo";
 import { bounds, edges } from "@/geometry/polygon";
 import type { Building, Storey, ConstructionCategory } from "@/geometry/types";
 import { useT } from "@/i18n/useT";
+import { EnergyScale } from "./EnergyScale";
 import { gegChecks, gegPassCount } from "@/geometry/geg";
 import type { MessageKey } from "@/i18n";
 import { useEditorStore } from "@/store/building";
 import { LayerSection, LayerTable } from "./LayerSection";
 import { buildRoof, roofOf } from "@/geometry/roof";
-import { ENERGY_PRICE_PER_KWH, evaluateAll } from "@/geometry/scenarios";
+import { ENERGY_PRICE_PER_KWH, buildRoadmap } from "@/geometry/scenarios";
 
 /*
   The report is a document, not an interface. It follows the conventions of
@@ -27,10 +28,7 @@ const num = (v: number, digits = 1) =>
 const dateTime = (d: Date) =>
   `${new Intl.DateTimeFormat(DE, { day: "2-digit", month: "2-digit", year: "numeric" }).format(d)}, ${new Intl.DateTimeFormat(DE, { hour: "2-digit", minute: "2-digit", hour12: false }).format(d)}`;
 
-const CLASSES: EnergyClass[] = ["A+", "A", "B", "C", "D", "E", "F", "G", "H"];
 /** Upper bound of each class on the scale in kWh/(m²a); H is open ended and drawn to 300. */
-const CLASS_UPPER = [30, 50, 75, 100, 130, 160, 200, 250, 300];
-const SCALE_MAX = 300;
 
 export function PrintView() {
   const t = useT();
@@ -130,7 +128,7 @@ export function PrintView() {
           {t("print.section.energy")}
         </h2>
         <EnergyTable current={energy} renovated={renovated} />
-        <Scale current={energy} renovated={renovated} />
+        <EnergyScale variant="print" current={energy} compare={renovated} />
 
         <h2 style={{ marginTop: "12pt" }}>
           <span className="n">3</span>
@@ -224,40 +222,39 @@ export function PrintView() {
 /** Variants as steps in order of payback, the way the iSFP presents measure packages. */
 function Roadmap({ building }: { building: Building }) {
   const t = useT();
-  const results = evaluateAll(building)
-    .filter((r) => r.demandSaved > 0)
-    .sort((a, b) => a.payback - b.payback);
+  const steps = buildRoadmap(building);
   return (
     <>
       <p className="small" style={{ marginTop: "6pt" }}>
+        {t("scenarios.roadmapIntro")}{" "}
         {t("scenarios.costHint", { price: num(ENERGY_PRICE_PER_KWH, 2) })}
       </p>
       <table style={{ marginTop: "6pt" }}>
         <thead>
           <tr>
-            <th style={{ width: "8%" }}>{t("scenarios.step")}</th>
+            <th style={{ width: "7%" }}>{t("scenarios.step")}</th>
+            <th style={{ width: "8%" }}>{t("scenarios.yearHeader")}</th>
             <th>{t("scenarios.measure")}</th>
             <th className="r">{t("energy.energyClass")}</th>
             <th className="r">kWh/(m²·a)</th>
             <th className="r">{t("scenarios.demandSaved")} [kWh/a]</th>
             <th className="r">{t("scenarios.investment")} [€]</th>
+            <th className="r">{t("scenarios.cumulative")} [€]</th>
             <th className="r">{t("scenarios.saving")} [€]</th>
-            <th className="r">{t("scenarios.payback")} [a]</th>
           </tr>
         </thead>
         <tbody>
-          {results.map((r, i) => (
-            <tr key={r.scenario.id}>
-              <td>{i + 1}</td>
-              <td>{r.scenario.id === "full-envelope" ? t("scenarios.full") : r.scenario.name}</td>
-              <td className="r">{r.energy.energyClass}</td>
-              <td className="r">{num(r.energy.specificHeatingDemand, 0)}</td>
-              <td className="r">{num(r.demandSaved, 0)}</td>
-              <td className="r">{num(r.investment, 0)}</td>
-              <td className="r">{num(r.savingPerYear, 0)}</td>
-              <td className="r">
-                {Number.isFinite(r.payback) ? num(r.payback, 1) : t("scenarios.never")}
-              </td>
+          {steps.map((s) => (
+            <tr key={s.scenario.id}>
+              <td>{s.index + 1}</td>
+              <td>{num(s.year, 0)}</td>
+              <td>{s.scenario.id === "full-envelope" ? t("scenarios.full") : s.scenario.name}</td>
+              <td className="r">{s.energy.energyClass}</td>
+              <td className="r">{num(s.energy.specificHeatingDemand, 0)}</td>
+              <td className="r">{num(s.demandSaved, 0)}</td>
+              <td className="r">{num(s.investment, 0)}</td>
+              <td className="r">{num(s.cumulativeInvestment, 0)}</td>
+              <td className="r">{num(s.savingPerYear, 0)}</td>
             </tr>
           ))}
         </tbody>
@@ -498,85 +495,6 @@ function EnergyTable({ current, renovated }: { current: EnergySummary; renovated
 }
 
 /** The A+ to H scale with kWh/(m²·a) ticks and two markers, current above and renovated below. */
-function Scale({ current, renovated }: { current: EnergySummary; renovated: EnergySummary }) {
-  const t = useT();
-  const w = 560;
-  const h = 78;
-  const barY = 30;
-  const barH = 16;
-  const x = (v: number) => (Math.min(v, SCALE_MAX) / SCALE_MAX) * w;
-  const segments = CLASSES.map((c, i) => ({
-    c,
-    x0: x(i === 0 ? 0 : (CLASS_UPPER[i - 1] ?? 0)),
-    x1: x(CLASS_UPPER[i] ?? SCALE_MAX),
-  }));
-  const ticks = [0, 25, 50, 75, 100, 125, 150, 175, 200, 225, 250];
-  const marker = (v: number, label: string, above: boolean) => {
-    const px = x(v);
-    const y = above ? barY - 4 : barY + barH + 4;
-    const dir = above ? -1 : 1;
-    return (
-      <g key={label}>
-        <path d={`M${px} ${y} l${-5} ${dir * 7} h10 z`} fill="#000" />
-        <text x={px} y={y + dir * 18} fontSize="9" textAnchor="middle" fill="#000">
-          {label}: {num(v, 0)}
-        </text>
-      </g>
-    );
-  };
-  return (
-    <svg
-      viewBox={`0 0 ${w} ${h}`}
-      style={{ width: "100%", marginTop: "8pt" }}
-      role="img"
-      aria-label={`${t("energy.energyClass")} ${current.energyClass}`}
-    >
-      {segments.map((s) => (
-        <g key={s.c}>
-          <rect
-            x={s.x0}
-            y={barY}
-            width={s.x1 - s.x0}
-            height={barH}
-            fill={ENERGY_CLASS_COLORS[s.c]}
-            stroke="#000"
-            strokeWidth="0.5"
-          />
-          <text
-            x={(s.x0 + s.x1) / 2}
-            y={barY + barH - 4}
-            fontSize="9"
-            textAnchor="middle"
-            fill="#000"
-          >
-            {s.c}
-          </text>
-        </g>
-      ))}
-      {ticks.map((v) => (
-        <g key={v}>
-          <line
-            x1={x(v)}
-            y1={barY + barH}
-            x2={x(v)}
-            y2={barY + barH + 3}
-            stroke="#000"
-            strokeWidth="0.5"
-          />
-          <text x={x(v)} y={h - 2} fontSize="7" textAnchor="middle" fill="#000">
-            {v}
-          </text>
-        </g>
-      ))}
-      <text x={w - 2} y={h - 2} fontSize="7" textAnchor="end" fill="#000">
-        {"kWh/(m²·a)"}
-      </text>
-      {marker(current.specificHeatingDemand, t("energy.scenario.current"), true)}
-      {marker(renovated.specificHeatingDemand, t("energy.scenario.renovated"), false)}
-    </svg>
-  );
-}
-
 function ElementsTable({ energy }: { energy: EnergySummary }) {
   const t = useT();
   const categoryKey: Record<string, MessageKey> = {

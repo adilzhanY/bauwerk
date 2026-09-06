@@ -7,12 +7,13 @@ import {
   CONSTRUCTION_COST,
   ENERGY_PRICE_PER_KWH,
   applyScenario,
+  buildRoadmap,
   evaluateAll,
   evaluateScenario,
   fullEnvelopeScenario,
   investmentOf,
 } from "./scenarios";
-import type { Building, Opening } from "./types";
+import type { Building, Opening, Scenario } from "./types";
 
 let n = 0;
 const factory = { createId: () => `room_${++n}`, defaultName: (i: number) => `Room ${i}` };
@@ -109,5 +110,35 @@ describe("scenarios", () => {
     expect(all.map((r) => r.scenario.id)).toEqual(["full-envelope", "s1"]);
     expect(all[1]!.demandSaved).toBeGreaterThan(0);
     expect(all[0]!.demandSaved).toBeGreaterThan(all[1]!.demandSaved);
+  });
+
+  it("buildRoadmap applies the saved scenarios cumulatively, cheapest payback first", () => {
+    const b = building();
+    const windows: Scenario = {
+      id: "w",
+      name: "Windows",
+      overrides: { window: PRESET_IDS.glazingTriple },
+    };
+    const facade: Scenario = {
+      id: "f",
+      name: "Facade",
+      overrides: { wall: PRESET_IDS.wallInsulated },
+      bridgeDetail: "good",
+    };
+    const steps = buildRoadmap({ ...b, scenarios: [windows, facade] }, 2);
+    expect(steps).toHaveLength(2);
+    expect(steps.map((s) => s.year)).toEqual([0, 2]);
+    const single = [windows, facade].map((s) => evaluateScenario(b, s));
+    const cheaperFirst = single[0]!.payback <= single[1]!.payback ? "w" : "f";
+    expect(steps[0]?.scenario.id).toBe(cheaperFirst);
+    // The last step equals both applied at once.
+    const both = applyScenario(applyScenario(b, windows), facade);
+    expect(steps[1]?.energy.heatingDemand).toBeCloseTo(computeEnergy(both).heatingDemand, 6);
+    expect(steps[1]?.cumulativeInvestment).toBe(steps[0]!.investment + steps[1]!.investment);
+    expect(steps[1]!.energy.heatingDemand).toBeLessThan(steps[0]!.energy.heatingDemand);
+    // Without saved scenarios the full envelope is the only step.
+    const only = buildRoadmap(b);
+    expect(only).toHaveLength(1);
+    expect(only[0]?.scenario.id).toBe("full-envelope");
   });
 });

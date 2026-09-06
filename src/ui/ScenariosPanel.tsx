@@ -1,6 +1,11 @@
 import { useMemo } from "react";
 import { Copy, Eye, Plus, Trash2 } from "lucide-react";
-import { ENERGY_PRICE_PER_KWH, evaluateAll, evaluateScenario } from "@/geometry/scenarios";
+import {
+  ENERGY_PRICE_PER_KWH,
+  buildRoadmap,
+  evaluateAll,
+  evaluateScenario,
+} from "@/geometry/scenarios";
 import type { ScenarioResult } from "@/geometry/scenarios";
 import type { ConstructionCategory, Scenario } from "@/geometry/types";
 import { useT } from "@/i18n/useT";
@@ -127,6 +132,7 @@ export function ScenariosPanel() {
       >
         {t("scenarios.add")}
       </CustomButton>
+      <Roadmap />
       {(building.scenarios ?? []).map((sc) => (
         <ScenarioEditor
           key={sc.id}
@@ -146,6 +152,60 @@ export function ScenariosPanel() {
           }}
         />
       ))}
+    </div>
+  );
+}
+
+/** The saved scenarios as one sequence, cheapest payback first, each step on the previous. */
+function Roadmap() {
+  const t = useT();
+  const language = useEditorStore((s) => s.language);
+  const building = useEditorStore((s) => s.building);
+  const steps = useMemo(() => buildRoadmap(building), [building]);
+  const num = (v: number, d = 0) => formatNumber(v, language, d);
+  const last = steps[steps.length - 1];
+  return (
+    <div className="flex flex-col gap-2 border-t border-line pt-3">
+      <span className="text-xs font-medium text-muted">{t("scenarios.roadmap")}</span>
+      <ol className="flex flex-col gap-1.5">
+        {steps.map((s) => (
+          <li
+            key={s.scenario.id}
+            className="grid grid-cols-[auto_1fr_auto] items-center gap-x-3 gap-y-0.5 rounded-inner bg-paper px-3 py-2 text-sm"
+          >
+            <span className="font-num text-xs text-muted">
+              {t("scenarios.year", { n: s.year })}
+            </span>
+            <span className="min-w-0 truncate font-medium text-ink">
+              {s.scenario.id === "full-envelope" ? t("scenarios.full") : s.scenario.name}
+            </span>
+            <span
+              className="rounded-pill px-2 py-0.5 font-num text-xs font-semibold"
+              style={{ background: classColor(s.energy.energyClass), color: "#1b1d20" }}
+            >
+              {s.energy.energyClass} · {num(s.energy.specificHeatingDemand)}
+            </span>
+            <span className="col-span-3 font-num text-xs text-muted">
+              {t("scenarios.stepCost", {
+                step: num(s.investment),
+                total: num(s.cumulativeInvestment),
+              })}
+              {" · "}
+              {t("scenarios.savingAfter", { n: num(s.savingPerYear) })}
+            </span>
+          </li>
+        ))}
+      </ol>
+      {last && (
+        <p className="text-xs leading-relaxed text-muted">
+          {t("scenarios.roadmapHint", {
+            years: num(last.year),
+            payback: Number.isFinite(last.cumulativeInvestment / Math.max(1e-9, last.savingPerYear))
+              ? num(last.cumulativeInvestment / Math.max(1e-9, last.savingPerYear), 1)
+              : t("scenarios.never"),
+          })}
+        </p>
+      )}
     </div>
   );
 }

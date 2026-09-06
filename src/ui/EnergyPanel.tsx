@@ -1,10 +1,11 @@
 import { useMemo } from "react";
 import { bestInCategory } from "@/geometry/constructions";
-import { ENERGY_CLASS_COLORS, computeEnergy } from "@/geometry/energy";
+import { computeEnergy } from "@/geometry/energy";
+import { EnergyScale } from "./EnergyScale";
 import { evaluateAll } from "@/geometry/scenarios";
 import { gegChecks, gegPassCount } from "@/geometry/geg";
 import { cx } from "@/components/cx";
-import type { EnergyClass, EnergySummary, Orientation } from "@/geometry/energy";
+import type { EnergySummary, Orientation } from "@/geometry/energy";
 import type { ConstructionCategory } from "@/geometry/types";
 import type { BridgeType } from "@/geometry/bridges";
 import { DESIGN_OUTDOOR_TEMPERATURE, roomHeatLoads, suggestHeatPumpPower } from "@/geometry/hvac";
@@ -17,8 +18,6 @@ import { CustomReadOnly } from "@/components/CustomField";
 import { CustomSegmented } from "@/components/CustomSegmented";
 import { CustomSelect } from "@/components/CustomSelect";
 import { LayerEditor } from "./LayerEditor";
-
-const CLASSES: EnergyClass[] = ["A+", "A", "B", "C", "D", "E", "F", "G", "H"];
 
 export function EnergyPanel() {
   const t = useT();
@@ -55,7 +54,17 @@ export function EnergyPanel() {
           setViewScenario(v === "current" ? null : v);
         }}
       />
-      <ClassBand value={shown.energyClass} />
+      <div className="flex flex-col gap-1">
+        <span className="text-xs font-medium text-muted">{t("energy.energyClass")}</span>
+        <EnergyScale
+          variant="panel"
+          current={current}
+          compare={renovated ? after : undefined}
+          compareLabel={
+            chosen?.scenario.id === "full-envelope" || !chosen ? undefined : chosen.scenario.name
+          }
+        />
+      </div>
       <div className="grid grid-cols-2 gap-2">
         <Big
           label={t("energy.specificHeatingDemand")}
@@ -126,26 +135,6 @@ export function EnergyPanel() {
       <GegCheck />
       <Constructions />
       <p className="text-xs leading-relaxed text-muted">{t("energy.assumptions")}</p>
-    </div>
-  );
-}
-
-function ClassBand({ value }: { value: EnergyClass }) {
-  const t = useT();
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-xs font-medium text-muted">{t("energy.energyClass")}</span>
-      <div className="flex gap-0.5" role="img" aria-label={`${t("energy.energyClass")}: ${value}`}>
-        {CLASSES.map((c) => (
-          <div
-            key={c}
-            className={`flex h-9 flex-1 items-center justify-center rounded-soft font-num text-xs font-semibold ${c === value ? "ring-2 ring-ink ring-offset-1 ring-offset-panel" : "opacity-40"}`}
-            style={{ background: ENERGY_CLASS_COLORS[c], color: "#1b1d20" }}
-          >
-            {c}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

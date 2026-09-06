@@ -190,3 +190,64 @@ export function evaluateAll(building: Building): ScenarioResult[] {
   const list = [fullEnvelopeScenario(building), ...(building.scenarios ?? [])];
   return list.map((s) => evaluateScenario(building, s, baseline));
 }
+
+export interface RoadmapStep {
+  index: number;
+  scenario: Scenario;
+  /** Years after the start; the first step is year 0. */
+  year: number;
+  /** The building after this and all earlier steps. */
+  energy: EnergySummary;
+  /** Euro for this step alone. */
+  investment: number;
+  /** Euro for this and all earlier steps. */
+  cumulativeInvestment: number;
+  /** Euro per year against the original building, after this step. */
+  savingPerYear: number;
+  /** kWh/a this step saves against the previous one. */
+  demandSaved: number;
+}
+
+/**
+ * A renovation roadmap in the manner of the individueller Sanierungsfahrplan
+ * (iSFP): the saved scenarios ordered by their own payback, cheapest win first,
+ * applied one after another so every step shows the building as it will be
+ * after everything before it. Later overrides win over earlier ones. Without
+ * saved scenarios the full envelope variant is the single step.
+ */
+export function buildRoadmap(building: Building, yearsBetweenSteps = 3): RoadmapStep[] {
+  const baseline = computeEnergy(building);
+  const own = building.scenarios ?? [];
+  const ordered =
+    own.length === 0
+      ? [fullEnvelopeScenario(building)]
+      : [...own].sort(
+          (a, b) =>
+            evaluateScenario(building, a, baseline).payback -
+            evaluateScenario(building, b, baseline).payback,
+        );
+  const steps: RoadmapStep[] = [];
+  let current = building;
+  let previousEnergy = baseline;
+  let cumulative = 0;
+  ordered.forEach((scenario, index) => {
+    const next = applyScenario(current, scenario);
+    const energy = computeEnergy(next);
+    const investment = investmentOf(current, next);
+    cumulative += investment;
+    steps.push({
+      index,
+      scenario,
+      year: index * yearsBetweenSteps,
+      energy,
+      investment,
+      cumulativeInvestment: cumulative,
+      savingPerYear:
+        Math.max(0, baseline.heatingDemand - energy.heatingDemand) * ENERGY_PRICE_PER_KWH,
+      demandSaved: Math.max(0, previousEnergy.heatingDemand - energy.heatingDemand),
+    });
+    current = next;
+    previousEnergy = energy;
+  });
+  return steps;
+}

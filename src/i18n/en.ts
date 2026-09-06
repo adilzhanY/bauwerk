@@ -444,6 +444,15 @@ export const en = {
   "geg.result": "Result",
   "geg.hint":
     "Maximum U-values after a renovation, GEG Annex 7 table 1 for residential buildings: walls 0.24, roof 0.24, floor 0.30, windows 1.3, doors 1.8 W/(m²K).",
+  "scenarios.year": "Year {n}",
+  "scenarios.yearHeader": "Year",
+  "scenarios.cumulative": "Cumulative",
+  "scenarios.stepCost": "{step} € this step, {total} € in total",
+  "scenarios.savingAfter": "{n} € per year saved after it",
+  "scenarios.roadmapIntro":
+    "Steps in the manner of the individual renovation roadmap (iSFP): the saved scenarios ordered by payback, each applied on top of the ones before, with the building as it stands after every step.",
+  "scenarios.roadmapHint":
+    "Cheapest payback first, each step on top of the previous ones, three years apart. The whole roadmap spans {years} years and pays back in {payback} years at today's energy price.",
   "common.metres": "m",
   "common.squareMetres": "m²",
   "common.remove": "Remove",

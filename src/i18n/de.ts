@@ -453,6 +453,15 @@ export const de: Messages = {
   "geg.result": "Ergebnis",
   "geg.hint":
     "Höchstwerte der U-Werte nach einer Sanierung, GEG Anlage 7 Tabelle 1 für Wohngebäude: Wände 0,24, Dach 0,24, Boden 0,30, Fenster 1,3, Türen 1,8 W/(m²K).",
+  "scenarios.year": "Jahr {n}",
+  "scenarios.yearHeader": "Jahr",
+  "scenarios.cumulative": "Kumuliert",
+  "scenarios.stepCost": "{step} € in diesem Schritt, {total} € insgesamt",
+  "scenarios.savingAfter": "danach {n} € pro Jahr gespart",
+  "scenarios.roadmapIntro":
+    "Schritte nach Art des individuellen Sanierungsfahrplans (iSFP): die gespeicherten Szenarien nach Amortisation geordnet, jedes auf den vorigen aufgesetzt, mit dem Gebäude, wie es nach jedem Schritt steht.",
+  "scenarios.roadmapHint":
+    "Kürzeste Amortisation zuerst, jeder Schritt auf den vorigen aufgesetzt, im Abstand von drei Jahren. Der ganze Fahrplan erstreckt sich über {years} Jahre und amortisiert sich beim heutigen Energiepreis in {payback} Jahren.",
   "common.metres": "m",
   "common.squareMetres": "m²",
   "common.remove": "Entfernen",
