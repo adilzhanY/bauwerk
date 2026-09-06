@@ -20,7 +20,8 @@ function inTextField(target: EventTarget | null): boolean {
 
 /**
  * Ctrl+Z undo, Ctrl+Shift+Z or Ctrl+Y redo, Delete removes the selection,
- * Escape clears it, 1 to 5 switch tools, PageUp and PageDown switch storeys.
+ * Escape clears it and returns to the select tool, 1 to 7 switch tools,
+ * PageUp and PageDown switch storeys.
  */
 export function useKeyboardShortcuts() {
   useEffect(() => {
@@ -47,6 +48,7 @@ export function useKeyboardShortcuts() {
       if (e.key === "Escape") {
         s.clearSelection();
         s.setMeasurement(null);
+        if (s.tool !== "select") s.setTool("select");
         if (s.walkthrough) s.setWalkthrough(false);
         return;
       }

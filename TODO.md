@@ -416,4 +416,4 @@ Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 - [x] README with numbers, the audit story and how to run
 - [x] Energieausweis scale graphic in the Energy panel and the report
 - [x] Renovation roadmap in iSFP style: ordered steps, demand after each, cumulative cost, print page
-- [ ] Keyboard and accessibility pass
+- [x] Keyboard and accessibility pass

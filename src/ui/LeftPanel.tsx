@@ -55,7 +55,10 @@ export function LeftPanel({ syncStatus }: { syncStatus: SyncStatus | "local" }) 
   const [section, setSection] = useState<SectionId>("storeys");
   const ids: SectionId[] = ["storeys", "zones", "location", "underlay", "settings"];
   return (
-    <aside className="pointer-events-auto flex h-full min-h-0 rounded-card border border-line bg-panel shadow-float">
+    <aside
+      aria-label={t("a11y.leftPanel")}
+      className="pointer-events-auto flex h-full min-h-0 rounded-card border border-line bg-panel shadow-float"
+    >
       <div className="flex flex-col items-center border-r border-line p-2">
         <CustomSegmented
           label={t("panel.view")}
@@ -231,6 +234,7 @@ function RoomList() {
             <li key={room.id}>
               <button
                 type="button"
+                aria-pressed={selected}
                 onClick={() => {
                   select({ kind: "room", storeyId: storey.id, id: room.id });
                 }}

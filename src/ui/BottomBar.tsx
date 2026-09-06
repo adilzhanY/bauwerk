@@ -114,7 +114,10 @@ export function BottomBar({ actor }: Props) {
   const [ifcError, setIfcError] = useState<string | null>(null);
 
   return (
-    <footer className="pointer-events-auto flex h-12 items-center gap-1 rounded-pill border border-line bg-panel px-3 text-sm shadow-float">
+    <footer
+      aria-label={t("a11y.bottomBar")}
+      className="pointer-events-auto flex h-12 items-center gap-1 rounded-pill border border-line bg-panel px-3 text-sm shadow-float"
+    >
       <CustomIconButton label={t("bar.undo")} size="sm" disabled={!canUndo} onClick={undo}>
         <Undo2 size={15} />
       </CustomIconButton>

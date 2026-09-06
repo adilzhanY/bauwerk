@@ -462,6 +462,10 @@ export const de: Messages = {
     "Schritte nach Art des individuellen Sanierungsfahrplans (iSFP): die gespeicherten Szenarien nach Amortisation geordnet, jedes auf den vorigen aufgesetzt, mit dem Gebäude, wie es nach jedem Schritt steht.",
   "scenarios.roadmapHint":
     "Kürzeste Amortisation zuerst, jeder Schritt auf den vorigen aufgesetzt, im Abstand von drei Jahren. Der ganze Fahrplan erstreckt sich über {years} Jahre und amortisiert sich beim heutigen Energiepreis in {payback} Jahren.",
+  "a11y.leftPanel": "Gebäudebereich",
+  "a11y.rightPanel": "Eigenschaftenbereich",
+  "a11y.bottomBar": "Aktionen und Status",
+  "a11y.scene": "3D-Ansicht",
   "common.metres": "m",
   "common.squareMetres": "m²",
   "common.remove": "Entfernen",

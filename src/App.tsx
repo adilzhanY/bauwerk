@@ -58,7 +58,7 @@ export function App() {
 
   return (
     <div className="relative h-full overflow-hidden bg-paper" data-tool={tool}>
-      <main className="absolute inset-0">
+      <main aria-label={t("a11y.scene")} className="absolute inset-0">
         {!hasStoreys ? <EmptyState /> : webgl ? <Viewport /> : <WebGLMissing />}
       </main>
       <div className="pointer-events-none absolute inset-0 grid grid-cols-[380px_1fr_360px] grid-rows-[1fr_auto] gap-4 p-4">

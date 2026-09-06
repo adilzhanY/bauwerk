@@ -53,7 +53,10 @@ export function RightPanel() {
     if (selection) setTab("properties");
   }
   return (
-    <aside className="pointer-events-auto flex h-full min-h-0 flex-col overflow-hidden rounded-card border border-line bg-panel shadow-float">
+    <aside
+      aria-label={t("a11y.rightPanel")}
+      className="pointer-events-auto flex h-full min-h-0 flex-col overflow-hidden rounded-card border border-line bg-panel shadow-float"
+    >
       <CustomTabs
         label={t("panel.properties")}
         value={tab}
