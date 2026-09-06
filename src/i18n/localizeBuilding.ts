@@ -8,6 +8,7 @@ type Pair = readonly [en: string, de: string];
 const BUILDINGS: Pair[] = [
   ["Family house", "Einfamilienhaus"],
   ["Office block", "Bürogebäude"],
+  ["Berlin office tower, 18 storeys", "Berliner Bürohochhaus, 18 Geschosse"],
   ["Kreuzberg apartment house, built 1905", "Altbau Kreuzberg, Baujahr 1905"],
   ["New building", "Neues Gebäude"],
 ];
@@ -34,6 +35,8 @@ const ZONES: Pair[] = [
   ["Living", "Wohnen"],
   ["Shop", "Laden"],
   ["Stairwell", "Treppenhaus"],
+  ["Offices", "Büros"],
+  ["Service core", "Kernbereich"],
 ];
 
 const SCENARIOS: Pair[] = [
@@ -57,6 +60,12 @@ function storeyName(value: string, language: Language): string {
 function roomName(value: string, language: Language): string {
   const generated = /^(?:Room|Raum) (\d+)$/.exec(value);
   if (generated?.[1]) return defaultRoomName(Number(generated[1]), language);
+  const office = /^(?:Office|Büro) (\d+)\.(\d+)$/.exec(value);
+  if (office?.[1] && office[2]) {
+    return `${language === "de" ? "Büro" : "Office"} ${office[1]}.${office[2]}`;
+  }
+  const core = /^(?:Core|Kern) (\d+)$/.exec(value);
+  if (core?.[1]) return `${language === "de" ? "Kern" : "Core"} ${core[1]}`;
   return knownName(value, ROOMS, language);
 }
 

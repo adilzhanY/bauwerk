@@ -7,7 +7,7 @@ import { defaultRoomName, defaultStoreyName } from "@/i18n";
 import type { Language } from "@/i18n";
 import { createId } from "./ids";
 
-export type ExampleId = "house" | "block" | "altbau";
+export type ExampleId = "house" | "block" | "altbau" | "tower";
 
 function storey(
   index: number,
@@ -184,6 +184,109 @@ export function exampleBlock(language: Language): Building {
     ...DEFAULT_ASSIGNMENT,
     wallConstructionId: PRESET_IDS.wall1970,
     storeys: [level(0, true), level(1, false), level(2, false)],
+  };
+}
+
+/** An eighteen-storey office tower, 36 by 24 m, with 162 rooms and 719 openings. */
+export function exampleTower(language: Language): Building {
+  const de = language === "de";
+  const footprint: Vec2[] = [
+    { x: 0, y: 0 },
+    { x: 36, y: 0 },
+    { x: 36, y: 24 },
+    { x: 0, y: 24 },
+  ];
+  const offices = createId("zone");
+  const core = createId("zone");
+  const interiorWalls: Segment[] = [
+    { a: { x: 12, y: 0 }, b: { x: 12, y: 24 } },
+    { a: { x: 24, y: 0 }, b: { x: 24, y: 24 } },
+    { a: { x: 0, y: 8 }, b: { x: 36, y: 8 } },
+    { a: { x: 0, y: 16 }, b: { x: 36, y: 16 } },
+  ];
+  const windows = (wallIndex: number, count: number, length: number) =>
+    Array.from({ length: count }, (_, index) => ({
+      wallIndex,
+      kind: "window" as const,
+      offset: ((index + 0.5) * length) / count - 0.9,
+      width: 1.8,
+      height: 1.8,
+      sill: 0.8,
+    }));
+  const facadeWindows = [
+    ...windows(0, 12, 36),
+    ...windows(1, 8, 24),
+    ...windows(2, 12, 36),
+    ...windows(3, 8, 24),
+  ];
+  const levels = Array.from({ length: 18 }, (_, index) => {
+    const openings =
+      index === 0
+        ? [
+            ...facadeWindows.filter(
+              (opening) =>
+                opening.wallIndex !== 0 ||
+                opening.offset + opening.width < 16 ||
+                opening.offset > 20,
+            ),
+            { wallIndex: 0, kind: "door" as const, offset: 17.2, width: 1.6, height: 2.4, sill: 0 },
+          ]
+        : facadeWindows;
+    const level = storey(index, language, footprint, 3.4, openings, interiorWalls);
+    level.openings = level.openings.map((opening) => ({
+      ...opening,
+      constructionId: opening.kind === "door" ? PRESET_IDS.doorInsulated : PRESET_IDS.glazingTriple,
+    }));
+    let officeNumber = 0;
+    nameRooms(
+      level,
+      [4, 12, 20].flatMap((y) =>
+        [6, 18, 30].map((x) => {
+          const isCore = x === 18 && y === 12;
+          if (!isCore) officeNumber += 1;
+          return {
+            at: { x, y },
+            name: isCore
+              ? `${de ? "Kern" : "Core"} ${index + 1}`
+              : `${de ? "Büro" : "Office"} ${index + 1}.${officeNumber}`,
+            zone: isCore ? core : offices,
+          };
+        }),
+      ),
+    );
+    return level;
+  });
+  return {
+    id: createId("building"),
+    name: de ? "Berliner Bürohochhaus, 18 Geschosse" : "Berlin office tower, 18 storeys",
+    footprint,
+    wallThickness: 0.3,
+    zones: [
+      {
+        id: offices,
+        name: de ? "Büros" : "Offices",
+        color: "#2a9d8f",
+        heated: true,
+        temperature: HEATED_TEMPERATURE,
+      },
+      {
+        id: core,
+        name: de ? "Kernbereich" : "Service core",
+        color: "#6c8ef5",
+        heated: true,
+        temperature: HEATED_TEMPERATURE,
+      },
+    ],
+    constructions: defaultConstructions(language),
+    ...DEFAULT_ASSIGNMENT,
+    wallConstructionId: PRESET_IDS.wallInsulated,
+    floorConstructionId: PRESET_IDS.floorInsulated,
+    roofConstructionId: PRESET_IDS.roofInsulated,
+    windowConstructionId: PRESET_IDS.glazingTriple,
+    doorConstructionId: PRESET_IDS.doorInsulated,
+    bridgeDetail: "good",
+    roof: { kind: "flat", pitch: 0, overhang: 0, ridgeAxis: "x", parapet: 1.1 },
+    storeys: levels,
   };
 }
 
@@ -391,5 +494,6 @@ export function exampleAltbau(language: Language): Building {
 
 export function example(id: ExampleId, language: Language): Building {
   if (id === "altbau") return exampleAltbau(language);
+  if (id === "tower") return exampleTower(language);
   return id === "house" ? exampleHouse(language) : exampleBlock(language);
 }

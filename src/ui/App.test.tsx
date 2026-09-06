@@ -82,6 +82,17 @@ describe("App", () => {
     expect(screen.getByText("WebGL ist nicht verfügbar")).toBeTruthy();
   });
 
+  it("loads the large office tower from the example selector", () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole("radio", { name: "Settings" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Load example" }));
+    fireEvent.click(screen.getByRole("option", { name: "Large office tower" }));
+    const building = useEditorStore.getState().building;
+    expect(building.name).toBe("Berlin office tower, 18 storeys");
+    expect(building.storeys).toHaveLength(18);
+    expect(building.storeys.reduce((sum, storey) => sum + storey.rooms.length, 0)).toBe(162);
+  });
+
   it("shows opening properties with a validation message for an invalid opening", () => {
     render(<App />);
     const s = useEditorStore.getState();

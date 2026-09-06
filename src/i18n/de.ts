@@ -43,6 +43,7 @@ export const de: Messages = {
   "settings.reset": "Auf Beispiel zurücksetzen",
   "settings.examplePlaceholder": "Beispiel wählen",
   "example.altbau": "Altbau Kreuzberg (Demo)",
+  "example.tower": "Großes Bürohochhaus",
   "example.house": "Zweigeschossiges Haus",
   "example.block": "L-förmiger Block",
 

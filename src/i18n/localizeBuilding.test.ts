@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { exampleAltbau } from "@/lib/examples";
+import { exampleAltbau, exampleTower } from "@/lib/examples";
 import { localizeBuilding } from "./localizeBuilding";
 
 describe("localizeBuilding", () => {
@@ -61,5 +61,14 @@ describe("localizeBuilding", () => {
         (construction.layers ?? []).map((layer) => layer.name),
       ),
     ).toContain("Solid brick");
+  });
+
+  it("translates the generated tower names", () => {
+    const german = localizeBuilding(exampleTower("en"), "de");
+    expect(german.name).toBe("Berliner Bürohochhaus, 18 Geschosse");
+    expect(german.storeys[17]?.name).toBe("17. Obergeschoss");
+    expect(german.storeys[17]?.rooms.map((room) => room.name)).toContain("Büro 18.8");
+    expect(german.storeys[17]?.rooms.map((room) => room.name)).toContain("Kern 18");
+    expect(german.zones.map((zone) => zone.name)).toEqual(["Büros", "Kernbereich"]);
   });
 });

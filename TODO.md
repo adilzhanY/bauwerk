@@ -448,3 +448,12 @@ Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 - [x] Increase the colored band, class letters, marker label and tick labels together.
 - [x] Test the panel view box and band height in both current and renovated views.
 - [ ] Manual check: inspect the Energy efficiency class scale at the normal panel width.
+
+## 40. Very large example building
+
+- [x] Add a bilingual large office tower to Load example: 18 storeys, 36 by 24 m, 162 named rooms and 719 openings.
+- [x] Give it office and service-core zones, modern constructions, a flat roof and complete energy assignments.
+- [x] Refit the camera whenever a different building is loaded so the full tower is visible at once.
+- [x] Translate its building, storey, room and zone names when the language changes.
+- [x] Validate both languages and test its dimensions, totals and Load example path.
+- [ ] Manual check: load the large office tower and inspect orbiting, storey selection and frame rate.

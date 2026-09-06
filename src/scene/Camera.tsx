@@ -30,27 +30,33 @@ export function Camera() {
   const activeStoreyId = useEditorStore((s) => s.activeStoreyId);
   const planView = useEditorStore((s) => s.planView);
   const tween = useRef<Tween | null>(null);
-  const fitted = useRef(false);
+  const fittedBuildingId = useRef<string | null>(null);
+  const skipStoreyFocus = useRef(false);
 
   useEffect(() => {
-    if (!controls || fitted.current) return;
+    if (!controls || fittedBuildingId.current === building.id) return;
     const { min, max } = bounds(building.footprint);
-    const centre = new Vector3((min.x + max.x) / 2, 0, (min.y + max.y) / 2);
-    const size = Math.max(max.x - min.x, max.y - min.y, 4);
     const height = building.storeys.reduce((s, st) => s + st.height, 0);
-    const distance = size * 1.4 + height;
+    const centre = new Vector3((min.x + max.x) / 2, height / 2, (min.y + max.y) / 2);
+    const size = Math.max(max.x - min.x, max.y - min.y, height, 4);
+    const distance = size * 1.8;
     camera.position.set(
       centre.x + distance * 0.8,
-      height + distance * 0.7,
+      centre.y + distance * 0.7,
       centre.z + distance * 0.8,
     );
     controls.target.copy(centre);
     controls.update();
-    fitted.current = true;
+    fittedBuildingId.current = building.id;
+    skipStoreyFocus.current = true;
   }, [controls, camera, building]);
 
   useEffect(() => {
     if (!controls || activeStoreyId === null || planView) return;
+    if (skipStoreyFocus.current) {
+      skipStoreyFocus.current = false;
+      return;
+    }
     const storey = building.storeys.find((s) => s.id === activeStoreyId);
     if (!storey) return;
     const y = storeyElevation(building, activeStoreyId) + storey.height / 2;

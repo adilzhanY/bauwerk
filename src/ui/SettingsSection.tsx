@@ -319,6 +319,7 @@ export function SettingsSection() {
           options={[
             { value: "", label: t("settings.examplePlaceholder") },
             { value: "altbau", label: t("example.altbau") },
+            { value: "tower", label: t("example.tower") },
             { value: "house", label: t("example.house") },
             { value: "block", label: t("example.block") },
           ]}

@@ -10,7 +10,7 @@ Built by Adilzhan Yerzhan in three weeks with Claude Code as the primary way cod
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Client code      | about 23,000 lines of TypeScript in `src/`                                                                                              |
 | Server code      | about 860 lines in `server/src/`                                                                                                        |
-| Tests            | 324 client tests in 55 files, 8 server tests against a real Postgres                                                                    |
+| Tests            | 327 client tests in 55 files, 8 server tests against a real Postgres                                                                    |
 | Logged overrules | 43 entries in `DECISIONS.md`                                                                                                            |
 | Languages        | English and German, a missing key is a type error                                                                                       |
 | Stack            | Vite, React 18, TypeScript strict, Zustand, Three.js via react-three-fiber, Tailwind CSS v4, Vitest; NestJS and Postgres for the server |
@@ -25,7 +25,7 @@ npm run build      # production build in dist/
 npm run preview    # serve the production build
 ```
 
-The `--legacy-peer-deps` flag works around an npm 10 crash while resolving Vitest's optional peers. The eight-minute demo script is in `DEMO.md`; load "Kreuzberg apartment house (demo)" from Settings, Examples.
+The `--legacy-peer-deps` flag works around an npm 10 crash while resolving Vitest's optional peers. The eight-minute demo script is in `DEMO.md`; load "Kreuzberg apartment house (demo)" from Settings, Examples. For a much larger model, load "Large office tower", which has 18 storeys, 162 rooms and 719 openings.
 
 ## How it fits together
 
