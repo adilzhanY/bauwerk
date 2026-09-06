@@ -18,25 +18,36 @@ import type {
 } from "./types";
 
 /**
- * Building physics, simplified on purpose and documented where simplified.
+ * Building physics after the heating period method of DIN V 4108-6 Annex D, the
+ * simplified procedure the EnEV allowed for residential buildings.
  *
- * Transmission heat loss coefficient   H_T  = Σ U_i · A_i           [W/K]
- * Ventilation heat loss coefficient    H_V  = 0.34 · n · V          [W/K], n = 0.5 1/h, V heated volume
- * Specific transmission loss           H_T' = H_T / A_envelope      [W/(m²K)]
- * Annual heating demand                Q_h  = (H_T + H_V) · G_t     [kWh/a], G_t = 84 kKh for Berlin
- * Specific heating demand              q_h  = Q_h / A_heated        [kWh/(m²a)]
+ * Transmission heat loss coefficient   H_T  = Σ F_x,i · U_i · A_i + Σ ψ_j · l_j     [W/K]
+ * Ventilation heat loss coefficient    H_V  = 0.34 · n · V                       [W/K], n = 0.5 1/h
+ * Specific transmission loss           H_T' = H_T / A_envelope                   [W/(m²K)]
+ * Annual heating demand                Q_h  = 66 kKh · (H_T + H_V) − 0.95 · (Q_s + Q_i)   [kWh/a]
+ * Internal gains                       Q_i  = 22 kWh/(m²a) · A_heated
+ * Specific heating demand              q_h  = Q_h / A_heated                     [kWh/(m²a)]
  *
- * Simplifications: no solar or internal gains, no thermal bridges beyond the U-values,
- * ground floor treated like an exterior surface, one temperature difference for all
- * heated surfaces. Interior walls between a heated and an unheated room count with a
- * fixed U of 1.0 W/(m²K). Rooms without a zone count as heated.
+ * F_x is the temperature correction factor of EnEV Annex 1 table 1: 1.0 for surfaces
+ * to outside air, 0.6 for the floor slab on the ground, 0.5 for walls to unheated
+ * rooms. V is the heated floor area times the storey height, which stands in for the
+ * net air volume. Solar gains come from ./sun.ts, thermal bridges from ./bridges.ts.
+ * Interior walls between a heated and an unheated room count with a fixed U of
+ * 1.0 W/(m²K). Rooms without a zone count as heated. The reference climate is the
+ * German one, so the result does not change with the site.
  */
 
 export const AIR_HEAT_CAPACITY = 0.34; // Wh/(m³K)
 export const AIR_CHANGE_RATE = 0.5; // 1/h
-export const HEATING_DEGREE_HOURS_BERLIN = 84; // kKh per year
+/** Heating degree hours of the German reference climate, DIN V 4108-6 Annex D. */
+export const HEATING_DEGREE_HOURS = 66; // kKh per year
+/** Internal gains per square metre of heated floor area over the heating period. */
+export const INTERNAL_GAINS_PER_M2 = 22; // kWh/(m²a)
+export const GAINS_UTILISATION = 0.95;
 export const INTERIOR_WALL_U = 1.0; // W/(m²K)
-export const INTERIOR_WALL_HEIGHT_FACTOR = 1;
+/** Temperature correction factors F_x, EnEV Annex 1 table 1. */
+export const FX_GROUND_FLOOR = 0.6;
+export const FX_UNHEATED_ROOM = 0.5;
 
 export type Orientation = "N" | "E" | "S" | "W";
 
@@ -81,7 +92,9 @@ export interface EnergySummary {
   ventilationLoss: number;
   /** Usable solar gains through windows over the heating period, kWh/a. */
   solarGains: number;
-  /** Losses times degree hours minus usable solar gains, never below zero. */
+  /** Usable internal gains from people and appliances, kWh/a. */
+  internalGains: number;
+  /** Losses times degree hours minus usable gains, never below zero. */
   heatingDemand: number;
   specificHeatingDemand: number;
   energyClass: EnergyClass;
@@ -276,16 +289,18 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
     if (storeyIndex === 0) {
       env.floorArea = footprintArea;
       const heated = storey.rooms.length === 0 ? footprintArea : env.heatedFloorArea;
-      transmission += floorU * heated;
+      const floorLoss = FX_GROUND_FLOOR * floorU * heated;
+      transmission += floorLoss;
       if (heated > 0)
         elements.push({
           category: "floor",
           label: storey.name,
           area: heated,
           uValue: floorU,
-          loss: floorU * heated,
+          loss: floorLoss,
         });
-      for (const r of heatedRooms) addZone(r.zoneId ?? null, r.area, floorU * r.area);
+      for (const r of heatedRooms)
+        addZone(r.zoneId ?? null, r.area, FX_GROUND_FLOOR * floorU * r.area);
     } else {
       for (const r of heatedRooms) addZone(r.zoneId ?? null, r.area, 0);
     }
@@ -323,16 +338,17 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
       const rh = isRoomHeated(right, building.zones);
       if (lh === rh) continue;
       const a = distance(wall.a, wall.b) * storey.height;
-      transmission += INTERIOR_WALL_U * a;
+      const loss = FX_UNHEATED_ROOM * INTERIOR_WALL_U * a;
+      transmission += loss;
       elements.push({
         category: "interiorWall",
         label: storey.name,
         area: a,
         uValue: INTERIOR_WALL_U,
-        loss: INTERIOR_WALL_U * a,
+        loss,
       });
       const heatedRoom = lh ? left : right;
-      addZone(heatedRoom.zoneId ?? null, 0, INTERIOR_WALL_U * a);
+      addZone(heatedRoom.zoneId ?? null, 0, loss);
     }
 
     for (const o of ["N", "E", "S", "W"] as const) {
@@ -366,9 +382,10 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
     for (const o of ["N", "E", "S", "W"] as const)
       windowsByOrientation[o] += st.windowToWall[o].window;
   const gains = solarGains(windowsByOrientation);
+  const internalGains = GAINS_UTILISATION * INTERNAL_GAINS_PER_M2 * heatedFloorArea;
   const heatingDemand = Math.max(
     0,
-    (transmission + ventilation) * HEATING_DEGREE_HOURS_BERLIN - gains,
+    (transmission + ventilation) * HEATING_DEGREE_HOURS - gains - internalGains,
   );
   const specific = heatedFloorArea > 0 ? heatingDemand / heatedFloorArea : 0;
 
@@ -387,6 +404,7 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
     specificTransmissionLoss: envelopeArea > 0 ? transmission / envelopeArea : 0,
     ventilationLoss: ventilation,
     solarGains: gains,
+    internalGains,
     heatingDemand,
     specificHeatingDemand: specific,
     energyClass: energyClass(specific),

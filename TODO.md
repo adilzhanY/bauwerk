@@ -399,3 +399,12 @@ Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 - [x] Energy, IFC, bridges and HVAC ignore interior openings, walkthrough passes through interior doors
 - [x] Opening editor and print plan handle interior openings
 - [ ] Manual check: door between two rooms, walk through it
+
+## 34. Formula audit
+
+- [x] Heating period method per DIN V 4108-6: 66 kKh, internal gains 22 kWh/(m²a), 0.95 utilisation
+- [x] Temperature correction factors: floor slab 0.6, walls to unheated rooms 0.5, in energy and heat load
+- [x] Berlin design outdoor temperature −14 °C after DIN EN 12831 Beiblatt 1
+- [x] Preset layer stacks aligned with IWU typology U-values, typed fallbacks match
+- [x] Assumption texts and print method text describe what is computed, class caveat added
+- [x] Plausibility run: uninsulated house 252 kWh/(m²a), renovated 47, heat load 145 W/m²

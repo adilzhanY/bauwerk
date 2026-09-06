@@ -163,3 +163,15 @@ The storey chooser was still a stacked list of bordered boxes with a blue left e
 ## 2026-09-05: Doors only worked on the envelope
 
 Rooms could be drawn but never connected: the Opening tool only accepted footprint walls, an agent simplification from the first spec. The user asked for openings on any wall. Openings now carry an `interior` flag and index the storey's interior walls, which share the exterior wall solids code. Energy and IFC deliberately skip them, since a door between two heated rooms is not an envelope loss.
+
+## 2026-09-06: Audit of every formula before the interview
+
+The user asked for a check of all numbers before accepting that the tool works. The audit found five errors in the agent's building physics, all in code that had green tests, because the tests pinned the agent's own numbers instead of the standard's:
+
+- Heating degree hours were 84 kKh; the heating period method of DIN V 4108-6 uses 66 kKh for the German reference climate.
+- Internal gains of 22 kWh/(m²a) were missing entirely.
+- The floor slab on the ground and walls to unheated rooms counted in full; the EnEV temperature correction factors 0.6 and 0.5 now apply, in the energy balance and in the heat load.
+- The design outdoor temperature for Berlin was −12 °C; DIN EN 12831 Beiblatt 1 gives −14 °C.
+- The uninsulated floor and roof presets claimed U-values of 1.0 and 1.3 while their layer stacks computed 3.7 and 2.5, and the stack wins. The stacks now land on the IWU typology values, and the typed fallbacks match.
+
+Before the fix the example house came out at 324 kWh/(m²a); after it, 252, which is where the IWU typology puts an uninsulated pre-1918 single-family house. The assumptions text on the Energy panel and in the print report also claimed that solar gains and thermal bridges were not included while the code included both; both texts now describe the method as computed.

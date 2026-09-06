@@ -173,7 +173,7 @@ export const en = {
   "energy.doorDefault": "New doors",
   "energy.elementLoss": "U × A",
   "energy.assumptions":
-    "Simplified: no solar or internal gains, Berlin climate (84 kKh), air change 0.5 1/h, interior walls to unheated rooms U = 1.0.",
+    "Heating period method of DIN V 4108-6: 66 kKh degree hours of the German reference climate, air change 0.5 1/h, floor slab with F_x = 0.6, walls to unheated rooms U = 1.0 with F_x = 0.5, solar gains by orientation and internal gains of 22 kWh/(m²a), both 95 % usable, thermal bridges as ψ times length. The class uses the Energieausweis scale on the heating demand, not on the final energy, so it is an approximation.",
   "zone.heated": "Heated",
   "zone.unheated": "Unheated",
   "zone.temperature": "Design temperature",
@@ -258,7 +258,7 @@ export const en = {
   "print.section.storey": "Storey",
   "print.section.method": "Method and assumptions",
   "print.methodText":
-    "Transmission heat loss is the sum of U times area over the heated envelope. Ventilation heat loss uses 0.34 Wh/(m³·K), an air change of 0.5 1/h and the heated volume. Heating demand multiplies the sum by 84 kKh of heating degree hours for Berlin. Solar and internal gains, thermal bridges and ground reduction are not included. The energy class follows the scale of the Energieausweis for residential buildings.",
+    "Transmission heat loss is the sum of temperature correction factor times U-value times area over the heated envelope, plus the linear thermal bridges as ψ times length. Surfaces to outside air count in full, the floor slab on the ground with 0.6 and walls to unheated rooms with 0.5. Ventilation heat loss uses 0.34 Wh/(m³·K), an air change of 0.5 1/h and the heated volume. The heating demand follows the heating period method of DIN V 4108-6: 66 kKh of heating degree hours for the German reference climate times the losses, minus 95 % of the solar gains through windows by orientation and of the internal gains of 22 kWh per square metre of heated floor area. The efficiency class applies the residential Energieausweis scale to the heating demand; a certificate rates the final energy, which is higher, so the class shown is an optimistic approximation.",
   "print.notGiven": "not given",
   "print.totalHeight": "Building height",
   "print.indicator": "Indicator",
@@ -362,6 +362,7 @@ export const en = {
   "sun.rise": "Sunrise",
   "sun.set": "Sunset",
   "energy.solarGains": "Usable solar gains",
+  "energy.internalGains": "Usable internal gains",
   "ifcImport.title": "IFC import",
   "ifcImport.summary":
     "{storeys} storeys, {walls} walls, {openings} openings, {rooms} rooms, {zones} zones",

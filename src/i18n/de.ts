@@ -178,7 +178,7 @@ export const de: Messages = {
   "energy.doorDefault": "Neue Türen",
   "energy.elementLoss": "U × A",
   "energy.assumptions":
-    "Vereinfacht: keine solaren und internen Gewinne, Klima Berlin (84 kKh), Luftwechsel 0,5 1/h, Innenwände zu unbeheizten Räumen U = 1,0.",
+    "Heizperiodenbilanzverfahren nach DIN V 4108-6: 66 kKh Gradtagzahl des deutschen Referenzklimas, Luftwechsel 0,5 1/h, Bodenplatte mit F_x = 0,6, Wände zu unbeheizten Räumen U = 1,0 mit F_x = 0,5, solare Gewinne nach Orientierung und interne Gewinne von 22 kWh/(m²a), beide zu 95 % nutzbar, Wärmebrücken als ψ mal Länge. Die Klasse legt die Energieausweis-Skala auf den Heizwärmebedarf, nicht auf die Endenergie, und ist deshalb eine Näherung.",
   "zone.heated": "Beheizt",
   "zone.unheated": "Unbeheizt",
   "zone.temperature": "Auslegungstemperatur",
@@ -264,7 +264,7 @@ export const de: Messages = {
   "print.section.storey": "Geschoss",
   "print.section.method": "Methode und Annahmen",
   "print.methodText":
-    "Der Transmissionswärmeverlust ist die Summe aus U-Wert mal Fläche über die beheizte Hüllfläche. Der Lüftungswärmeverlust rechnet mit 0,34 Wh/(m³·K), einem Luftwechsel von 0,5 1/h und dem beheizten Volumen. Der Heizwärmebedarf multipliziert die Summe mit 84 kKh Gradtagzahl für Berlin. Solare und interne Gewinne, Wärmebrücken und die Erdreichminderung sind nicht enthalten. Die Effizienzklasse folgt der Skala des Energieausweises für Wohngebäude.",
+    "Der Transmissionswärmeverlust ist die Summe aus Temperatur-Korrekturfaktor mal U-Wert mal Fläche über die beheizte Hüllfläche, zuzüglich der linearen Wärmebrücken als ψ mal Länge. Flächen gegen Außenluft zählen voll, die Bodenplatte gegen Erdreich mit 0,6 und Wände zu unbeheizten Räumen mit 0,5. Der Lüftungswärmeverlust rechnet mit 0,34 Wh/(m³·K), einem Luftwechsel von 0,5 1/h und dem beheizten Volumen. Der Heizwärmebedarf folgt dem Heizperiodenbilanzverfahren der DIN V 4108-6: 66 kKh Gradtagzahl des deutschen Referenzklimas mal Verluste, abzüglich 95 % der solaren Gewinne durch Fenster nach Orientierung und der internen Gewinne von 22 kWh je Quadratmeter beheizter Fläche. Die Effizienzklasse legt die Skala des Wohngebäude-Energieausweises auf den Heizwärmebedarf; ein Ausweis bewertet die Endenergie, die höher liegt, die gezeigte Klasse ist deshalb eine optimistische Näherung.",
   "print.notGiven": "nicht angegeben",
   "print.totalHeight": "Gebäudehöhe",
   "print.indicator": "Kennwert",
@@ -371,6 +371,7 @@ export const de: Messages = {
   "sun.rise": "Sonnenaufgang",
   "sun.set": "Sonnenuntergang",
   "energy.solarGains": "Nutzbare solare Gewinne",
+  "energy.internalGains": "Nutzbare interne Gewinne",
   "ifcImport.title": "IFC-Import",
   "ifcImport.summary":
     "{storeys} Geschosse, {walls} Wände, {openings} Öffnungen, {rooms} Räume, {zones} Zonen",

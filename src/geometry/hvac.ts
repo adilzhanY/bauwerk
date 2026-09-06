@@ -1,5 +1,11 @@
 import { computeEnergy } from "./energy";
-import { AIR_CHANGE_RATE, AIR_HEAT_CAPACITY, isRoomHeated } from "./energy";
+import {
+  AIR_CHANGE_RATE,
+  AIR_HEAT_CAPACITY,
+  FX_GROUND_FLOOR,
+  FX_UNHEATED_ROOM,
+  isRoomHeated,
+} from "./energy";
 import { findConstruction } from "./constructions";
 import { openingsOn, validateOpening } from "./openings";
 import { area, distance, edges, pointInPolygon, pointOnSegment } from "./polygon";
@@ -8,14 +14,16 @@ import type { Building, Radiator, Room, Storey } from "./types";
 
 /**
  * Heat load and equipment sizing, simplified after DIN EN 12831:
- *   Φ_room = (Σ U·A over the room's exterior surfaces + 0.34 · n · V) · (θ_in − θ_e)
- * with θ_in from the zone (20 °C heated) and θ_e = −12 °C, the design outdoor
- * temperature for Berlin. Thermal bridges are spread onto the room by floor area
- * share. Radiators are sized to the room load rounded up to 100 W; the heat pump
- * to the building load with a 1.1 safety factor.
+ *   Φ_room = (Σ F_x · U·A over the room's exterior surfaces + 0.34 · n · V) · (θ_in − θ_e)
+ * with θ_in from the zone (20 °C heated) and θ_e = −14 °C, the design outdoor
+ * temperature for Berlin in DIN EN 12831 Beiblatt 1. The floor slab counts with
+ * F_x = 0.6 and walls to unheated rooms with 0.5, as in the energy balance.
+ * Thermal bridges are spread onto the room by floor area share. Radiators are
+ * sized to the room load rounded up to 100 W; the heat pump to the building load
+ * with a 1.1 safety factor.
  */
 
-export const DESIGN_OUTDOOR_TEMPERATURE = -12;
+export const DESIGN_OUTDOOR_TEMPERATURE = -14;
 export const INTERIOR_WALL_U = 1.0;
 
 export interface RoomHeatLoad {
@@ -70,7 +78,7 @@ export function roomEnvelopeLoss(building: Building, storey: Storey, room: Room)
     loss += wallU * Math.max(0, length * storey.height - openingArea);
   }
   const index = building.storeys.findIndex((s) => s.id === storey.id);
-  if (index === 0) loss += u(building.floorConstructionId) * room.area;
+  if (index === 0) loss += FX_GROUND_FLOOR * u(building.floorConstructionId) * room.area;
   if (index === building.storeys.length - 1) {
     const fpArea = Math.max(1e-9, area(fp));
     const slope = buildRoof(building, 0).area / fpArea;
@@ -93,7 +101,7 @@ export function roomEnvelopeLoss(building: Building, storey: Storey, room: Room)
     if (!mine) continue;
     const other = storey.rooms.find((r) => r.id !== room.id && pointInPolygon(mine, r.polygon));
     if (other && !isRoomHeated(other, building.zones))
-      loss += INTERIOR_WALL_U * len * storey.height;
+      loss += FX_UNHEATED_ROOM * INTERIOR_WALL_U * len * storey.height;
   }
   return loss;
 }

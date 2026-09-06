@@ -3,9 +3,12 @@ import type { Construction, ConstructionCategory, Layer } from "./types";
 
 /**
  * Default construction presets. Ids are stable so files written before the
- * energy layer existed can be migrated onto them. U-values are typical German
- * values by construction period, in W/(m²K), rounded; they are starting points
- * the user edits, not survey data.
+ * energy layer existed can be migrated onto them. The typed U-values are the
+ * fallback for presets without a layer stack (windows and doors); layered presets
+ * take their U from the stack. The stacks are chosen so the result lands on the
+ * typical values of the IWU building typology for the German stock: solid brick
+ * wall about 1.5, uninsulated roof and floor slab about 1.5 to 1.7, aerated
+ * concrete wall of the 1970s about 0.75 W/(m²K). Starting points, not survey data.
  */
 export const PRESET_IDS = {
   wallBrick: "c_wall_brick",
@@ -30,12 +33,12 @@ const presetDefs: Record<
 > = {
   wallBrick: {
     category: "wall",
-    uValue: 1.4,
+    uValue: 1.47,
     en: "Brick wall, uninsulated",
     de: "Ziegelwand, ungedämmt",
   },
-  wall1970: { category: "wall", uValue: 1.0, en: "Wall, 1970s", de: "Wand, 1970er" },
-  wallInsulated: { category: "wall", uValue: 0.25, en: "Wall, insulated", de: "Wand, gedämmt" },
+  wall1970: { category: "wall", uValue: 0.74, en: "Wall, 1970s", de: "Wand, 1970er" },
+  wallInsulated: { category: "wall", uValue: 0.19, en: "Wall, insulated", de: "Wand, gedämmt" },
   glazingSingle: { category: "window", uValue: 5.0, en: "Single glazing", de: "Einfachverglasung" },
   glazingDouble: {
     category: "window",
@@ -53,7 +56,7 @@ const presetDefs: Record<
   doorInsulated: { category: "door", uValue: 1.3, en: "Door, insulated", de: "Tür, gedämmt" },
   floorBare: {
     category: "floor",
-    uValue: 1.0,
+    uValue: 1.69,
     en: "Floor slab, uninsulated",
     de: "Bodenplatte, ungedämmt",
   },
@@ -63,7 +66,7 @@ const presetDefs: Record<
     en: "Floor slab, insulated",
     de: "Bodenplatte, gedämmt",
   },
-  roofBare: { category: "roof", uValue: 1.3, en: "Roof, uninsulated", de: "Dach, ungedämmt" },
+  roofBare: { category: "roof", uValue: 1.47, en: "Roof, uninsulated", de: "Dach, ungedämmt" },
   roofInsulated: { category: "roof", uValue: 0.2, en: "Roof, insulated", de: "Dach, gedämmt" },
 };
 
@@ -88,6 +91,8 @@ const materials = {
   plasterboard: { en: "Plasterboard", de: "Gipskartonplatte", lambda: 0.25 },
   bitumen: { en: "Bitumen membrane", de: "Bitumenbahn", lambda: 0.17 },
   screed: { en: "Cement screed", de: "Zementestrich", lambda: 1.4 },
+  woodwool: { en: "Wood wool board", de: "Holzwolle-Leichtbauplatte", lambda: 0.09 },
+  cinder: { en: "Cinder fill", de: "Schlackeschüttung", lambda: 0.25 },
 } as const;
 
 type MaterialKey = keyof typeof materials;
@@ -113,6 +118,7 @@ const presetLayers: Partial<Record<PresetKey, [MaterialKey, number][]>> = {
   roofBare: [
     ["bitumen", 5],
     ["timber", 24],
+    ["woodwool", 25],
     ["plasterboard", 12.5],
   ],
   roofInsulated: [
@@ -123,6 +129,7 @@ const presetLayers: Partial<Record<PresetKey, [MaterialKey, number][]>> = {
   ],
   floorBare: [
     ["concrete", 150],
+    ["cinder", 80],
     ["screed", 50],
   ],
   floorInsulated: [

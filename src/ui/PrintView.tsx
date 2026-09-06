@@ -423,6 +423,8 @@ function EnergyTable({ current, renovated }: { current: EnergySummary; renovated
     ["energy.transmissionLoss", (e) => `${num(e.transmissionLoss, 1)} W/K`],
     ["energy.specificTransmissionLoss", (e) => `${num(e.specificTransmissionLoss, 2)} W/(m²·K)`],
     ["energy.ventilationLoss", (e) => `${num(e.ventilationLoss, 1)} W/K`],
+    ["energy.solarGains", (e) => `${num(e.solarGains, 0)} kWh/a`],
+    ["energy.internalGains", (e) => `${num(e.internalGains, 0)} kWh/a`],
     ["energy.heatingDemand", (e) => `${num(e.heatingDemand, 0)} kWh/a`],
     ["energy.specificHeatingDemand", (e) => `${num(e.specificHeatingDemand, 0)} kWh/(m²·a)`],
     ["energy.energyClass", (e) => e.energyClass],

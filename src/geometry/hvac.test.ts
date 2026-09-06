@@ -39,7 +39,7 @@ function building(walls: Segment[] = [], radiators: Radiator[] = []): Building {
 }
 
 describe("roomEnvelopeLoss and roomHeatLoads", () => {
-  it("a single room owns the whole envelope; its load matches the building at 32 K", () => {
+  it("a single room owns the whole envelope; its load matches the building at 34 K", () => {
     const b = building();
     const e = computeEnergy(b);
     const room = b.storeys[0]!.rooms[0]!;
@@ -49,7 +49,7 @@ describe("roomEnvelopeLoss and roomHeatLoads", () => {
     );
     const loads = roomHeatLoads(b);
     expect(loads).toHaveLength(1);
-    expect(loads[0]!.load).toBeCloseTo((e.transmissionLoss + e.ventilationLoss) * 32, 3);
+    expect(loads[0]!.load).toBeCloseTo((e.transmissionLoss + e.ventilationLoss) * 34, 3);
     expect(loads[0]!.coverage).toBe(0);
   });
 
@@ -59,7 +59,7 @@ describe("roomEnvelopeLoss and roomHeatLoads", () => {
     const loads = roomHeatLoads(b);
     expect(loads).toHaveLength(2);
     const total = loads.reduce((s, r) => s + r.load, 0);
-    expect(total).toBeCloseTo((e.transmissionLoss + e.ventilationLoss) * 32, 3);
+    expect(total).toBeCloseTo((e.transmissionLoss + e.ventilationLoss) * 34, 3);
     const small = loads.find((r) => r.name.endsWith("1") || r.load < total / 2)!;
     expect(small.load).toBeLessThan(total / 2);
   });
