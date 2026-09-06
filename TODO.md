@@ -433,3 +433,10 @@ Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 - [x] Keep restored, imported, synchronized and undo history snapshots in the active language.
 - [x] Test the German print route with the Altbau Kreuzberg example and reject its English model names.
 - [ ] Manual check: switch Altbau Kreuzberg to German, open Print and inspect every page.
+
+## 38. Building name chip
+
+- [x] Keep the floating building name on one line and let the chip grow with its text up to a safe maximum width.
+- [x] Truncate unusually long custom names inside the chip while keeping the complete accessible name and rename tooltip.
+- [x] Test the long German Altbau name against the bounded single-line chip contract.
+- [ ] Manual check: load Altbau Kreuzberg in German and inspect the name chip at normal and narrow viewport sizes.

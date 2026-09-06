@@ -19,4 +19,15 @@ describe("BuildingNameEditor", () => {
     fireEvent.click(screen.getByRole("button", { name: "Rename building Bauwerk" }), { detail: 0 });
     expect(screen.getByLabelText("Building name")).toBeTruthy();
   });
+
+  it("keeps a long building name inside one bounded chip", () => {
+    render(<BuildingNameEditor name="Altbau Kreuzberg, Baujahr 1905" onRename={() => undefined} />);
+    const button = screen.getByRole("button", {
+      name: "Rename building Altbau Kreuzberg, Baujahr 1905",
+    });
+    expect(button.className).toContain("max-w-80");
+    expect(button.className).toContain("whitespace-nowrap");
+    expect(button.querySelector("span")?.className).toContain("truncate");
+    expect(button.title).toContain("Altbau Kreuzberg, Baujahr 1905");
+  });
 });

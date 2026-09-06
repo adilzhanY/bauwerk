@@ -10,8 +10,8 @@ Built by Adilzhan Yerzhan in three weeks with Claude Code as the primary way cod
 | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Client code      | about 23,000 lines of TypeScript in `src/`                                                                                              |
 | Server code      | about 860 lines in `server/src/`                                                                                                        |
-| Tests            | 323 client tests in 55 files, 8 server tests against a real Postgres                                                                    |
-| Logged overrules | 41 entries in `DECISIONS.md`                                                                                                            |
+| Tests            | 324 client tests in 55 files, 8 server tests against a real Postgres                                                                    |
+| Logged overrules | 42 entries in `DECISIONS.md`                                                                                                            |
 | Languages        | English and German, a missing key is a type error                                                                                       |
 | Stack            | Vite, React 18, TypeScript strict, Zustand, Three.js via react-three-fiber, Tailwind CSS v4, Vitest; NestJS and Postgres for the server |
 

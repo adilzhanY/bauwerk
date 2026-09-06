@@ -39,8 +39,8 @@ export function BuildingNameEditor({ name, onRename }: EditorProps) {
     <CustomButton
       variant="default"
       aria-label={t("building.rename", { name })}
-      title={t("building.renameHint")}
-      className="h-8 bg-paper/95 px-3 shadow-float"
+      title={`${name}\n${t("building.renameHint")}`}
+      className="h-8 max-w-80 overflow-hidden bg-paper/95 px-3 text-ellipsis whitespace-nowrap shadow-float"
       onClick={(event) => {
         if (event.detail === 0) setEditing(true);
       }}
@@ -48,7 +48,7 @@ export function BuildingNameEditor({ name, onRename }: EditorProps) {
         setEditing(true);
       }}
     >
-      {name}
+      <span className="truncate">{name}</span>
     </CustomButton>
   );
 }
