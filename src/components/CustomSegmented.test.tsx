@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { useState } from "react";
 import { CustomSegmented } from "./CustomSegmented";
@@ -71,5 +71,33 @@ describe("CustomSegmented", () => {
       expect(r.className).toContain("min-w-0");
       expect(r.className).toContain("text-xs");
     }
+  });
+
+  it("lays long text options out in two readable columns when wrapping is requested", () => {
+    const onChange = vi.fn();
+    render(
+      <CustomSegmented
+        label="Scenario"
+        value="current"
+        options={[
+          { value: "current", label: "Current" },
+          { value: "renovated", label: "Renovated" },
+          { value: "windows", label: "Windows and roof" },
+          { value: "facade", label: "Insulate the facade" },
+        ]}
+        onChange={onChange}
+        wrap
+      />,
+    );
+    const group = screen.getByRole("radiogroup", { name: "Scenario" });
+    expect(group.className).toContain("grid-cols-2");
+    for (const radio of within(group).getAllByRole("radio")) {
+      expect(radio.className).toContain("text-sm");
+      expect(radio.title).toBe(radio.textContent);
+    }
+    fireEvent.keyDown(within(group).getByRole("radio", { name: "Current" }), {
+      key: "ArrowDown",
+    });
+    expect(onChange).toHaveBeenCalledWith("windows");
   });
 });

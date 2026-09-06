@@ -187,3 +187,7 @@ Adilzhan switched the Altbau Kreuzberg example to German and found English names
 ## 2026-09-06: The floating building name wrapped outside its chip
 
 After the German document fix, Adilzhan found that "Altbau Kreuzberg, Baujahr 1905" wrapped into four lines while the floating chip stayed one line high. The chip had a fixed height but no rule preventing text wrapping. It now grows naturally with the name on one line up to a fixed maximum width. Longer custom names are clipped with an ellipsis inside the chip, while the complete name remains in its accessible label and the rename control. A component test covers the German example name and the sizing contract.
+
+## 2026-09-06: Four renovation variants made the selector unreadable
+
+The Energy panel originally had two scenario buttons. Once the Altbau example added two named renovation packages, the same one-row control squeezed four long labels into equal narrow slots and clipped three of them. The earlier generic overflow fix prevented the pills from escaping the track, but it preserved the track at the cost of readable content. The Energy selector now uses a two-column grid with full size text and two rows. Short four-option controls such as roof display stay in one row. Tooltips and arrow-key navigation still expose and reach every option.

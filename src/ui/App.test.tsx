@@ -150,6 +150,24 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Remove scenario" })).toBeTruthy();
   });
 
+  it("shows all Altbau energy scenarios in a readable two-column selector", () => {
+    act(() => {
+      useEditorStore.getState().loadBuilding(exampleAltbau("en"));
+    });
+    render(<App />);
+    fireEvent.click(screen.getByRole("tab", { name: "Energy" }));
+    const scenarios = screen.getByRole("radiogroup", { name: "Energy" });
+    expect(scenarios.className).toContain("grid-cols-2");
+    expect(within(scenarios).getByRole("radio", { name: "Current" }).title).toBe("Current");
+    expect(within(scenarios).getByRole("radio", { name: "Renovated" }).title).toBe("Renovated");
+    expect(within(scenarios).getByRole("radio", { name: "Windows and roof" }).title).toBe(
+      "Windows and roof",
+    );
+    expect(within(scenarios).getByRole("radio", { name: "Insulate the facade" }).title).toBe(
+      "Insulate the facade",
+    );
+  });
+
   it("renders the print view as a plain document with German conventions", () => {
     window.history.replaceState(null, "", "/?print=1");
     vi.useFakeTimers();
