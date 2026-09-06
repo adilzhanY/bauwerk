@@ -1,6 +1,8 @@
 export const en = {
   "app.title": "Bauwerk",
   "building.name": "Building name",
+  "building.rename": "Rename building {name}",
+  "building.renameHint": "Double click to rename",
 
   "tool.select": "Select",
   "tool.footprint": "Footprint",

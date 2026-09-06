@@ -11,6 +11,7 @@ interface Props {
   placeholder?: string;
   disabled?: boolean;
   hideLabel?: boolean;
+  autoFocus?: boolean;
 }
 
 /** Text field that commits on blur or Enter and reverts on Escape, so a rename is one undo step. */
@@ -22,6 +23,7 @@ export function CustomTextInput({
   placeholder,
   disabled = false,
   hideLabel = false,
+  autoFocus = false,
 }: Props) {
   const id = useId();
   const [draft, setDraft] = useState(value);
@@ -54,6 +56,7 @@ export function CustomTextInput({
           value={draft}
           placeholder={placeholder}
           disabled={disabled}
+          autoFocus={autoFocus}
           onChange={(e) => {
             setDraft(e.target.value);
           }}

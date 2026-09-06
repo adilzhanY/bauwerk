@@ -38,6 +38,7 @@ export function App() {
   const webgl = useMemo(() => hasWebGL(), []);
   const hasStoreys = useEditorStore((s) => s.building.storeys.length > 0);
   const language = useEditorStore((s) => s.language);
+  const buildingName = useEditorStore((s) => s.building.name);
   const tool = useEditorStore((s) => s.tool);
   const mapVisible = useEditorStore((s) => s.showMap && s.building.origin !== undefined);
   const t = useT();
@@ -46,6 +47,10 @@ export function App() {
   useEffect(() => {
     document.documentElement.lang = language;
   }, [language]);
+
+  useEffect(() => {
+    document.title = `${buildingName} · ${t("app.title")}`;
+  }, [buildingName, t]);
 
   useEffect(() => {
     installCursors();

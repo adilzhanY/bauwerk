@@ -3,6 +3,8 @@ import type { Messages } from "./en";
 export const de: Messages = {
   "app.title": "Bauwerk",
   "building.name": "Gebäudename",
+  "building.rename": "Gebäude {name} umbenennen",
+  "building.renameHint": "Zum Umbenennen doppelklicken",
 
   "tool.select": "Auswählen",
   "tool.footprint": "Grundriss",

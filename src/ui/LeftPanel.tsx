@@ -98,6 +98,7 @@ export function LeftPanel({ syncStatus }: { syncStatus: SyncStatus | "local" }) 
 function StoreyList() {
   const t = useT();
   const storeys = useEditorStore((s) => s.building.storeys);
+  const buildingName = useEditorStore((s) => s.building.name);
   const activeStoreyId = useEditorStore((s) => s.activeStoreyId);
   const language = useEditorStore((s) => s.language);
   const setActiveStorey = useEditorStore((s) => s.setActiveStorey);
@@ -125,7 +126,7 @@ function StoreyList() {
 
   return (
     <CustomSection
-      title={t("panel.storeys")}
+      title={`${buildingName} · ${t("panel.storeys")}`}
       action={
         <span className="flex items-center gap-0.5">
           <CustomIconButton

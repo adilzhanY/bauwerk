@@ -17,34 +17,35 @@ Point at the scene: an unrenovated 1905 apartment house in Kreuzberg, on its rea
 
 ## 0:30 Geometry (2 min)
 
-1. Orbit once. Say: three storeys, a shop at the street, two flats per floor around an unheated stairwell, a gable roof with a heated attic.
-2. Storey switch in the left panel: click "Ground floor". The floors above turn into outlines. Say: "Other storeys draw as outlines, the way Revit's halftone underlay or ArchiCAD's ghost story does it, so the floor you edit is never covered."
-3. Openings tool (key 3). Click the street wall: a window appears. Click an interior wall: a door appears. Say: "Doors between rooms, windows in the facade, the tool decides by the wall you click. Shift swaps it."
-4. Drag the new window along the wall. Press Ctrl+Z twice. Say: "Every gesture is one undo step, including drags and typed values."
-5. Interior wall tool (key 4), draw one wall across the shop. Two rooms appear with their areas. Say: "Rooms are derived from the walls, not drawn. Delete the wall and they merge back."
+1. Choose the Move tool (key 8), drag the house a short distance along the street and watch the centre coordinates change. Undo the move. Say: "The map stays anchored while the full building moves as one undoable geometry operation. Its real coordinates update live."
+2. Orbit once. Say: three storeys, a shop at the street, two flats per floor around an unheated stairwell, a gable roof with a heated attic.
+3. Storey switch in the left panel: click "Ground floor". The floors above turn into outlines. Say: "Other storeys draw as outlines, the way Revit's halftone underlay or ArchiCAD's ghost story does it, so the floor you edit is never covered."
+4. Openings tool (key 3). Click the street wall: a window appears. Click an interior wall: a door appears. Say: "Doors between rooms, windows in the facade, the tool decides by the wall you click. Shift swaps it."
+5. Drag the new window along the wall. Press Ctrl+Z twice. Say: "Every gesture is one undo step, including drags and typed values."
+6. Interior wall tool (key 4), draw one wall across the shop. Two rooms appear with their areas. Say: "Rooms are derived from the walls, not drawn. Delete the wall and they merge back."
 
 ## 2:30 Energy (2 min)
 
-6. Open the Energy tab on the right. Point at the class band: G, 239 kWh per square metre and year. Say: "Heating period method of DIN V 4108-6: 66 kelvin-kilohours, transmission and ventilation losses, solar and internal gains, thermal bridges as psi times length. The panel says which assumptions it makes."
-7. Scroll to the GEG check: 0 of 5 pass. Say: "Every element against the GEG Annex 7 limit. This is the first question a consultant asks."
-8. Constructions: open "Brick wall, uninsulated", show the layer stack and U = 1.47. Say: "U-values come from layers after ISO 6946, not from a typed number. Change a thickness and the whole balance updates live."
-9. Heat load block: rooms with their loads, radiators undersized in red. Say: "DIN EN 12831 room by room, minus 14 degrees design temperature for Berlin, so the radiators and the heat pump size fall out of the same model."
+7. Open the Energy tab on the right. Point at the class band: G, 239 kWh per square metre and year. Say: "Heating period method of DIN V 4108-6: 66 kelvin-kilohours, transmission and ventilation losses, solar and internal gains, thermal bridges as psi times length. The panel says which assumptions it makes."
+8. Scroll to the GEG check: 0 of 5 pass. Say: "Every element against the GEG Annex 7 limit. This is the first question a consultant asks."
+9. Constructions: open "Brick wall, uninsulated", show the layer stack and U = 1.47. Say: "U-values come from layers after ISO 6946, not from a typed number. Change a thickness and the whole balance updates live."
+10. Heat load block: rooms with their loads, radiators undersized in red. Say: "DIN EN 12831 room by room, minus 14 degrees design temperature for Berlin, so the radiators and the heat pump size fall out of the same model."
 
 ## 4:30 Scenarios and report (1.5 min)
 
-10. Scenarios tab. Two variants plus "Full envelope". Point at payback years. Say: "Scenarios are override sets on the same model. Change the baseline and every variant follows."
-11. Toggle "Renovated view": the walls recolour by U-value. Toggle back.
-12. Settings, Print. The report opens: plain German document layout, Energieausweis scale with both markers, GEG table, storey plans, method text. Say: "This is what leaves the office. No UI chrome, German number and date formats."
+11. Scenarios tab. Two variants plus "Full envelope". Point at payback years. Say: "Scenarios are override sets on the same model. Change the baseline and every variant follows."
+12. Toggle "Renovated view": the walls recolour by U-value. Toggle back.
+13. Settings, Print. The report opens: plain German document layout, Energieausweis scale with both markers, GEG table, storey plans, method text. Say: "This is what leaves the office. No UI chrome, German number and date formats."
 
 ## 6:00 Collaboration and exchange (1 min)
 
-13. Bottom bar: Export IFC. Say: "IFC4 written by hand, validated with IfcOpenShell, every opening is a real void."
-14. If the server is running: open the project in a second tab, move a window, watch it move in the first tab. Otherwise say it in one sentence: "With the NestJS and Postgres server, edits sync over WebSockets with optimistic concurrency; twelve simultaneous writes, exactly one wins, the rest rebase."
+14. Bottom bar: Export IFC. Say: "IFC4 written by hand, validated with IfcOpenShell, every opening is a real void."
+15. If the server is running: open the project in a second tab, move a window, watch it move in the first tab. Otherwise say it in one sentence: "With the NestJS and Postgres server, edits sync over WebSockets with optimistic concurrency; twelve simultaneous writes, exactly one wins, the rest rebase."
 
 ## 7:00 The process (1 min)
 
-15. Switch to DECISIONS.md. Say: "Forty entries where I overruled the agent. Yesterday I asked it to audit its own formulas. Five errors, all with green tests, because the tests pinned its own numbers. The fix moved this house from 324 to 252 kilowatt-hours, which is where the IWU typology puts it. That is the job: the agent produces, the human decides what is true."
-16. Close: "Three hundred tests, a fixed stack, one store, pure geometry with no Three.js in it. I can walk through any file you pick."
+16. Switch to DECISIONS.md. Say: "Forty entries where I overruled the agent. Yesterday I asked it to audit its own formulas. Five errors, all with green tests, because the tests pinned its own numbers. The fix moved this house from 324 to 252 kilowatt-hours, which is where the IWU typology puts it. That is the job: the agent produces, the human decides what is true."
+17. Close: "More than three hundred tests, a fixed stack, one store, pure geometry with no Three.js in it. I can walk through any file you pick."
 
 ## If asked
 

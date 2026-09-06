@@ -423,5 +423,5 @@ Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 - [x] Move tool: drag the full building over the grid, hold Shift to rotate, keep the map origin fixed, show live centre coordinates, and record one undo step per gesture.
 - [x] New building dialog: create a named rectangular building from width, depth, storey count, storey height, roof kind and construction era. Keep the existing map origin and make creation one undo step.
 - [x] Building properties: edit the name, width and depth when the footprint is rectangular. Preserve the centre and rotation, clamp openings to the resized walls, and recompute rooms.
-- [ ] Show the building name over the model, allow direct renaming, use it in the Storeys heading and keep the browser tab title current.
+- [x] Show the building name over the model, allow direct renaming, use it in the Storeys heading and keep the browser tab title current.
 - [ ] Manual check: create a building, resize it, move it, rotate it, rename it and undo each operation.

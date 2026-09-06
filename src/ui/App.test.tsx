@@ -24,7 +24,7 @@ beforeEach(() => {
 describe("App", () => {
   it("renders the panels and the WebGL-missing state under jsdom", () => {
     render(<App />);
-    expect(screen.getByRole("heading", { name: "Storeys" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Bauwerk · Storeys" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Properties" })).toBeTruthy();
     expect(screen.getByText("WebGL is not available")).toBeTruthy();
     expect(screen.getByText("Ground floor")).toBeTruthy();
@@ -61,6 +61,8 @@ describe("App", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Create building" }));
 
     expect(useEditorStore.getState().building.name).toBe("Garden house");
+    expect(document.title).toBe("Garden house · Bauwerk");
+    expect(screen.getByRole("heading", { name: "Garden house · Storeys" })).toBeTruthy();
     expect(useEditorStore.getState().building.storeys).toHaveLength(3);
     expect(useEditorStore.getState().past).toHaveLength(1);
     fireEvent.click(screen.getByRole("button", { name: "Undo" }));
@@ -74,7 +76,7 @@ describe("App", () => {
     fireEvent.click(screen.getByRole("combobox", { name: "Language" }));
     fireEvent.click(screen.getByRole("option", { name: "Deutsch" }));
     fireEvent.click(screen.getByRole("radio", { name: "Geschosse" }));
-    expect(screen.getByRole("heading", { name: "Geschosse" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Bauwerk · Geschosse" })).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Eigenschaften" })).toBeTruthy();
     expect(screen.getByText("WebGL ist nicht verfügbar")).toBeTruthy();
   });
