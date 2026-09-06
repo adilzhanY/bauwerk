@@ -3,8 +3,9 @@ import type { EnergyClass, EnergySummary } from "@/geometry/energy";
 import { findConstruction } from "@/geometry/constructions";
 import { epsgForZone, toUtm } from "@/geometry/geo";
 import { bounds, edges } from "@/geometry/polygon";
-import type { Building, Storey } from "@/geometry/types";
+import type { Building, Storey, ConstructionCategory } from "@/geometry/types";
 import { useT } from "@/i18n/useT";
+import { gegChecks, gegPassCount } from "@/geometry/geg";
 import type { MessageKey } from "@/i18n";
 import { useEditorStore } from "@/store/building";
 import { LayerSection, LayerTable } from "./LayerSection";
@@ -136,6 +137,7 @@ export function PrintView() {
           {t("print.section.elements")}
         </h2>
         <ElementsTable energy={energy} />
+        <GegTable building={building} />
         <ConstructionLayers building={building} />
         <BridgesTable energy={energy} />
       </div>
@@ -320,6 +322,50 @@ function BridgesTable({ energy }: { energy: EnergySummary }) {
         </tbody>
       </table>
     </div>
+  );
+}
+
+function GegTable({ building }: { building: Building }) {
+  const t = useT();
+  const checks = gegChecks(building);
+  const label: Record<ConstructionCategory, MessageKey> = {
+    wall: "energy.wallConstruction",
+    roof: "energy.roofConstruction",
+    floor: "energy.floorConstruction",
+    window: "energy.windowDefault",
+    door: "energy.doorDefault",
+  };
+  return (
+    <>
+      <h3 style={{ marginTop: "10pt" }}>
+        {t("geg.title")}: {t("geg.passed", { n: gegPassCount(checks), total: checks.length })}
+      </h3>
+      <table style={{ marginTop: "4pt" }}>
+        <thead>
+          <tr>
+            <th>{t("energy.construction")}</th>
+            <th>{t("print.element")}</th>
+            <th className="r">U [W/(m²·K)]</th>
+            <th className="r">{t("geg.limit")} [W/(m²·K)]</th>
+            <th className="r">{t("geg.result")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {checks.map((c) => (
+            <tr key={c.category}>
+              <td>{c.construction?.name ?? t("print.notGiven")}</td>
+              <td>{t(label[c.category])}</td>
+              <td className="r">{Number.isFinite(c.uValue) ? num(c.uValue, 2) : ""}</td>
+              <td className="r">{num(c.limit, 2)}</td>
+              <td className="r">{t(c.ok ? "geg.pass" : "geg.fail")}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <p className="small" style={{ marginTop: "4pt" }}>
+        {t("geg.hint")}
+      </p>
+    </>
   );
 }
 

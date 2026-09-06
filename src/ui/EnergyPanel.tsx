@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import { bestInCategory } from "@/geometry/constructions";
 import { ENERGY_CLASS_COLORS, computeEnergy } from "@/geometry/energy";
 import { evaluateAll } from "@/geometry/scenarios";
+import { gegChecks, gegPassCount } from "@/geometry/geg";
+import { cx } from "@/components/cx";
 import type { EnergyClass, EnergySummary, Orientation } from "@/geometry/energy";
 import type { ConstructionCategory } from "@/geometry/types";
 import type { BridgeType } from "@/geometry/bridges";
@@ -121,6 +123,7 @@ export function EnergyPanel() {
       <Orientations summary={shown} />
       <Zones summary={shown} />
       <Assignments />
+      <GegCheck />
       <Constructions />
       <p className="text-xs leading-relaxed text-muted">{t("energy.assumptions")}</p>
     </div>
@@ -365,6 +368,63 @@ function Assignments() {
           }}
         />
       ))}
+    </div>
+  );
+}
+
+const categoryLabel: Record<ConstructionCategory, MessageKey> = {
+  wall: "energy.wallConstruction",
+  roof: "energy.roofConstruction",
+  floor: "energy.floorConstruction",
+  window: "energy.windowDefault",
+  door: "energy.doorDefault",
+};
+
+/** Every assigned construction against the GEG Annex 7 limit, pass or fail. */
+function GegCheck() {
+  const t = useT();
+  const language = useEditorStore((s) => s.language);
+  const building = useEditorStore((s) => s.building);
+  const checks = gegChecks(building);
+  const passed = gegPassCount(checks);
+  return (
+    <div className="flex flex-col gap-2 border-t border-line pt-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-xs font-medium text-muted">{t("geg.title")}</span>
+        <span
+          className={cx(
+            "rounded-pill px-2.5 py-0.5 font-num text-xs font-semibold",
+            passed === checks.length ? "bg-ok-soft text-ok" : "bg-mark-soft text-mark",
+          )}
+        >
+          {t("geg.passed", { n: passed, total: checks.length })}
+        </span>
+      </div>
+      <ul className="flex flex-col gap-1">
+        {checks.map((c) => (
+          <li
+            key={c.category}
+            className="flex items-center justify-between gap-2 rounded-inner bg-paper px-3 py-1.5 text-sm"
+          >
+            <span className="min-w-0 truncate">{t(categoryLabel[c.category])}</span>
+            <span className="flex items-center gap-2 font-num text-xs text-muted">
+              <span>
+                {Number.isFinite(c.uValue) ? formatNumber(c.uValue, language, 2) : "?"} /{" "}
+                {formatNumber(c.limit, language, 2)}
+              </span>
+              <span
+                className={cx(
+                  "rounded-pill px-2 py-0.5 font-semibold",
+                  c.ok ? "bg-ok-soft text-ok" : "bg-mark-soft text-mark",
+                )}
+              >
+                {t(c.ok ? "geg.pass" : "geg.fail")}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="text-xs text-muted">{t("geg.hint")}</p>
     </div>
   );
 }

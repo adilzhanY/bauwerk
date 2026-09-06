@@ -435,6 +435,14 @@ export const en = {
   "bench.textures": "Textures",
   "bench.strategy":
     "Each wall is one merged mesh of prisms, memoised by a hash of its quad, height and openings. Room fills, dimensions and labels are memoised per element. Hover writes to the store at most once per frame. Inactive storeys are not raycast.",
+  "geg.title": "GEG check (existing buildings, Annex 7)",
+  "geg.passed": "{n} of {total} pass",
+  "geg.pass": "passes",
+  "geg.fail": "fails",
+  "geg.limit": "GEG limit",
+  "geg.result": "Result",
+  "geg.hint":
+    "Maximum U-values after a renovation, GEG Annex 7 table 1 for residential buildings: walls 0.24, roof 0.24, floor 0.30, windows 1.3, doors 1.8 W/(m²K).",
   "common.metres": "m",
   "common.squareMetres": "m²",
   "common.remove": "Remove",

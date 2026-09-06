@@ -62,7 +62,7 @@ const presetDefs: Record<
   },
   floorInsulated: {
     category: "floor",
-    uValue: 0.35,
+    uValue: 0.26,
     en: "Floor slab, insulated",
     de: "Bodenplatte, gedämmt",
   },
@@ -133,7 +133,7 @@ const presetLayers: Partial<Record<PresetKey, [MaterialKey, number][]>> = {
     ["screed", 50],
   ],
   floorInsulated: [
-    ["xps", 100],
+    ["xps", 120],
     ["concrete", 150],
     ["screed", 50],
   ],

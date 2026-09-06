@@ -444,6 +444,14 @@ export const de: Messages = {
   "bench.textures": "Texturen",
   "bench.strategy":
     "Jede Wand ist ein zusammengeführtes Netz aus Prismen, memoisiert über einen Hash aus Viereck, Höhe und Öffnungen. Raumflächen, Maße und Beschriftungen sind je Element memoisiert. Hover schreibt höchstens einmal pro Bild in den Store. Inaktive Geschosse werden nicht per Raycast getroffen.",
+  "geg.title": "GEG-Prüfung (Bestand, Anlage 7)",
+  "geg.passed": "{n} von {total} erfüllt",
+  "geg.pass": "erfüllt",
+  "geg.fail": "nicht erfüllt",
+  "geg.limit": "GEG-Grenzwert",
+  "geg.result": "Ergebnis",
+  "geg.hint":
+    "Höchstwerte der U-Werte nach einer Sanierung, GEG Anlage 7 Tabelle 1 für Wohngebäude: Wände 0,24, Dach 0,24, Boden 0,30, Fenster 1,3, Türen 1,8 W/(m²K).",
   "common.metres": "m",
   "common.squareMetres": "m²",
   "common.remove": "Entfernen",

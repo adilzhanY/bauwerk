@@ -408,3 +408,12 @@ Goal: the iSFP roadmap as named variants side by side. Answers product thinking.
 - [x] Preset layer stacks aligned with IWU typology U-values, typed fallbacks match
 - [x] Assumption texts and print method text describe what is computed, class caveat added
 - [x] Plausibility run: uninsulated house 252 kWh/(m²a), renovated 47, heat load 145 W/m²
+
+## 35. Interview day (picked by the user on 2026-09-06, in this order)
+
+- [x] GEG check: compare every construction with the GEG reference building, pass/fail in Energy panel and report
+- [ ] Demo project "Altbau Kreuzberg" loadable from examples, plus DEMO.md eight-minute script
+- [ ] README with numbers, the audit story and how to run
+- [ ] Energieausweis scale graphic in the Energy panel and the report
+- [ ] Renovation roadmap in iSFP style: ordered steps, demand after each, cumulative cost, print page
+- [ ] Keyboard and accessibility pass
