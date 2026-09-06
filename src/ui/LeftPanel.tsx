@@ -1,8 +1,8 @@
 import { useState } from "react";
 import type { KeyboardEvent } from "react";
 import {
-  ArrowLeft,
-  ArrowRight,
+  ArrowDown,
+  ArrowUp,
   Building2,
   Copy,
   Image as ImageIcon,
@@ -106,7 +106,8 @@ function StoreyList() {
 
   const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
     if (activeIndex === -1) return;
-    const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+    // Up raises the storey index, matching the top storey being drawn first.
+    const step = e.key === "ArrowUp" ? 1 : e.key === "ArrowDown" ? -1 : 0;
     if (step === 0) return;
     e.preventDefault();
     const next = storeys[(activeIndex + step + storeys.length) % storeys.length];
@@ -128,13 +129,13 @@ function StoreyList() {
       {storeys.length === 0 && <p className="text-sm text-muted">{t("empty.body")}</p>}
       {storeys.length > 0 && (
         <div className="flex flex-col gap-3">
-          {/* A horizontal switch, ground floor on the left, the top storey on the right. */}
+          {/* A vertical switch, top storey first like the building. */}
           <div
             role="radiogroup"
             aria-label={t("panel.storeys")}
-            className="flex gap-1 overflow-x-auto rounded-pill border border-line bg-panel p-1"
+            className="flex flex-col gap-1 rounded-card border border-line bg-panel p-1"
           >
-            {storeys.map((storey) => {
+            {[...storeys].reverse().map((storey) => {
               const selected = storey.id === activeStoreyId;
               return (
                 <button
@@ -151,7 +152,7 @@ function StoreyList() {
                   }}
                   onKeyDown={onKeyDown}
                   className={cx(
-                    "h-9 min-w-0 flex-1 truncate rounded-pill px-3 text-sm transition-colors",
+                    "h-10 min-w-0 truncate rounded-pill px-4 text-left text-sm transition-colors",
                     selected ? "bg-ink text-paper" : "text-muted hover:bg-panel-2 hover:text-ink",
                   )}
                 >
@@ -174,7 +175,7 @@ function StoreyList() {
                   moveStorey(active.id, -1);
                 }}
               >
-                <ArrowLeft size={13} />
+                <ArrowDown size={13} />
               </CustomIconButton>
               <CustomIconButton
                 label={t("storey.moveUp")}
@@ -184,7 +185,7 @@ function StoreyList() {
                   moveStorey(active.id, 1);
                 }}
               >
-                <ArrowRight size={13} />
+                <ArrowUp size={13} />
               </CustomIconButton>
               <CustomIconButton
                 label={t("storey.duplicate")}

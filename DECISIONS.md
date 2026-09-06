@@ -158,4 +158,4 @@ The roof display switch was the first segmented control with four options, and t
 
 ## 2026-09-05: Storey list broke the design system
 
-The storey chooser was still a stacked list of bordered boxes with a blue left edge, a leftover from the first interface. The user pointed out it did not follow the rounded design and asked for a horizontal switch. It is now a pill track with one segment per storey, ground floor on the left, and the actions for the active storey in a row underneath. Drag reordering went with it, the arrow buttons cover that.
+The storey chooser was still a stacked list of bordered boxes with a blue left edge, a leftover from the first interface. The user pointed out it did not follow the rounded design and asked for a switch. The agent first built it horizontal; the user corrected that to vertical. It is now a rounded track with one pill per storey, top storey first like the building, and the actions for the active storey in a row underneath. Drag reordering went with it, the arrow buttons cover that.
