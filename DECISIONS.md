@@ -155,3 +155,7 @@ The user reported for the fourth time that the OpenStreetMap ground was not show
 ## 2026-09-05: Four-option segmented control overflowed its track
 
 The roof display switch was the first segmented control with four options, and the last pill was drawn outside the rounded track. The agent had never tested the component with more than three labels. Flex items now may shrink, groups with more than three options use the smaller text size, and a test covers the four-option case.
+
+## 2026-09-05: Storey list broke the design system
+
+The storey chooser was still a stacked list of bordered boxes with a blue left edge, a leftover from the first interface. The user pointed out it did not follow the rounded design and asked for a horizontal switch. It is now a pill track with one segment per storey, ground floor on the left, and the actions for the active storey in a row underneath. Drag reordering went with it, the arrow buttons cover that.

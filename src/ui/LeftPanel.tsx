@@ -1,8 +1,8 @@
 import { useState } from "react";
-import type { DragEvent } from "react";
+import type { KeyboardEvent } from "react";
 import {
-  ArrowDown,
-  ArrowUp,
+  ArrowLeft,
+  ArrowRight,
   Building2,
   Copy,
   Image as ImageIcon,
@@ -15,7 +15,6 @@ import {
 import type { ReactNode } from "react";
 import type { MessageKey } from "@/i18n";
 import { CustomSegmented } from "@/components/CustomSegmented";
-import type { Id } from "@/geometry/types";
 import { useT } from "@/i18n/useT";
 import { formatArea, formatMetres } from "@/lib/format";
 import { useEditorStore } from "@/store/building";
@@ -102,22 +101,20 @@ function StoreyList() {
   const removeStorey = useEditorStore((s) => s.removeStorey);
   const moveStorey = useEditorStore((s) => s.moveStorey);
   const duplicateStorey = useEditorStore((s) => s.duplicateStorey);
-  const [dragging, setDragging] = useState<Id | null>(null);
+  const active = storeys.find((s) => s.id === activeStoreyId);
+  const activeIndex = active ? storeys.indexOf(active) : -1;
 
-  const onDrop = (targetId: Id) => (e: DragEvent) => {
+  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
+    if (activeIndex === -1) return;
+    const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+    if (step === 0) return;
     e.preventDefault();
-    if (!dragging || dragging === targetId) return;
-    const from = storeys.findIndex((s) => s.id === dragging);
-    const to = storeys.findIndex((s) => s.id === targetId);
-    if (from === -1 || to === -1) return;
-    const direction = to > from ? 1 : -1;
-    for (let i = from; i !== to; i += direction) moveStorey(dragging, direction);
-    setDragging(null);
+    const next = storeys[(activeIndex + step + storeys.length) % storeys.length];
+    if (next) {
+      setActiveStorey(next.id);
+      select({ kind: "storey", id: next.id });
+    }
   };
-
-  // Drawn as a section: top storey first, like the building.
-  const ordered = [...storeys].reverse();
-  const totalHeight = storeys.reduce((s, x) => s + x.height, 0) || 1;
 
   return (
     <CustomSection
@@ -129,101 +126,88 @@ function StoreyList() {
       }
     >
       {storeys.length === 0 && <p className="text-sm text-muted">{t("empty.body")}</p>}
-      <ul className="flex flex-col">
-        {ordered.map((storey) => {
-          const index = storeys.indexOf(storey);
-          const active = storey.id === activeStoreyId;
-          const share = Math.max(36, (storey.height / totalHeight) * 160);
-          return (
-            <li
-              key={storey.id}
-              draggable
-              onDragStart={() => {
-                setDragging(storey.id);
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-              }}
-              onDrop={onDrop(storey.id)}
-              onDragEnd={() => {
-                setDragging(null);
-              }}
-              style={{ minHeight: share }}
-              className={cx(
-                "group flex items-stretch border-x border-t border-line last:border-b",
-                active ? "bg-paper" : "bg-panel-2/60 hover:bg-panel-2",
-              )}
-            >
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveStorey(storey.id);
-                  select({ kind: "storey", id: storey.id });
-                }}
-                aria-current={active ? "true" : undefined}
-                className={cx(
-                  "flex min-w-0 flex-1 flex-col justify-center gap-0.5 px-3 py-2 text-left",
-                  active && "border-l-2 border-select",
-                )}
-              >
-                <span
-                  className={cx("truncate text-sm", active ? "font-medium text-ink" : "text-muted")}
+      {storeys.length > 0 && (
+        <div className="flex flex-col gap-3">
+          {/* A horizontal switch, ground floor on the left, the top storey on the right. */}
+          <div
+            role="radiogroup"
+            aria-label={t("panel.storeys")}
+            className="flex gap-1 overflow-x-auto rounded-pill border border-line bg-panel p-1"
+          >
+            {storeys.map((storey) => {
+              const selected = storey.id === activeStoreyId;
+              return (
+                <button
+                  key={storey.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  aria-current={selected ? "true" : undefined}
+                  tabIndex={selected ? 0 : -1}
+                  title={storey.name}
+                  onClick={() => {
+                    setActiveStorey(storey.id);
+                    select({ kind: "storey", id: storey.id });
+                  }}
+                  onKeyDown={onKeyDown}
+                  className={cx(
+                    "h-9 min-w-0 flex-1 truncate rounded-pill px-3 text-sm transition-colors",
+                    selected ? "bg-ink text-paper" : "text-muted hover:bg-panel-2 hover:text-ink",
+                  )}
                 >
                   {storey.name}
-                </span>
-                <span className="font-num text-xs text-muted">
-                  {formatMetres(storey.height, language)} · {storey.rooms.length}{" "}
-                  {t("storey.rooms").toLowerCase()}
-                </span>
-              </button>
-              <div className="flex flex-col justify-center gap-0 pr-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-                <div className="flex">
-                  <CustomIconButton
-                    label={t("storey.moveUp")}
-                    size="sm"
-                    disabled={index === storeys.length - 1}
-                    onClick={() => {
-                      moveStorey(storey.id, 1);
-                    }}
-                  >
-                    <ArrowUp size={13} />
-                  </CustomIconButton>
-                  <CustomIconButton
-                    label={t("storey.moveDown")}
-                    size="sm"
-                    disabled={index === 0}
-                    onClick={() => {
-                      moveStorey(storey.id, -1);
-                    }}
-                  >
-                    <ArrowDown size={13} />
-                  </CustomIconButton>
-                </div>
-                <div className="flex">
-                  <CustomIconButton
-                    label={t("storey.duplicate")}
-                    size="sm"
-                    onClick={() => {
-                      duplicateStorey(storey.id);
-                    }}
-                  >
-                    <Copy size={13} />
-                  </CustomIconButton>
-                  <CustomIconButton
-                    label={t("storey.remove")}
-                    size="sm"
-                    onClick={() => {
-                      removeStorey(storey.id);
-                    }}
-                  >
-                    <Trash2 size={13} />
-                  </CustomIconButton>
-                </div>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+                </button>
+              );
+            })}
+          </div>
+          {active && (
+            <div className="flex items-center gap-1 px-1">
+              <span className="font-num min-w-0 flex-1 truncate text-xs text-muted">
+                {formatMetres(active.height, language)} · {active.rooms.length}{" "}
+                {t("storey.rooms").toLowerCase()}
+              </span>
+              <CustomIconButton
+                label={t("storey.moveDown")}
+                size="sm"
+                disabled={activeIndex === 0}
+                onClick={() => {
+                  moveStorey(active.id, -1);
+                }}
+              >
+                <ArrowLeft size={13} />
+              </CustomIconButton>
+              <CustomIconButton
+                label={t("storey.moveUp")}
+                size="sm"
+                disabled={activeIndex === storeys.length - 1}
+                onClick={() => {
+                  moveStorey(active.id, 1);
+                }}
+              >
+                <ArrowRight size={13} />
+              </CustomIconButton>
+              <CustomIconButton
+                label={t("storey.duplicate")}
+                size="sm"
+                onClick={() => {
+                  duplicateStorey(active.id);
+                }}
+              >
+                <Copy size={13} />
+              </CustomIconButton>
+              <CustomIconButton
+                label={t("storey.remove")}
+                size="sm"
+                onClick={() => {
+                  removeStorey(active.id);
+                }}
+              >
+                <Trash2 size={13} />
+              </CustomIconButton>
+            </div>
+          )}
+        </div>
+      )}
     </CustomSection>
   );
 }
