@@ -114,6 +114,8 @@ canvas { cursor: var(--cursor-grab); }
 canvas:active { cursor: var(--cursor-grabbing); }
 [data-tool="footprint"] canvas, [data-tool="opening"] canvas, [data-tool="interiorWall"] canvas, [data-tool="measure"] canvas { cursor: var(--cursor-crosshair); }
 [data-tool="footprint"] canvas:active, [data-tool="opening"] canvas:active, [data-tool="interiorWall"] canvas:active, [data-tool="measure"] canvas:active { cursor: var(--cursor-crosshair); }
+[data-tool="move"] canvas { cursor: var(--cursor-grab); }
+[data-tool="move"] canvas:active { cursor: var(--cursor-grabbing); }
 `;
 }
 

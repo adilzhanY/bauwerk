@@ -1,4 +1,11 @@
 import { create } from "zustand";
+import { planToLatLon } from "@/geometry/geo";
+import {
+  buildingCentre,
+  rotateBuilding,
+  translateBuilding,
+  translatePoint,
+} from "@/geometry/transform";
 import { immer } from "zustand/middleware/immer";
 import type {
   Building,
@@ -43,7 +50,7 @@ import type { HistorySlice } from "./history";
 export type Theme = "light" | "dark" | "system";
 
 export type Tool =
-  "select" | "footprint" | "opening" | "interiorWall" | "zone" | "measure" | "hvac";
+  "select" | "footprint" | "opening" | "interiorWall" | "zone" | "measure" | "hvac" | "move";
 
 export type Selection =
   | { kind: "vertex"; index: number }
@@ -162,6 +169,12 @@ export interface EditorActions {
   removePipe: (storeyId: Id, id: Id) => void;
   /** Replaces the footprint, for a GeoJSON import. Rooms are recomputed. */
   setFootprint: (footprint: Vec2[], origin?: GeoOrigin) => void;
+  /** Slides the whole building on the plan; the geo origin stays. */
+  translateBuilding: (delta: Vec2) => void;
+  /** Turns the whole building about its footprint centre. */
+  rotateBuilding: (degrees: number) => void;
+  /** Makes the building centre the new plan origin and moves the geo origin with it. */
+  recentreOrigin: () => void;
   addOpening: (storeyId: Id, opening: NewOpening) => Id;
   updateOpening: (storeyId: Id, openingId: Id, patch: Partial<Omit<Opening, "id">>) => void;
   removeOpening: (storeyId: Id, openingId: Id) => void;
@@ -530,6 +543,44 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           setBridgeDetail: (detail) => {
             set((state) => {
               state.building.bridgeDetail = detail;
+            });
+          },
+
+          translateBuilding: (delta) => {
+            set((state) => {
+              state.building = translateBuilding(state.building, delta);
+              if (state.proposal) {
+                state.proposal.footprint = state.proposal.footprint.map((p) =>
+                  translatePoint(p, delta),
+                );
+                for (const w of state.proposal.interiorWalls) {
+                  w.segment = {
+                    a: translatePoint(w.segment.a, delta),
+                    b: translatePoint(w.segment.b, delta),
+                  };
+                }
+              }
+            });
+          },
+
+          rotateBuilding: (degrees) => {
+            set((state) => {
+              state.building = rotateBuilding(state.building, degrees);
+            });
+          },
+
+          recentreOrigin: () => {
+            set((state) => {
+              const b = state.building;
+              const centre = buildingCentre(b);
+              if (b.origin) {
+                const geo = planToLatLon(centre, b.origin);
+                state.building.origin = { ...b.origin, lat: geo.lat, lon: geo.lon };
+              }
+              state.building = translateBuilding(state.building, {
+                x: -centre.x,
+                y: -centre.y,
+              });
             });
           },
 

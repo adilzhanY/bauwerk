@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Download, Upload } from "lucide-react";
-import { epsgForZone, toUtm } from "@/geometry/geo";
+import { epsgForZone, planToLatLon, toUtm } from "@/geometry/geo";
+import { centroid } from "@/geometry/polygon";
 import { fromGeoJson, toGeoJson } from "@/geometry/geojson";
 import { useT } from "@/i18n/useT";
 import type { MessageKey } from "@/i18n";
@@ -18,6 +19,8 @@ export function LocationSection() {
   const language = useEditorStore((s) => s.language);
   const building = useEditorStore((s) => s.building);
   const setOrigin = useEditorStore((s) => s.setOrigin);
+  const recentreOrigin = useEditorStore((s) => s.recentreOrigin);
+  const footprint = useEditorStore((s) => s.building.footprint);
   const setFootprint = useEditorStore((s) => s.setFootprint);
   const showMap = useEditorStore((s) => s.showMap);
   const setShowMap = useEditorStore((s) => s.setShowMap);
@@ -28,6 +31,8 @@ export function LocationSection() {
   const fileInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<MessageKey | null>(null);
   const origin = building.origin;
+  const centrePlan = centroid(footprint);
+  const centre = origin ? planToLatLon(centrePlan, origin) : { lat: 0, lon: 0 };
 
   const onExport = () => {
     if (!origin) return;
@@ -125,6 +130,19 @@ export function LocationSection() {
               onChange={setMapOpacity}
             />
           )}
+          <CustomReadOnly
+            label={t("location.centre")}
+            value={`${formatNumber(centre.lat, language, 6)}° N, ${formatNumber(centre.lon, language, 6)}° E`}
+          />
+          <CustomButton
+            variant="quiet"
+            className="self-start"
+            disabled={Math.hypot(centrePlan.x, centrePlan.y) < 1e-6}
+            onClick={recentreOrigin}
+          >
+            {t("location.recentre")}
+          </CustomButton>
+          <p className="text-xs text-muted">{t("location.recentreHint")}</p>
           <CustomReadOnly
             label={`${t("location.utm")} ${utm.zone}${utm.north ? "N" : "S"} (EPSG:${epsgForZone(utm.zone)})`}
             value={`${formatNumber(utm.easting, language, 1)} E, ${formatNumber(utm.northing, language, 1)} N`}

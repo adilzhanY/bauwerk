@@ -1,7 +1,7 @@
 import { Html, Line } from "@react-three/drei";
-import { northInPlan, toUtm } from "@/geometry/geo";
+import { northInPlan, planToLatLon, toUtm } from "@/geometry/geo";
 import { formatNumber } from "@/lib/format";
-import { bounds } from "@/geometry/polygon";
+import { bounds, centroid } from "@/geometry/polygon";
 import { useSceneColors } from "./useSceneColors";
 import { useT } from "@/i18n/useT";
 import { useEditorStore } from "@/store/building";
@@ -13,7 +13,9 @@ export function Compass() {
   const origin = useEditorStore((s) => s.building.origin);
   const language = useEditorStore((s) => s.language);
   const scene = useSceneColors();
-  const utm = toUtm(origin ?? { lat: 0, lon: 0 });
+  // The chip reads the building centre, so it follows the building when it is moved.
+  const centre = origin ? planToLatLon(centroid(footprint), origin) : { lat: 0, lon: 0 };
+  const utm = toUtm(centre);
   const { min, max } = bounds(footprint);
   const north = northInPlan(origin);
   const base: [number, number] = [max.x + 2, min.y - 1];
@@ -48,7 +50,7 @@ export function Compass() {
             className="rounded-soft border border-line bg-paper/90 px-2 py-0.5 font-num text-xs whitespace-nowrap select-none"
             style={{ color }}
           >
-            {formatNumber(origin.lat, language, 5)}° N · {formatNumber(origin.lon, language, 5)}° E
+            {formatNumber(centre.lat, language, 5)}° N · {formatNumber(centre.lon, language, 5)}° E
             · UTM {utm.zone}
             {utm.north ? "N" : "S"} · {formatNumber(origin.rotation, language, 0)}°
           </span>

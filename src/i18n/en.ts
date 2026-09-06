@@ -457,6 +457,13 @@ export const en = {
   "a11y.rightPanel": "Properties panel",
   "a11y.bottomBar": "Actions and status",
   "a11y.scene": "3D view",
+  "tool.move": "Move",
+  "hint.move":
+    "Drag anywhere on the building to slide it on the grid. Hold Shift and drag to turn it in 5° steps. One undo step per drag.",
+  "location.centre": "Building centre",
+  "location.recentre": "Make the centre the origin",
+  "location.recentreHint":
+    "Moves the plan origin to the building centre and the map with it, so the coordinates you type describe the building itself.",
   "common.metres": "m",
   "common.squareMetres": "m²",
   "common.remove": "Remove",

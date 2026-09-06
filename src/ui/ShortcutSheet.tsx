@@ -8,7 +8,7 @@ export function ShortcutSheet({ onClose }: { onClose: () => void }) {
     [t("shortcuts.redo"), "Ctrl+Shift+Z, Ctrl+Y"],
     [t("shortcuts.delete"), "Delete"],
     [t("shortcuts.escape"), "Esc"],
-    [t("shortcuts.tools"), "1 to 6"],
+    [t("shortcuts.tools"), "1 to 8"],
     [t("shortcuts.storeys"), "PageUp, PageDown"],
     [t("shortcuts.orbit"), t("shortcuts.orbitKeys")],
   ];

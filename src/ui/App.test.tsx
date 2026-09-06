@@ -144,10 +144,10 @@ describe("App", () => {
     window.history.replaceState(null, "", "/");
   });
 
-  it("has seven tools including measure and heating, switchable by key", () => {
+  it("has eight tools including measure, heating and move, switchable by key", () => {
     render(<App />);
     const palette = screen.getByRole("radiogroup", { name: "Tools" });
-    expect(within(palette).getAllByRole("radio")).toHaveLength(7);
+    expect(within(palette).getAllByRole("radio")).toHaveLength(8);
     fireEvent.keyDown(window, { key: "6" });
     expect(useEditorStore.getState().tool).toBe("measure");
     expect(screen.getByText(/read the distance/)).toBeTruthy();

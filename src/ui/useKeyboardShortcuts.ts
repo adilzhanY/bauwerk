@@ -10,6 +10,7 @@ export const TOOL_ORDER: Tool[] = [
   "zone",
   "measure",
   "hvac",
+  "move",
 ];
 
 function inTextField(target: EventTarget | null): boolean {
@@ -20,7 +21,7 @@ function inTextField(target: EventTarget | null): boolean {
 
 /**
  * Ctrl+Z undo, Ctrl+Shift+Z or Ctrl+Y redo, Delete removes the selection,
- * Escape clears it and returns to the select tool, 1 to 7 switch tools,
+ * Escape clears it and returns to the select tool, 1 to 8 switch tools,
  * PageUp and PageDown switch storeys.
  */
 export function useKeyboardShortcuts() {
@@ -54,7 +55,7 @@ export function useKeyboardShortcuts() {
       }
       const toolIndex = Number(e.key) - 1;
       const tool = TOOL_ORDER[toolIndex];
-      if (!mod && e.key >= "1" && e.key <= "7" && tool) {
+      if (!mod && e.key >= "1" && e.key <= "8" && tool) {
         s.setTool(tool);
         return;
       }

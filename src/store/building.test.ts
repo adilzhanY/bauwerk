@@ -260,6 +260,20 @@ describe("UI state and history", () => {
 });
 
 describe("store behaviour", () => {
+  it("translates the building and re-centres the origin onto it", () => {
+    store.getState().setOrigin({ lat: 52.5, lon: 13.4, rotation: 0 });
+    store.getState().translateBuilding({ x: 10, y: 0 });
+    expect(store.getState().building.footprint[0]).toEqual({ x: 10, y: 0 });
+    store.getState().recentreOrigin();
+    const b = store.getState().building;
+    const xs = b.footprint.map((p) => p.x);
+    expect((Math.min(...xs) + Math.max(...xs)) / 2).toBeCloseTo(0, 6);
+    // 15 m east of the old origin: about 0.00022 degrees of longitude at 52.5° N.
+    expect(b.origin?.lon ?? 0).toBeGreaterThan(13.4001);
+    expect(b.origin?.lat ?? 0).toBeCloseTo(52.5, 4);
+    store.getState().undo();
+    expect(store.getState().building.footprint[0]).toEqual({ x: 10, y: 0 });
+  });
   it("removing an interior wall drops its openings and renumbers the rest", () => {
     const sid = storeyId();
     store.getState().addInteriorWall(sid, { a: { x: 3, y: 0 }, b: { x: 3, y: 8 } });

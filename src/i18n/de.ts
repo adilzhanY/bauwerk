@@ -466,6 +466,13 @@ export const de: Messages = {
   "a11y.rightPanel": "Eigenschaftenbereich",
   "a11y.bottomBar": "Aktionen und Status",
   "a11y.scene": "3D-Ansicht",
+  "tool.move": "Verschieben",
+  "hint.move":
+    "Irgendwo am Gebäude ziehen, um es auf dem Raster zu verschieben. Mit Shift ziehen dreht es in 5°-Schritten. Ein Rückgängig-Schritt pro Zug.",
+  "location.centre": "Gebäudemitte",
+  "location.recentre": "Mitte zum Ursprung machen",
+  "location.recentreHint":
+    "Setzt den Planursprung auf die Gebäudemitte und die Karte mit, damit die eingegebenen Koordinaten das Gebäude selbst beschreiben.",
   "common.metres": "m",
   "common.squareMetres": "m²",
   "common.remove": "Entfernen",
