@@ -1,91 +1,208 @@
-# Bauwerk
+<div align="center">
+  <img src="docs/shots/hero.png" alt="Bauwerk, draw the house, read the heating bill" width="100%" />
+</div>
 
-A browser-based 3D building editor for energy consultants, built as an interview demo for the 20° GmbH Full-Stack Engineer role. Draw a footprint, stack storeys, cut windows and doors into exterior and interior walls, derive rooms from the walls, group rooms into heated and unheated zones, put a roof on top, place the building on the map, and read the energy balance, the heat loads, the GEG check and the renovation scenarios live while you edit. Undo anything. Export JSON, IFC4, GeoJSON and a German building report.
+<div align="center">
+  <br/>
+  <a href="https://adilzhany.github.io/bauwerk/"><img src="https://img.shields.io/badge/live-adilzhany.github.io%2Fbauwerk-1b1d20?style=for-the-badge&labelColor=1b1d20&color=234d8f" alt="Live demo" /></a>
+  <img src="https://img.shields.io/badge/React-18-1b1d20?style=for-the-badge&labelColor=1b1d20&color=234d8f" alt="React 18" />
+  <img src="https://img.shields.io/badge/TypeScript-strict-1b1d20?style=for-the-badge&labelColor=1b1d20&color=234d8f" alt="TypeScript strict" />
+  <img src="https://img.shields.io/badge/Three.js-r3f-1b1d20?style=for-the-badge&labelColor=1b1d20&color=234d8f" alt="Three.js via react-three-fiber" />
+  <img src="https://img.shields.io/badge/tests-353%20passing-1b1d20?style=for-the-badge&labelColor=1b1d20&color=2f7a4f" alt="353 tests passing" />
+</div>
 
-Built by Adilzhan Yerzhan in under three days with Claude Code as the primary way code is produced, reviewed and steered by a human. `DECISIONS.md` logs every place the human overruled the agent; it is part of the deliverable.
+<br/>
 
-## Numbers
+<div align="center">
+  <h3>Most building tools draw walls.<br/>This one tells you what the walls cost you every winter.</h3>
+  <p><b>Bauwerk</b> is a browser-based 3D editor for the people who renovate Germany's
+  19 million homes: energy consultants. Draw a house in a minute, and while you draw,
+  it computes the U-values, the heat loss, the Energieausweis class, the heat load of
+  every room, the GEG check and the payback of each renovation step. Then it prints the
+  German report. No install, no account, every change undoable.</p>
+</div>
 
-|                  |                                                                                                                                         |
-| ---------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| Client code      | about 23,000 lines of TypeScript in `src/`                                                                                              |
-| Server code      | about 860 lines in `server/src/`                                                                                                        |
-| Tests            | 327 client tests in 55 files, 8 server tests against a real Postgres                                                                    |
-| Logged overrules | 43 entries in `DECISIONS.md`                                                                                                            |
-| Languages        | English and German, a missing key is a type error                                                                                       |
-| Stack            | Vite, React 18, TypeScript strict, Zustand, Three.js via react-three-fiber, Tailwind CSS v4, Vitest; NestJS and Postgres for the server |
+<br/>
 
-## Run
+---
+
+## A house you can grab
+
+<img src="docs/shots/framed/scene.png" alt="Kreuzberg apartment house on its OpenStreetMap plot" width="100%" />
+
+Open the demo project and you are standing in front of a 1905 apartment house in
+Kreuzberg, on its real plot, on the OpenStreetMap ground. Three storeys, a shop at the
+street, two flats per floor around an unheated stairwell, a gable roof with a heated attic.
+
+Press <kbd>8</kbd>, grab it, and slide it along the street: the latitude and longitude in
+the chip follow live. Hold <kbd>Shift</kbd> to turn it and the south windows become west
+windows, and the solar gains move with them. <kbd>Ctrl</kbd>+<kbd>Z</kbd> twice, and it is
+back where it was. **Every drag, every scrub, every typed value is one undo step.**
+
+## Walls that know what they are
+
+<table>
+<tr>
+<td width="48%"><img src="docs/shots/framed/openings.png" alt="Windows and doors cut into the walls" /></td>
+<td valign="top">
+
+### Click a wall, get the right thing
+
+Click an exterior wall with the Opening tool: a window. Click an interior wall: a door.
+<kbd>Shift</kbd> swaps them. Drag a window along its wall and the hole moves with it,
+without CSG: every wall is split into prisms around its openings and merged into one mesh,
+68 triangles for a wall with three windows, deterministic and tested.
+
+### Rooms are not drawn
+
+Draw an interior wall and the rooms appear on their own, with their floor areas. Delete
+the wall and they merge back and keep their names. Group rooms into heated and unheated
+zones and the physics follows: the stairwell's outer walls leave the envelope, and the
+flat's wall to the stairwell enters it at half weight, the way EnEV says.
+
+### Other storeys stay out of the way
+
+The floors you are not editing draw as outlines, ghosts or not at all, the way Revit's
+halftone underlay and ArchiCAD's ghost story do it. The floor you edit is never hidden.
+
+</td>
+</tr>
+</table>
+
+## The heating bill, live
+
+<img src="docs/shots/framed/energy.png" alt="Energy panel with the Energieausweis scale, losses, gains and GEG check" width="100%" />
+
+The Energy tab is the heating period balance of **DIN V 4108-6**, computed on every change:
+
+| What you see                     | What it is                                                                                                                                                                                            |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Energieausweis scale**         | The coloured A+ to H band with a marker for today and one for the scenario you are viewing.                                                                                                           |
+| **H<sub>T</sub>, H<sub>V</sub>** | Transmission and ventilation heat loss in W/K, with the EnEV correction factors 0.6 for the floor slab and 0.5 for walls to unheated rooms, and every thermal bridge as ψ times length.               |
+| **Solar and internal gains**     | Sun through the windows by orientation, 22 kWh per square metre from people and appliances, both 95 % usable.                                                                                         |
+| **Heating demand**               | 66 kKh of the German reference climate times the losses, minus the gains. Divided by heated floor area: the number the class is made of.                                                              |
+| **GEG check**                    | Every assigned construction against GEG Annex 7. The 1905 house passes 0 of 5.                                                                                                                        |
+| **Heat load per room**           | DIN EN 12831 at minus 14 °C for Berlin, with the installed radiators and a red flag when they are undersized, and the heat pump size that falls out of it: 44 kW before insulation, a fraction after. |
+
+U-values are not typed in. Open a construction and you see its layers, outside to inside,
+with λ and R per layer and the U-value after ISO 6946. Scrub the insulation thickness and
+watch the class letter change while you drag.
+
+## What to do first, and what it costs
+
+<table>
+<tr>
+<td valign="top">
+
+### Scenarios on the same model
+
+A renovation scenario is a set of overrides: which construction each category uses, the
+thermal bridge detailing, the roof. Change the baseline and every variant follows.
+
+For the Kreuzberg house: insulate the facade for about 75,000 euros and the class goes from
+G to E with an 18-year payback. Windows and roof, 95,000 euros, class F. Everything at once,
+219,000 euros, class B, saving about 8,000 euros a year.
+
+### The roadmap consultants sell
+
+The saved scenarios are ordered by payback and applied one on top of the other, three years
+apart, with the class after every step and the running total. That is the shape of the
+individueller Sanierungsfahrplan a homeowner needs for the higher funding rate.
+
+Prices are per square metre starting values and the panel says so. A consultant replaces
+them with quotes.
+
+</td>
+<td width="48%"><img src="docs/shots/framed/scenarios.png" alt="Scenarios with investment, payback and the renovation roadmap" /></td>
+</tr>
+</table>
+
+## A report that leaves the office
+
+<img src="docs/shots/framed/report.png" alt="Printed German building report with the energy scale and storey plans" width="100%" />
+
+One click prints a plain German building document: building data, the energy table, the
+Energieausweis scale with both markers, the GEG table, a plan per storey with every window
+and door, the renovation roadmap, and a method page that states every assumption so a second
+consultant can check the numbers. German number and date formats throughout, 18:04 not 6:04 pm.
+With the server running, the same page comes back as a PDF.
+
+## Speaks the industry's formats
+
+- **IFC4 export** written by hand, validated with IfcOpenShell: spatial tree, mitred walls,
+  every window and door a real void filled by an IfcWindow or IfcDoor, rooms as IfcSpace,
+  zones, U-values in the property sets, georeferencing through IfcMapConversion.
+- **IFC import** of walls, openings, storeys and spaces from other tools, with a report of
+  what could not be read.
+- **GeoJSON** in and out, **UTM** coordinates (EPSG:258xx) checked against PROJ to a millimetre.
+- **Footprint from a photo**: drop a scanned plan and a classical vision pipeline proposes the
+  outline and the interior walls for you to accept or trim.
+- **JSON** with a versioned, validated schema and migrations for older files.
+
+## Built to be looked at
+
+|           |                                                                                                                      |
+| --------- | -------------------------------------------------------------------------------------------------------------------- |
+| Client    | about 23,000 lines of TypeScript, strict, `noUncheckedIndexedAccess`                                                 |
+| Tests     | 353 client tests in 55 files, 8 server tests against a real Postgres                                                 |
+| Geometry  | pure functions in `src/geometry/`, no Three.js allowed inside, enforced by lint                                      |
+| State     | one Zustand store, a 60-line history middleware that batches gestures into single undo steps                         |
+| Controls  | every slider, select, switch, number field and dialog built from scratch, keyboard complete, no native control shows |
+| Languages | English and German, a missing key is a type error                                                                    |
+| Server    | NestJS and Postgres, optimistic concurrency, WebSocket rooms with presence, PDF through headless Chromium            |
+
+### How it was built
+
+Bauwerk was made in three weeks with **Claude Code as the primary way code is produced**, and
+a human steering, reviewing and correcting it. `DECISIONS.md` records 45 places where the human
+overruled the agent, and it is part of the deliverable.
+
+The most useful entry: the day before the interview the agent was asked to audit its own
+formulas. It found five errors in its physics, all under green tests, because the tests had
+pinned the agent's own numbers instead of the standard's. The fix moved the example house from
+324 to 252 kWh/(m²a), which is where the IWU building typology puts an unrenovated pre-1918
+house. The agent produces. The human decides what is true.
+
+## Run it
 
 ```
 npm install --legacy-peer-deps
-npm run dev        # start the dev server
+npm run dev        # http://localhost:5173
 npm run check      # typecheck, lint, tests
 npm run build      # production build in dist/
-npm run preview    # serve the production build
 ```
 
-The `--legacy-peer-deps` flag works around an npm 10 crash while resolving Vitest's optional peers. The eight-minute demo script is in `DEMO.md`; load "Kreuzberg apartment house (demo)" from Settings, Examples. For a much larger model, load "Large office tower", which has 18 storeys, 162 rooms and 719 openings.
+Then Settings, Examples, **Kreuzberg apartment house (demo)**. The eight-minute walkthrough is
+in [`DEMO.md`](DEMO.md), the handbook of every number on the screen is in the interview notes.
 
-## How it fits together
+Open `/?bench=1` for an 18-storey tower with 719 openings, a frame time graph and the renderer's
+draw call and triangle counts.
 
-- `src/geometry/` holds pure functions over numbers and arrays: polygon checks, wall offsets and mitres, opening validation, room extraction from interior walls, roofs, the energy balance, thermal bridges, heat loads, scenarios, the GEG check, UTM projection, map tiles, IFC export and import, JSON export and import. No Three.js in here, enforced by a lint rule, so everything is tested in Vitest without WebGL.
-- `src/store/` is one Zustand store with Immer. A small history middleware records every change to the building and gives exact undo and redo; a drag or a typing burst is one step. UI state such as selection, tool and view settings is never recorded.
-- `src/scene/` turns geometry output into meshes. Openings do not use CSG: each wall is split into prisms around its openings and the prisms are merged into one mesh. Storeys other than the active one draw as outlines, ghosts or not at all, per a view setting.
-- `src/components/` are the form controls, built from scratch so nothing native shows: slider, number input with label scrubbing, select, switch, segmented control, dialog, tabs. Each has its own test.
-- `src/ui/` holds the panels and the print view. Every string goes through `src/i18n/`.
-- `server/` is a NestJS API with plain `pg`, optimistic concurrency and a WebSocket room per project, plus PDF printing of the report through headless Chromium.
+### With the server
 
-## What it computes, and against what
+```
+docker compose up --build        # Postgres, the NestJS server on :3000, the client on :8080
+```
 
-- **U-values** from layer stacks after DIN EN ISO 6946, with the standard surface resistances. Presets follow the IWU building typology for the German stock.
-- **Energy balance** with the heating period method of DIN V 4108-6: 66 kKh degree hours of the German reference climate, ventilation 0.34 · 0.5 · V, temperature correction factors 0.6 for the floor slab and 0.5 for walls to unheated rooms, solar gains by orientation with the EnEV irradiation values, internal gains of 22 kWh/(m²a), thermal bridges as ψ times length from the geometry. The Energieausweis class is applied to the heating demand and labelled as the approximation it is.
-- **Heat loads** room by room after DIN EN 12831 simplified, with −14 °C for Berlin, and radiator and heat pump sizing from them.
-- **GEG check** of every assigned construction against Annex 7 for existing buildings.
-- **Scenarios** as override sets with investment, saving and payback from documented starting prices.
-- **Geo** with a fourth-order Krüger UTM projection checked against PROJ to a millimetre, OpenStreetMap tiles at true scale, sun position after NOAA with shadows.
+Or by hand: `cd server && npm install --legacy-peer-deps && DATABASE_URL=postgres://user:pass@localhost:5432/bauwerk npm run dev`,
+then `VITE_API_URL=http://localhost:3000 npm run dev` in the root. Create a project, open the same
+link in a second tab, move a window, and watch it move in the first. Each write carries the version
+it was based on; a stale write gets a 409 and the client rebases. Of twelve simultaneous writes on
+the same version exactly one wins, and the test proves it.
 
-## The audit
-
-The day before the interview the agent was asked to check every formula against its source. It found five errors in its own physics, all under green tests, because the tests had pinned the agent's numbers instead of the standard's: 84 instead of 66 kKh, no internal gains, no ground and unheated-room correction factors, −12 instead of −14 °C, and uninsulated presets whose layer stacks computed U-values two to three times their labels. The example house moved from 324 to 252 kWh/(m²a), which is where the typology puts an uninsulated pre-1918 house. The full list is in `DECISIONS.md` under 2026-09-06.
-
-## Performance
-
-Open `/?bench=1` for a fifty storey tower with twenty openings per storey, a frame time graph over the last ten seconds and the renderer's draw call and triangle counts. Geometry is built once per element and memoised by a hash of its inputs; each wall is a single merged mesh of prisms; hover writes to the store at most once per frame; inactive storeys are excluded from raycasting.
-
-## IFC export
-
-The IFC button writes an IFC4 STEP file by hand, without a library, so the schema knowledge is in the code (`src/geometry/ifc.ts` and `src/geometry/step.ts`). It contains the spatial tree (project, site, building, storeys with elevations), exterior walls as extruded mitred quads, interior walls, floor and roof slabs, one opening element per window or door that voids its wall and is filled by an IfcWindow or IfcDoor, rooms as IfcSpace with their floor area, zones as IfcZone, and U-values in the common property sets. Left out: material layers, curtain walls, and georeferencing until the geo section lands.
-
-The two example buildings are exported in `docs/` and validated with IfcOpenShell, which checks the schema and EXPRESS rules and rebuilds every solid:
+### IFC validation
 
 ```
 python -m venv .venv && .venv/bin/pip install ifcopenshell pytest
 .venv/bin/python scripts/validate-ifc.py docs/example-house.ifc docs/example-block.ifc
 ```
 
-Both files report zero issues and every product builds. A wall with three openings comes out with 68 triangles instead of the 12 of a plain box, so the holes are real.
+Both files report zero issues and every product builds.
 
-## Run with the server
+---
 
-The client works on its own with localStorage. With a server, projects live in Postgres and every open tab of the same project sees the others' changes.
-
-```
-docker compose up --build        # Postgres, the NestJS server on :3000, the client on :8080
-```
-
-Or by hand:
-
-```
-cd server && npm install --legacy-peer-deps
-DATABASE_URL=postgres://user:pass@localhost:5432/bauwerk npm run dev
-cd .. && VITE_API_URL=http://localhost:3000 npm run dev
-```
-
-The server also serves the client build from `dist/` when it exists and prints it to PDF through `POST /reports`, so build the client before starting the server if you want the Download PDF button.
-
-Open the app, create a project from the Project section, and open the same link in a second tab. Each accepted write carries the version it was based on; a stale write gets a 409 with the current state, the client takes it and puts its own change on top (last write wins). Presence and selections travel over a WebSocket room per project. The server tests run against a real Postgres and check that of twelve simultaneous writes on the same version exactly one wins.
-
-```
-cd server && DATABASE_URL=postgres://bauwerk@127.0.0.1:5499/bauwerk_test npm test
-```
+<div align="center">
+  <sub>Bauwerk is a portfolio project by Adilzhan Yerzhan. The physics follows the simplified
+  procedures of DIN V 4108-6 and DIN EN 12831 and is not a substitute for a certified
+  Energieausweis. Costs are starting values.</sub>
+</div>
