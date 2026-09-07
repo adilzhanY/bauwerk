@@ -83,7 +83,7 @@ describe("REST", () => {
   it("rejects a missing building cleanly and accepts a valid body over 100 KB", async () => {
     const missing = await json("POST", "/projects", {});
     expect(missing.status).toBe(400);
-    expect(await missing.json()).toMatchObject({ message: { error: "buildingRequired" } });
+    expect(await missing.json()).toMatchObject({ error: "buildingRequired" });
 
     const tower = exampleTower("en");
     expect(JSON.stringify({ building: tower }).length).toBeGreaterThan(100_000);

@@ -110,6 +110,10 @@ export class ProjectsGateway
         if (!isClientMessage(parsed)) throw new Error("invalid message");
         message = parsed;
       } catch {
+        // We initiated this close, so drop the client from its room now instead of
+        // waiting for the adapter's disconnect hook. handleDisconnect is idempotent,
+        // so the later lifecycle call is harmless.
+        this.handleDisconnect(socket);
         socket.close(1003, "Invalid message");
         return;
       }
