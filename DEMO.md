@@ -11,7 +11,7 @@ The script for the interview demo. One browser tab, the dev server running, Engl
 
 ## 0:00 The claim (30 s)
 
-Say: "This is Bauwerk, a browser-based building editor I built in three weeks with Claude Code as the primary way code gets produced, with me steering, reviewing and correcting it. The editor is the product; the process is what I want to show you, because it is the job."
+Say: "This is Bauwerk, a browser-based building editor I built in under three days with Claude Code as the primary way code gets produced, with me steering, reviewing and correcting it. The editor is the product; the process is what I want to show you, because it is the job."
 
 Point at the scene: an unrenovated 1905 apartment house in Kreuzberg, on its real plot on the OpenStreetMap ground.
 

@@ -2,7 +2,7 @@
 
 A browser-based 3D building editor for energy consultants, built as an interview demo for the 20° GmbH Full-Stack Engineer role. Draw a footprint, stack storeys, cut windows and doors into exterior and interior walls, derive rooms from the walls, group rooms into heated and unheated zones, put a roof on top, place the building on the map, and read the energy balance, the heat loads, the GEG check and the renovation scenarios live while you edit. Undo anything. Export JSON, IFC4, GeoJSON and a German building report.
 
-Built by Adilzhan Yerzhan in three weeks with Claude Code as the primary way code is produced, reviewed and steered by a human. `DECISIONS.md` logs every place the human overruled the agent; it is part of the deliverable.
+Built by Adilzhan Yerzhan in under three days with Claude Code as the primary way code is produced, reviewed and steered by a human. `DECISIONS.md` logs every place the human overruled the agent; it is part of the deliverable.
 
 ## Numbers
 
