@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Line } from "@react-three/drei";
+import { Object3D } from "three";
 import { bounds } from "@/geometry/polygon";
 import { sunPath } from "@/geometry/sun";
 import { BERLIN_FALLBACK, instantFor, sunAt } from "@/lib/sunTime";
@@ -29,6 +30,7 @@ export function Sun() {
       ),
     [sun.dayOfYear, origin.lat, origin.lon, origin.rotation, centre.x, centre.y, radius], // eslint-disable-line react-hooks/exhaustive-deps
   );
+  const target = useMemo(() => new Object3D(), []);
   if (!sun.enabled) return null;
   const up = position.elevation > 0;
   const pos = sunWorldPosition(
@@ -41,19 +43,22 @@ export function Sun() {
   return (
     <group>
       {up && (
-        <directionalLight
-          position={pos}
-          intensity={1.4 + Math.sin((position.elevation * Math.PI) / 180) * 0.8}
-          color={position.elevation < 10 ? "#ffd2a1" : "#fff6e6"}
-          castShadow
-          shadow-mapSize={[2048, 2048]}
-          shadow-camera-left={-radius}
-          shadow-camera-right={radius}
-          shadow-camera-top={radius}
-          shadow-camera-bottom={-radius}
-          shadow-camera-far={radius * 3}
-          target-position={[centre.x, 0, centre.y]}
-        />
+        <>
+          <primitive object={target} position={[centre.x, 0, centre.y]} />
+          <directionalLight
+            position={pos}
+            target={target}
+            intensity={1.4 + Math.sin((position.elevation * Math.PI) / 180) * 0.8}
+            color={position.elevation < 10 ? "#ffd2a1" : "#fff6e6"}
+            castShadow
+            shadow-mapSize={[2048, 2048]}
+            shadow-camera-left={-radius}
+            shadow-camera-right={radius}
+            shadow-camera-top={radius}
+            shadow-camera-bottom={-radius}
+            shadow-camera-far={radius * 3}
+          />
+        </>
       )}
       {path.length >= 2 && (
         <Line

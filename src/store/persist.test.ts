@@ -41,6 +41,18 @@ describe("persistence", () => {
     expect(restored.getState().building.storeys).toHaveLength(2);
   });
 
+  it("stores only source data and restores files without derived energy", () => {
+    const store = createEditorStore();
+    startPersistence(store);
+    store.getState().setWallThickness(0.42);
+    vi.advanceTimersByTime(400);
+    const saved = JSON.parse(localStorage.getItem("bauwerk.building") ?? "null") as {
+      derived?: unknown;
+    };
+    expect(saved.derived).toBeUndefined();
+    expect(loadBuilding()?.wallThickness).toBe(0.42);
+  });
+
   it("ignores a corrupt autosave", () => {
     localStorage.setItem("bauwerk.building", "{broken");
     expect(loadBuilding()).toBeNull();

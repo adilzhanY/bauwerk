@@ -39,7 +39,7 @@ describe("PDF report", () => {
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ building }),
     });
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toContain("application/pdf");
     expect(res.headers.get("content-disposition")).toMatch(
       /bauwerk-einfamilienhaus-\d{4}-\d{2}-\d{2}\.pdf/,

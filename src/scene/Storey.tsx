@@ -12,6 +12,7 @@ import { prismGeometry } from "./three";
 import { Outline } from "./Outline";
 import type { StoreyDisplay } from "./display";
 import { StoreyHvac } from "./Hvac";
+import { useDisposableGeometry } from "./useDisposableGeometry";
 
 interface Props {
   building: Building;
@@ -34,6 +35,7 @@ export function Storey({ building, storey, elevation, active, display, ghostOpac
     () => prismGeometry(building.footprint, elevation - SLAB, elevation),
     [building.footprint, elevation],
   );
+  useDisposableGeometry(slab);
   const zones = useMemo(() => new Map(building.zones.map((z) => [z.id, z])), [building.zones]);
 
   return (
@@ -91,7 +93,7 @@ export function Storey({ building, storey, elevation, active, display, ghostOpac
         const onWall = openingsOn(storey.openings, index, true);
         const wall = interiorWallAsWall(segment, index, storey.height);
         return (
-          <group key={`${segment.a.x},${segment.a.y},${segment.b.x},${segment.b.y}`}>
+          <group key={index}>
             <InteriorWall
               storeyId={storey.id}
               index={index}
@@ -126,7 +128,14 @@ export function Storey({ building, storey, elevation, active, display, ghostOpac
           </group>
         );
       })}
-      <StoreyHvac building={building} storey={storey} elevation={elevation} active={active} />
+      <StoreyHvac
+        building={building}
+        storey={storey}
+        elevation={elevation}
+        active={active}
+        display={display}
+        ghostOpacity={ghostOpacity}
+      />
       {storey.rooms.map((room) => (
         <Room
           key={room.id}
@@ -136,6 +145,7 @@ export function Storey({ building, storey, elevation, active, display, ghostOpac
           elevation={elevation}
           active={active}
           display={display}
+          ghostOpacity={ghostOpacity}
         />
       ))}
     </group>

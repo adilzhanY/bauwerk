@@ -44,6 +44,10 @@ describe("CustomSegmented", () => {
     expect(within(group).getByRole("radio", { name: "Current" }).getAttribute("tabindex")).toBe(
       "0",
     );
+    fireEvent.keyDown(within(group).getByRole("radio", { name: "Current" }), { key: "End" });
+    expect(within(group).getByRole("radio", { name: "Plan" }).getAttribute("aria-checked")).toBe(
+      "true",
+    );
   });
 
   it("icon-only mode keeps the accessible name", () => {

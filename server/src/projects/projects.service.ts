@@ -2,7 +2,7 @@ import { EventEmitter } from "node:events";
 import { randomUUID } from "node:crypto";
 import { Inject, Injectable } from "@nestjs/common";
 import type { Pool } from "pg";
-import { validateBuilding } from "@/geometry/export";
+import { EXPORT_VERSION, fromJson } from "@/geometry/export";
 import type { ImportError } from "@/geometry/export";
 import type { Building } from "@/geometry/types";
 import { DB } from "../db";
@@ -49,6 +49,15 @@ const toRecord = (r: Row): ProjectRecord => ({
   updatedAt: r.updated_at.toISOString(),
 });
 
+function parseBuilding(
+  value: unknown,
+): { ok: true; building: Building } | { ok: false; error: ImportError } {
+  const result = fromJson(
+    JSON.stringify({ format: "bauwerk", version: EXPORT_VERSION, building: value }),
+  );
+  return result.ok ? result : { ok: false, error: result.error };
+}
+
 @Injectable()
 export class ProjectsService {
   /** Emits "updated" with a ProjectUpdated after every accepted write. */
@@ -74,9 +83,10 @@ export class ProjectsService {
     return row ? toRecord(row) : null;
   }
 
-  async create(building: Building, actor: string): Promise<WriteResult> {
-    const error = validateBuilding(building);
-    if (error) return { ok: false, reason: "invalid", error };
+  async create(input: unknown, actor: string): Promise<WriteResult> {
+    const parsed = parseBuilding(input);
+    if (!parsed.ok) return { ok: false, reason: "invalid", error: parsed.error };
+    const building = parsed.building;
     const id = randomUUID();
     const client = await this.pool.connect();
     try {
@@ -108,12 +118,13 @@ export class ProjectsService {
    */
   async update(
     id: string,
-    building: Building,
+    input: unknown,
     baseVersion: number,
     actor: string,
   ): Promise<WriteResult> {
-    const error = validateBuilding(building);
-    if (error) return { ok: false, reason: "invalid", error };
+    const parsed = parseBuilding(input);
+    if (!parsed.ok) return { ok: false, reason: "invalid", error: parsed.error };
+    const building = parsed.building;
     const client = await this.pool.connect();
     try {
       await client.query("BEGIN");

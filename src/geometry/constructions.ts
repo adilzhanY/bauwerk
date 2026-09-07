@@ -67,7 +67,7 @@ const presetDefs: Record<
     de: "Bodenplatte, gedämmt",
   },
   roofBare: { category: "roof", uValue: 1.47, en: "Roof, uninsulated", de: "Dach, ungedämmt" },
-  roofInsulated: { category: "roof", uValue: 0.2, en: "Roof, insulated", de: "Dach, gedämmt" },
+  roofInsulated: { category: "roof", uValue: 0.16, en: "Roof, insulated", de: "Dach, gedämmt" },
 };
 
 /**
@@ -167,8 +167,6 @@ export function defaultConstructions(language: "en" | "de"): Construction[] {
     return c;
   });
 }
-
-export const MATERIALS = materials;
 
 /** Default assignment for a building that has no energy data yet: the uninsulated stock. */
 export const DEFAULT_ASSIGNMENT = {

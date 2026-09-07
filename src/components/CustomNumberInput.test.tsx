@@ -58,13 +58,35 @@ describe("CustomNumberInput", () => {
     fireEvent.change(input, { target: { value: "0,9" } });
     fireEvent.keyDown(input, { key: "Escape" });
     fireEvent.blur(input);
-    expect(input.value).toBe("0,9"); // live commit already happened at 0.9 (in range)
+    expect(input.value).toBe("0,3");
     fireEvent.focus(input);
     fireEvent.keyDown(input, { key: "ArrowDown" });
-    expect(input.value).toBe("0,85");
+    expect(input.value).toBe("0,25");
     fireEvent.keyDown(input, { key: "ArrowUp", shiftKey: true });
-    expect(input.value).toBe("1");
+    expect(input.value).toBe("0,75");
     fireEvent.keyDown(input, { key: "Enter" });
+  });
+
+  it("preserves values whose step needs six decimal places", () => {
+    const onChange = vi.fn();
+    render(
+      <CustomNumberInput
+        label="Latitude"
+        value={52.520008}
+        min={-90}
+        max={90}
+        step={0.000001}
+        language="en"
+        slider={false}
+        onChange={onChange}
+      />,
+    );
+    const input = screen.getByLabelText<HTMLInputElement>("Latitude");
+    expect(input.value).toBe("52.520008");
+    fireEvent.focus(input);
+    fireEvent.blur(input);
+    expect(input.value).toBe("52.520008");
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it("scrubbing on the label changes the value by pixels moved, one gesture", () => {

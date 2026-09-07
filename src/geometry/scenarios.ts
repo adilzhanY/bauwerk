@@ -9,9 +9,10 @@ import type { Building, Construction, ConstructionCategory, Scenario } from "./t
  * construction each category uses, the thermal bridge detailing, and optionally
  * the roof. A change to the baseline flows into every variant.
  *
- * Costs are rough gross prices per square metre of element for the German
- * market in 2025, in the range of the BKI Baukosten index and public renovation
- * cost guides; they are starting points a consultant replaces, marked as such.
+ * Costs are rough gross prices for the German market in 2025, per square metre
+ * of element for walls, roof, floor and windows and per piece for doors, in the
+ * range of the BKI Baukosten index and public renovation cost guides; they are
+ * starting points a consultant replaces, marked as such.
  * Saving per year is the heating demand difference times an energy price.
  */
 
@@ -30,7 +31,10 @@ export interface ScenarioResult {
   demandSaved: number;
 }
 
-/** €/m² installed, by construction preset id. Unknown ids cost the category default. */
+/**
+ * Installed cost by construction preset id: €/m² of element for walls, roof, floor
+ * and windows, € per door. Unknown ids cost the category default.
+ */
 export const CONSTRUCTION_COST: Record<string, number> = {
   c_wall_insulated: 180,
   c_wall_1970: 120,
@@ -40,6 +44,7 @@ export const CONSTRUCTION_COST: Record<string, number> = {
   c_glazing_double: 500,
   c_door_insulated: 2200,
 };
+/** Fallback cost per category, same units as CONSTRUCTION_COST (€/m², doors € per piece). */
 export const CATEGORY_DEFAULT_COST: Record<ConstructionCategory, number> = {
   wall: 170,
   roof: 190,

@@ -4,7 +4,7 @@ import type { RawData } from "ws";
 import { Pool } from "pg";
 import type { INestApplication } from "@nestjs/common";
 import { WebSocket } from "ws";
-import { exampleHouse } from "@/lib/examples";
+import { exampleHouse, exampleTower } from "@/lib/examples";
 import { resetIds } from "@/lib/ids";
 import type { Building } from "@/geometry/types";
 import { createApp } from "../app";
@@ -78,6 +78,17 @@ describe("REST", () => {
     expect(res.status).toBe(422);
     const body = (await res.json()) as { detail: { code: string } };
     expect(body.detail.code).toBe("openingsOverlap");
+  });
+
+  it("rejects a missing building cleanly and accepts a valid body over 100 KB", async () => {
+    const missing = await json("POST", "/projects", {});
+    expect(missing.status).toBe(400);
+    expect(await missing.json()).toMatchObject({ message: { error: "buildingRequired" } });
+
+    const tower = exampleTower("en");
+    expect(JSON.stringify({ building: tower }).length).toBeGreaterThan(100_000);
+    const large = await json("POST", "/projects", { building: tower });
+    expect(large.status).toBe(201);
   });
 
   it("accepts a write with the right base version and returns 409 with the current state otherwise", async () => {
@@ -216,5 +227,23 @@ describe("WebSocket", () => {
     const p3 = (await a.next()) as { actors: { actor: string }[] };
     expect(p3.actors.map((x) => x.actor)).toEqual(["alice"]);
     a.socket.close();
+  });
+
+  it("closes malformed clients and removes empty rooms", async () => {
+    const created = await service.create(house(), "setup");
+    if (!created.ok) throw new Error("create failed");
+    const id = created.project.id;
+    const client = await connect(id, "alice");
+    await client.next();
+    expect(app.get(ProjectsGateway).roomSize(id)).toBe(1);
+
+    const closed = new Promise<number>((resolve) => {
+      client.socket.on("close", (code) => {
+        resolve(code);
+      });
+    });
+    client.socket.send(JSON.stringify({ type: "join", actor: 42 }));
+    expect(await closed).toBe(1003);
+    expect(app.get(ProjectsGateway).roomSize(id)).toBe(0);
   });
 });

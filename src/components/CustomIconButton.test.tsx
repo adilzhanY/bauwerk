@@ -3,14 +3,14 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { CustomIconButton } from "./CustomIconButton";
 
 describe("CustomIconButton", () => {
-  it("takes its accessible name from the label and shows the key hint in the tooltip", () => {
+  it("takes its accessible name and tooltip from the label", () => {
     render(
-      <CustomIconButton label="Measure" hint="6">
+      <CustomIconButton label="Measure">
         <svg />
       </CustomIconButton>,
     );
     const b = screen.getByRole("button", { name: "Measure" });
-    expect(b.getAttribute("title")).toBe("Measure (6)");
+    expect(b.getAttribute("title")).toBe("Measure");
   });
 
   it("is a toggle when pressed is given", () => {

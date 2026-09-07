@@ -189,8 +189,8 @@ function StoreyList() {
           {active && (
             <div className="flex items-center gap-1 px-1">
               <span className="font-num min-w-0 flex-1 truncate text-xs text-muted">
-                {formatMetres(active.height, language)} · {active.rooms.length}{" "}
-                {t("storey.rooms").toLowerCase()}
+                {formatMetres(active.height, language)} ·{" "}
+                {t("storey.roomCount", { n: active.rooms.length })}
               </span>
               <CustomIconButton
                 label={t("storey.moveDown")}
@@ -324,7 +324,7 @@ function ZoneList() {
                   setActiveZone(zone.id);
                   select({ kind: "zone", id: zone.id });
                 }}
-                aria-pressed={active}
+                aria-pressed={selected}
                 className={cx(
                   "flex w-full items-center gap-2 border-l-2 px-2 py-1.5 text-left text-sm",
                   selected ? "border-select bg-paper" : "border-transparent hover:bg-panel-2",

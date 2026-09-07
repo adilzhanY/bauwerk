@@ -44,7 +44,9 @@ export type SyncStatus = "connecting" | "online" | "offline" | "error";
 
 export class SyncClient {
   private version = 0;
+  private lastLocalVersion = 0;
   private pending: Building | null = null;
+  private deferredRemote: ProjectResponse | null = null;
   private inFlight = false;
   private applying = false;
   private socket: WebSocket | null = null;
@@ -86,6 +88,7 @@ export class SyncClient {
     }
     const project = (await res.json()) as ProjectResponse;
     this.version = project.version;
+    this.lastLocalVersion = project.version;
     this.apply(project.building);
     this.store.getState().setProjectId(this.config.projectId);
 
@@ -136,9 +139,10 @@ export class SyncClient {
     const building = this.pending;
     this.pending = null;
     this.inFlight = true;
+    let outcome: "accepted" | "superseded" | "rejected";
     try {
-      await this.write(building, 0);
-      this.setStatus("online");
+      outcome = await this.write(building, 0);
+      if (outcome !== "rejected") this.setStatus("online");
     } catch {
       // Network failure: keep the newest building pending and retry later.
       this.pending ??= building;
@@ -150,6 +154,11 @@ export class SyncClient {
       this.inFlight = false;
     }
     this.reconnectDelay = this.config.retryMs ?? 1000;
+    const remote = this.deferredRemote;
+    if (outcome === "accepted" && !this.hasPending() && remote !== null) {
+      this.deferredRemote = null;
+      if (remote.version > this.lastLocalVersion) this.apply(remote.building);
+    }
     // A change may have been queued while the request was in flight.
     if (this.hasPending()) void this.flush();
   }
@@ -158,7 +167,10 @@ export class SyncClient {
     return this.pending !== null;
   }
 
-  private async write(building: Building, attempt: number): Promise<void> {
+  private async write(
+    building: Building,
+    attempt: number,
+  ): Promise<"accepted" | "superseded" | "rejected"> {
     const res = await this.fetchImpl(`${this.config.apiUrl}/projects/${this.config.projectId}`, {
       method: "PUT",
       headers: { "content-type": "application/json", "x-actor": this.config.actor },
@@ -166,29 +178,26 @@ export class SyncClient {
     });
     if (res.status === 200) {
       const project = (await res.json()) as ProjectResponse;
-      this.version = project.version;
-      return;
+      this.version = Math.max(this.version, project.version);
+      this.lastLocalVersion = Math.max(this.lastLocalVersion, project.version);
+      return "accepted";
     }
     if (res.status === 409) {
       const body = (await res.json()) as { current: ProjectResponse };
-      this.version = body.current.version;
+      this.version = Math.max(this.version, body.current.version);
+      if (!this.deferredRemote || body.current.version > this.deferredRemote.version) {
+        this.deferredRemote = body.current;
+      }
       // Someone else's write landed first. Take it, then put our change on top,
       // unless a newer local change is already waiting, which supersedes ours.
-      if (this.pending) {
-        this.apply(body.current.building);
-        return;
-      }
-      if (attempt >= 1) {
-        this.apply(body.current.building);
-        return;
-      }
-      await this.write(building, attempt + 1);
-      return;
+      if (this.pending) return "superseded";
+      if (attempt >= 2) throw new Error("Write conflicted repeatedly");
+      return this.write(building, attempt + 1);
     }
     if (res.status === 422) {
       // The server refused the building as invalid; keep the local state, report it.
       this.setStatus("error");
-      return;
+      return "rejected";
     }
     throw new Error(`Write failed: ${res.status}`);
   }
@@ -236,11 +245,22 @@ export class SyncClient {
       case "update":
         if (message.actor === this.config.actor) {
           this.version = Math.max(this.version, message.version);
+          this.lastLocalVersion = Math.max(this.lastLocalVersion, message.version);
           return;
         }
         if (message.version > this.version) {
           this.version = message.version;
-          this.apply(message.building);
+          if (this.inFlight || this.pending) {
+            if (!this.deferredRemote || message.version > this.deferredRemote.version) {
+              this.deferredRemote = {
+                id: this.config.projectId,
+                version: message.version,
+                building: message.building,
+              };
+            }
+          } else {
+            this.apply(message.building);
+          }
         }
         return;
       case "presence": {

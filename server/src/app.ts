@@ -20,7 +20,9 @@ export async function createApp(
   await ensureSchema(pool);
   const app = await NestFactory.create<NestExpressApplication>(createAppModule(pool), {
     logger: options.logger === false ? false : ["log", "warn", "error"],
+    bodyParser: false,
   });
+  app.useBodyParser("json", { limit: "5mb" });
   app.useWebSocketAdapter(new WsAdapter(app));
   app.enableCors({ origin: true, exposedHeaders: ["ETag"] });
   if (clientServed()) app.useStaticAssets(DIST);

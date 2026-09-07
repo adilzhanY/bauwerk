@@ -50,6 +50,14 @@ describe("constrainWalk", () => {
     expect(blocked.y).toBeGreaterThan(0);
   });
 
+  it("lets a walker who is already outside move back toward the building", () => {
+    const recovering = constrainWalk(building, storey, { x: 2, y: -2 }, { x: 2, y: -1.8 }, 0.3);
+    expect(recovering).toEqual({ x: 2, y: -1.8 });
+
+    const movingAway = constrainWalk(building, storey, { x: 2, y: -2 }, { x: 2, y: -2.2 }, 0.3);
+    expect(movingAway).toEqual({ x: 2, y: -2 });
+  });
+
   it("keeps a body radius away from interior walls", () => {
     const p = constrainWalk(building, storey, { x: 3, y: 4 }, { x: 3.9, y: 4 }, 0.3);
     expect(Math.abs(p.x - 4)).toBeGreaterThanOrEqual(BODY_RADIUS - 1e-9);

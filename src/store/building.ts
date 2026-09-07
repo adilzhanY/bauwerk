@@ -4,6 +4,7 @@ import { resizeRectangle } from "@/geometry/box";
 import {
   buildingCentre,
   rotateBuilding,
+  rotatePoint,
   translateBuilding,
   translatePoint,
 } from "@/geometry/transform";
@@ -46,7 +47,7 @@ import { localizeBuilding } from "@/i18n/localizeBuilding";
 import { loadBuilding, loadLanguage, loadTheme } from "@/lib/storage";
 import type { Language } from "@/i18n";
 import { createId } from "@/lib/ids";
-import { history } from "./history";
+import { clampUiState, history } from "./history";
 import type { HistorySlice } from "./history";
 
 export type Theme = "light" | "dark" | "system";
@@ -298,6 +299,13 @@ function refreshAllRooms(building: Building, language: Language): void {
   for (const storey of building.storeys) refreshRooms(storey, building.footprint, language);
 }
 
+function transformProposal(proposal: FootprintProposal, transform: (point: Vec2) => Vec2): void {
+  proposal.footprint = proposal.footprint.map(transform);
+  for (const wall of proposal.interiorWalls) {
+    wall.segment = { a: transform(wall.segment.a), b: transform(wall.segment.b) };
+  }
+}
+
 export function createEditorStore(initial?: Partial<EditorState>) {
   return create<EditorStore>()(
     history(
@@ -337,7 +345,12 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           setFootprintVertex: (index, position) => {
             set((state) => {
               if (index < 0 || index >= state.building.footprint.length) return;
-              state.building.footprint[index] = { x: position.x, y: position.y };
+              if (!Number.isFinite(position.x) || !Number.isFinite(position.y)) return;
+              const next = state.building.footprint.map((point, pointIndex) =>
+                pointIndex === index ? { x: position.x, y: position.y } : point,
+              );
+              if (!isSimplePolygon(next) || !isCounterClockwise(next)) return;
+              state.building.footprint = next;
               refreshAllRooms(state.building, state.language);
             });
           },
@@ -563,23 +576,17 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           translateBuilding: (delta) => {
             set((state) => {
               state.building = translateBuilding(state.building, delta);
-              if (state.proposal) {
-                state.proposal.footprint = state.proposal.footprint.map((p) =>
-                  translatePoint(p, delta),
-                );
-                for (const w of state.proposal.interiorWalls) {
-                  w.segment = {
-                    a: translatePoint(w.segment.a, delta),
-                    b: translatePoint(w.segment.b, delta),
-                  };
-                }
-              }
+              if (state.proposal)
+                transformProposal(state.proposal, (point) => translatePoint(point, delta));
             });
           },
 
           rotateBuilding: (degrees) => {
             set((state) => {
+              const centre = buildingCentre(state.building);
               state.building = rotateBuilding(state.building, degrees);
+              if (state.proposal)
+                transformProposal(state.proposal, (point) => rotatePoint(point, centre, degrees));
             });
           },
 
@@ -595,6 +602,10 @@ export function createEditorStore(initial?: Partial<EditorState>) {
                 x: -centre.x,
                 y: -centre.y,
               });
+              if (state.proposal) {
+                const delta = { x: -centre.x, y: -centre.y };
+                transformProposal(state.proposal, (point) => translatePoint(point, delta));
+              }
             });
           },
 
@@ -607,7 +618,11 @@ export function createEditorStore(initial?: Partial<EditorState>) {
 
           setFootprint: (footprint, origin) => {
             set((state) => {
-              if (!isSimplePolygon(footprint)) return;
+              if (
+                !footprint.every((point) => Number.isFinite(point.x) && Number.isFinite(point.y)) ||
+                !isSimplePolygon(footprint)
+              )
+                return;
               state.building.footprint = ensureCounterClockwise(footprint);
               if (origin) state.building.origin = { ...origin };
               for (const storey of state.building.storeys) storey.openings = [];
@@ -683,8 +698,12 @@ export function createEditorStore(initial?: Partial<EditorState>) {
                   o.interior && o.wallIndex > index ? { ...o, wallIndex: o.wallIndex - 1 } : o,
                 );
               refreshRooms(storey, state.building.footprint, state.language);
-              if (state.selection?.kind === "interiorWall" && state.selection.index === index) {
-                state.selection = null;
+              if (
+                state.selection?.kind === "interiorWall" &&
+                state.selection.storeyId === storeyId
+              ) {
+                if (state.selection.index === index) state.selection = null;
+                else if (state.selection.index > index) state.selection.index -= 1;
               }
             });
           },
@@ -842,10 +861,15 @@ export function createEditorStore(initial?: Partial<EditorState>) {
           loadBuilding: (next) => {
             set((state) => {
               state.building = localizeBuilding(next, state.language);
-              state.activeStoreyId = next.storeys[0]?.id ?? null;
-              state.activeZoneId = next.zones[0]?.id ?? null;
+              state.activeStoreyId = state.building.storeys[0]?.id ?? null;
+              state.activeZoneId = null;
               state.selection = null;
               state.hovered = null;
+              state.renovatedView = false;
+              state.viewScenarioId = null;
+              state.underlay = null;
+              state.measurement = null;
+              state.proposal = null;
             });
           },
 
@@ -1022,10 +1046,10 @@ export function createEditorStore(initial?: Partial<EditorState>) {
             // withoutHistory and future belong to the history slice wrapped around this initializer.
             (get() as unknown as EditorStore).withoutHistory(() => {
               set((state) => {
-                state.building = localizeBuilding(building, state.language);
-                if (!state.building.storeys.some((s) => s.id === state.activeStoreyId)) {
-                  state.activeStoreyId = state.building.storeys[0]?.id ?? null;
-                }
+                const next = localizeBuilding(building, state.language);
+                const ui = clampUiState(next, state);
+                state.building = next;
+                Object.assign(state, ui);
                 (state as unknown as { future: Building[] }).future = [];
               });
             });

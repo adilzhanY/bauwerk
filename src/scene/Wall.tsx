@@ -11,8 +11,9 @@ import type { StoreyDisplay } from "./display";
 import { sameSelection, useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
 import { useHover } from "./hover";
-import { mergeAll, prismGeometry } from "./three";
+import { mergeAll, meshRaycast, noRaycast, prismGeometry } from "./three";
 import { placeRadiatorFromWallClick } from "./tools/placeRadiator";
+import { useDisposableGeometry } from "./useDisposableGeometry";
 
 interface Props {
   storeyId: Id;
@@ -45,7 +46,6 @@ export function Wall({
   const select = useEditorStore((s) => s.select);
   const tool = useEditorStore((s) => s.tool);
   const addOpening = useEditorStore((s) => s.addOpening);
-  const setActiveStorey = useEditorStore((s) => s.setActiveStorey);
   const hover = useHover(target, active);
 
   // Memoised by a hash of the inputs: the wall quad, height and the openings on it.
@@ -55,6 +55,7 @@ export function Wall({
     return mergeAll(prisms.map((p) => prismGeometry(p.plan, p.bottom, p.top)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hash]);
+  useDisposableGeometry(geometry);
 
   // Place on pointer up after a short pointer down on the same wall. R3F's synthetic
   // click only fires for objects hit at pointer down and can be lost to a stale
@@ -73,9 +74,7 @@ export function Wall({
     act(e);
   };
   const act = (e: ThreeEvent<PointerEvent>) => {
-    // A click on another storey's wall makes that storey active first, so placing
-    // an opening on the ground floor works while the first floor is active.
-    if (!active) setActiveStorey(storeyId);
+    if (!active) return;
     if (tool === "opening") {
       e.stopPropagation();
       const kind = e.nativeEvent.shiftKey ? "door" : "window";
@@ -108,6 +107,10 @@ export function Wall({
       position={[0, elevation, 0]}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
+      onPointerCancel={() => {
+        down.current = null;
+      }}
+      raycast={active ? meshRaycast : noRaycast}
       castShadow
       receiveShadow
       {...hover}

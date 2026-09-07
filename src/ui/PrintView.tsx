@@ -11,13 +11,13 @@ import type { MessageKey } from "@/i18n";
 import { useEditorStore } from "@/store/building";
 import { LayerSection, LayerTable } from "./LayerSection";
 import { buildRoof, roofOf } from "@/geometry/roof";
-import { ENERGY_PRICE_PER_KWH, buildRoadmap } from "@/geometry/scenarios";
+import { ENERGY_PRICE_PER_KWH, buildRoadmap, evaluateAll } from "@/geometry/scenarios";
 
 /*
   The report is a document, not an interface. It follows the conventions of
   German building documents: plain sans type, black hairlines, grey field
   labels over white value boxes, a numbered section order, the energy scale
-  from A+ to H with kWh/(m²·a) ticks. No rounded corners, no shadows, no colour
+  from A+ to H with kWh/(m²a) ticks. No rounded corners, no shadows, no colour
   outside the scale. Numbers, dates and times use German conventions whatever
   the interface language: 1.234,5 and 05.09.2026, 18:04.
 */
@@ -28,13 +28,13 @@ const num = (v: number, digits = 1) =>
 const dateTime = (d: Date) =>
   `${new Intl.DateTimeFormat(DE, { day: "2-digit", month: "2-digit", year: "numeric" }).format(d)}, ${new Intl.DateTimeFormat(DE, { hour: "2-digit", minute: "2-digit", hour12: false }).format(d)}`;
 
-/** Upper bound of each class on the scale in kWh/(m²a); H is open ended and drawn to 300. */
-
 export function PrintView() {
   const t = useT();
   const building = useEditorStore((s) => s.building);
   const energy = computeEnergy(building);
-  const renovated = computeEnergy(building, { renovated: true });
+  const renovated =
+    evaluateAll(building).find((result) => result.scenario.id === "full-envelope")?.energy ??
+    energy;
   const now = new Date();
 
   return (
@@ -236,7 +236,7 @@ function Roadmap({ building }: { building: Building }) {
             <th style={{ width: "8%" }}>{t("scenarios.yearHeader")}</th>
             <th>{t("scenarios.measure")}</th>
             <th className="r">{t("energy.energyClass")}</th>
-            <th className="r">kWh/(m²·a)</th>
+            <th className="r">kWh/(m²a)</th>
             <th className="r">{t("scenarios.demandSaved")} [kWh/a]</th>
             <th className="r">{t("scenarios.investment")} [€]</th>
             <th className="r">{t("scenarios.cumulative")} [€]</th>
@@ -342,8 +342,8 @@ function GegTable({ building }: { building: Building }) {
           <tr>
             <th>{t("energy.construction")}</th>
             <th>{t("print.element")}</th>
-            <th className="r">U [W/(m²·K)]</th>
-            <th className="r">{t("geg.limit")} [W/(m²·K)]</th>
+            <th className="r">U [W/(m²K)]</th>
+            <th className="r">{t("geg.limit")} [W/(m²K)]</th>
             <th className="r">{t("geg.result")}</th>
           </tr>
         </thead>
@@ -391,7 +391,7 @@ function ConstructionLayers({ building }: { building: Building }) {
             }}
           >
             <span>{c.name}</span>
-            <span>U = {num(c.uValue, 3)} W/(m²·K)</span>
+            <span>U = {num(c.uValue, 3)} W/(m²K)</span>
           </div>
           <div
             style={{
@@ -425,13 +425,16 @@ function BuildingFields({ building, energy }: { building: Building; energy: Ener
   const c = (id: string) => findConstruction(building.constructions, id);
   const construction = (id: string) => {
     const x = c(id);
-    return x ? `${x.name} (U = ${num(x.uValue, 2)} W/(m²·K))` : "";
+    return x ? `${x.name} (U = ${num(x.uValue, 2)} W/(m²K))` : "";
   };
   const origin = building.origin;
   const location = origin
     ? (() => {
         const u = toUtm(origin);
-        return `${num(origin.lat, 6)}° N, ${num(origin.lon, 6)}° E · UTM ${u.zone}N ${num(u.easting, 0)} E ${num(u.northing, 0)} N (EPSG:${epsgForZone(u.zone)})`;
+        const latitude = `${num(Math.abs(origin.lat), 6)}° ${origin.lat >= 0 ? "N" : "S"}`;
+        const longitude = `${num(Math.abs(origin.lon), 6)}° ${origin.lon >= 0 ? "E" : "W"}`;
+        const hemisphere = u.north ? "N" : "S";
+        return `${latitude}, ${longitude} · UTM ${u.zone}${hemisphere} ${num(u.easting, 0)} E ${num(u.northing, 0)} N (EPSG:${epsgForZone(u.zone)})`;
       })()
     : t("print.notGiven");
   const height = building.storeys.reduce((s, x) => s + x.height, 0);
@@ -464,12 +467,12 @@ function EnergyTable({ current, renovated }: { current: EnergySummary; renovated
   const t = useT();
   const rows: [MessageKey, (e: EnergySummary) => string][] = [
     ["energy.transmissionLoss", (e) => `${num(e.transmissionLoss, 1)} W/K`],
-    ["energy.specificTransmissionLoss", (e) => `${num(e.specificTransmissionLoss, 2)} W/(m²·K)`],
+    ["energy.specificTransmissionLoss", (e) => `${num(e.specificTransmissionLoss, 2)} W/(m²K)`],
     ["energy.ventilationLoss", (e) => `${num(e.ventilationLoss, 1)} W/K`],
     ["energy.solarGains", (e) => `${num(e.solarGains, 0)} kWh/a`],
     ["energy.internalGains", (e) => `${num(e.internalGains, 0)} kWh/a`],
     ["energy.heatingDemand", (e) => `${num(e.heatingDemand, 0)} kWh/a`],
-    ["energy.specificHeatingDemand", (e) => `${num(e.specificHeatingDemand, 0)} kWh/(m²·a)`],
+    ["energy.specificHeatingDemand", (e) => `${num(e.specificHeatingDemand, 0)} kWh/(m²a)`],
     ["energy.energyClass", (e) => e.energyClass],
   ];
   return (
@@ -494,7 +497,6 @@ function EnergyTable({ current, renovated }: { current: EnergySummary; renovated
   );
 }
 
-/** The A+ to H scale with kWh/(m²·a) ticks and two markers, current above and renovated below. */
 function ElementsTable({ energy }: { energy: EnergySummary }) {
   const t = useT();
   const categoryKey: Record<string, MessageKey> = {
@@ -525,8 +527,8 @@ function ElementsTable({ energy }: { energy: EnergySummary }) {
       <thead>
         <tr>
           <th>{t("print.element")}</th>
-          <th className="r">U [W/(m²·K)]</th>
-          <th className="r">A [m²]</th>
+          <th className="r">U [W/(m²K)]</th>
+          <th className="r">{t("print.heatTransferArea")} [m²]</th>
           <th className="r">U·A [W/K]</th>
           <th className="r">{t("print.share")}</th>
         </tr>
@@ -535,8 +537,8 @@ function ElementsTable({ energy }: { energy: EnergySummary }) {
         {rows.map((r) => (
           <tr key={`${r.category}-${r.uValue}`}>
             <td>{t(categoryKey[r.category] ?? "category.wall")}</td>
-            <td className="r">{num(r.uValue, 2)}</td>
-            <td className="r">{num(r.area, 2)}</td>
+            <td className="r">{r.category === "bridge" ? "" : num(r.uValue, 2)}</td>
+            <td className="r">{r.category === "bridge" ? "" : num(r.area, 2)}</td>
             <td className="r">{num(r.loss, 1)}</td>
             <td className="r">{total > 0 ? `${num((r.loss / total) * 100, 0)} %` : ""}</td>
           </tr>

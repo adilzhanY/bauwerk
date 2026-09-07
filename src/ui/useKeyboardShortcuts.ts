@@ -19,6 +19,12 @@ function inTextField(target: EventTarget | null): boolean {
   return tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || target.isContentEditable;
 }
 
+function ownsEditingShortcut(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const role = target.getAttribute("role");
+  return ["slider", "combobox", "checkbox", "switch", "radio", "tab"].includes(role ?? "");
+}
+
 /**
  * Ctrl+Z undo, Ctrl+Shift+Z or Ctrl+Y redo, Delete removes the selection,
  * Escape clears it and returns to the select tool, 1 to 8 switch tools,
@@ -27,8 +33,10 @@ function inTextField(target: EventTarget | null): boolean {
 export function useKeyboardShortcuts() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented) return;
       const s = useEditorStore.getState();
       const mod = e.ctrlKey || e.metaKey;
+      if (inTextField(e.target)) return;
       if (mod && e.key.toLowerCase() === "z") {
         e.preventDefault();
         if (e.shiftKey) s.redo();
@@ -40,8 +48,8 @@ export function useKeyboardShortcuts() {
         s.redo();
         return;
       }
-      if (inTextField(e.target)) return;
       if (e.key === "Delete" || e.key === "Backspace") {
+        if (ownsEditingShortcut(e.target)) return;
         e.preventDefault();
         s.deleteSelection();
         return;
@@ -56,6 +64,7 @@ export function useKeyboardShortcuts() {
       const toolIndex = Number(e.key) - 1;
       const tool = TOOL_ORDER[toolIndex];
       if (!mod && e.key >= "1" && e.key <= "8" && tool) {
+        if (ownsEditingShortcut(e.target)) return;
         s.setTool(tool);
         return;
       }

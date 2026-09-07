@@ -6,8 +6,6 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   label: string;
   pressed?: boolean;
   size?: "sm" | "md";
-  /** Small key hint drawn in the corner, for the tool rail. */
-  hint?: string;
 }
 
 /** Square icon-only button. `pressed` makes it a toggle with aria-pressed. */
@@ -15,7 +13,6 @@ export function CustomIconButton({
   label,
   pressed,
   size = "md",
-  hint,
   className,
   children,
   ...rest
@@ -24,7 +21,7 @@ export function CustomIconButton({
     <button
       type="button"
       aria-label={label}
-      title={hint ? `${label} (${hint})` : label}
+      title={label}
       aria-pressed={pressed}
       className={cx(
         "relative inline-flex shrink-0 items-center justify-center rounded-pill border transition-colors",
@@ -38,14 +35,6 @@ export function CustomIconButton({
       {...rest}
     >
       {children}
-      {hint && (
-        <span
-          aria-hidden
-          className="absolute right-0.5 bottom-0 font-num text-xs leading-none text-muted"
-        >
-          {hint}
-        </span>
-      )}
     </button>
   );
 }

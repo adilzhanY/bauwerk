@@ -6,6 +6,8 @@ import { placeTiles } from "@/geometry/tiles";
 import type { PlacedTile } from "@/geometry/tiles";
 import { OSM_MAX_ZOOM } from "@/geometry/tiles";
 import { useEditorStore } from "@/store/building";
+import { noRaycast } from "./three";
+import { useDisposableGeometry } from "./useDisposableGeometry";
 
 const RADIUS_METRES = 120;
 
@@ -39,8 +41,9 @@ function Tile({ placed, opacity }: { placed: PlacedTile; opacity: number }) {
     loader.setCrossOrigin("anonymous");
   });
   const geometry = useMemo(() => tileGeometry(placed), [placed]);
+  useDisposableGeometry(geometry);
   return (
-    <mesh geometry={geometry} position={[0, 0.002, 0]} raycast={() => null} renderOrder={-1}>
+    <mesh geometry={geometry} position={[0, 0.002, 0]} raycast={noRaycast} renderOrder={-1}>
       <meshBasicMaterial
         map={texture}
         transparent

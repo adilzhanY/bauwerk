@@ -21,6 +21,7 @@ export const OPENING_SNAP = 0.1;
 export const MIN_OPENING_SIZE = 0.1;
 
 export type OpeningError =
+  | "nonFinite"
   | "outsideWallStart"
   | "outsideWallEnd"
   | "tooSmall"
@@ -40,6 +41,20 @@ export interface OpeningContext {
 export function validateOpening(opening: Opening, ctx: OpeningContext): OpeningError[] {
   const errors: OpeningError[] = [];
   const eps = 1e-9;
+  if (
+    ![
+      opening.wallIndex,
+      opening.offset,
+      opening.width,
+      opening.height,
+      opening.sill,
+      ctx.wallLength,
+      ctx.storeyHeight,
+    ].every(Number.isFinite) ||
+    !Number.isInteger(opening.wallIndex)
+  ) {
+    return ["nonFinite"];
+  }
   if (opening.width < MIN_OPENING_SIZE || opening.height < MIN_OPENING_SIZE)
     errors.push("tooSmall");
   if (opening.offset < -eps) errors.push("outsideWallStart");

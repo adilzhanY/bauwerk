@@ -131,7 +131,13 @@ type LegacyBuilding = Omit<
  */
 export function migrate(b: LegacyBuilding, language: "en" | "de"): Building {
   // Layered constructions carry their computed U, whatever the file says.
-  const constructions = (b.constructions ?? defaultConstructions(language)).map(withComputedU);
+  const constructionsById = new Map(
+    defaultConstructions(language).map((construction) => [construction.id, construction]),
+  );
+  for (const construction of b.constructions ?? []) {
+    constructionsById.set(construction.id, withComputedU(construction));
+  }
+  const constructions = [...constructionsById.values()];
   const assignment = {
     wallConstructionId: b.wallConstructionId ?? DEFAULT_ASSIGNMENT.wallConstructionId,
     floorConstructionId: b.floorConstructionId ?? DEFAULT_ASSIGNMENT.floorConstructionId,
@@ -139,11 +145,6 @@ export function migrate(b: LegacyBuilding, language: "en" | "de"): Building {
     windowConstructionId: b.windowConstructionId ?? DEFAULT_ASSIGNMENT.windowConstructionId,
     doorConstructionId: b.doorConstructionId ?? DEFAULT_ASSIGNMENT.doorConstructionId,
   };
-  const complete =
-    b.constructions !== undefined &&
-    b.zones.every((z) => z.heated !== undefined && z.temperature !== undefined) &&
-    b.storeys.every((s) => s.openings.every((o) => o.constructionId !== undefined));
-  if (complete && b.wallConstructionId !== undefined) return { ...(b as Building), constructions };
   return {
     ...b,
     ...assignment,
@@ -153,15 +154,21 @@ export function migrate(b: LegacyBuilding, language: "en" | "de"): Building {
       heated: z.heated ?? true,
       temperature: z.temperature ?? HEATED_TEMPERATURE,
     })),
-    storeys: b.storeys.map((s) => ({
-      ...s,
-      openings: s.openings.map((o) => ({
-        ...o,
-        constructionId:
-          o.constructionId ??
-          (o.kind === "door" ? assignment.doorConstructionId : assignment.windowConstructionId),
-      })),
-    })),
+    storeys: b.storeys.map((s) => {
+      return {
+        ...s,
+        rooms: s.rooms.map((room) => ({
+          ...room,
+          area: Math.round(area(room.polygon) * 1e6) / 1e6,
+        })),
+        openings: s.openings.map((o) => ({
+          ...o,
+          constructionId:
+            o.constructionId ??
+            (o.kind === "door" ? assignment.doorConstructionId : assignment.windowConstructionId),
+        })),
+      };
+    }),
   };
 }
 
@@ -174,6 +181,19 @@ export function validateBuilding(b: Building): ImportError | null {
   }
   if (!(b.wallThickness > 0))
     return { code: "wallThicknessInvalid", path: "building.wallThickness" };
+
+  if (
+    b.origin &&
+    (![b.origin.lat, b.origin.lon, b.origin.rotation].every(Number.isFinite) ||
+      b.origin.lat < -90 ||
+      b.origin.lat > 90 ||
+      b.origin.lon < -180 ||
+      b.origin.lon > 180 ||
+      b.origin.rotation < 0 ||
+      b.origin.rotation >= 360)
+  ) {
+    return { code: "originInvalid", path: "building.origin" };
+  }
 
   if (b.roof) {
     const r = roofOf(b);
@@ -316,6 +336,8 @@ function openingCode(err: ReturnType<typeof validateOpening>[number]): ImportErr
       return "doorNotOnFloor";
     case "tooSmall":
       return "openingTooSmall";
+    case "nonFinite":
+      return "invalidStructure";
   }
 }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame, useThree } from "@react-three/fiber";
 import { PointerLockControls } from "@react-three/drei";
 import { Vector3 } from "three";
@@ -18,6 +18,10 @@ export function Walkthrough() {
   const walking = useEditorStore((s) => s.walkthrough);
   const keys = useRef(new Set<string>());
   const placed = useRef(false);
+  const direction = useRef(new Vector3());
+  const right = useRef(new Vector3());
+  const footprintBounds = useMemo(() => bounds(building.footprint), [building.footprint]);
+  const thickness = effectiveWallThickness(building);
 
   useEffect(() => {
     const pressed = keys.current;
@@ -59,23 +63,23 @@ export function Walkthrough() {
       camera.position.y = elevation + EYE_HEIGHT;
       return;
     }
-    const dir = new Vector3();
+    const dir = direction.current;
     camera.getWorldDirection(dir);
     dir.y = 0;
     dir.normalize();
-    const right = new Vector3(-dir.z, 0, dir.x);
+    right.current.set(-dir.z, 0, dir.x);
     const step = Math.min(dt, 0.05) * SPEED;
     const from = { x: camera.position.x, y: camera.position.z };
     const to = {
-      x: from.x + (dir.x * forward + right.x * strafe) * step,
-      y: from.y + (dir.z * forward + right.z * strafe) * step,
+      x: from.x + (dir.x * forward + right.current.x * strafe) * step,
+      y: from.y + (dir.z * forward + right.current.z * strafe) * step,
     };
-    const { min, max } = bounds(building.footprint);
+    const { min, max } = footprintBounds;
     const clamped = {
       x: Math.min(max.x + 3, Math.max(min.x - 3, to.x)),
       y: Math.min(max.y + 3, Math.max(min.y - 3, to.y)),
     };
-    const p = constrainWalk(building, storey, from, clamped, effectiveWallThickness(building));
+    const p = constrainWalk(building, storey, from, clamped, thickness);
     camera.position.set(p.x, elevation + EYE_HEIGHT, p.y);
   });
 

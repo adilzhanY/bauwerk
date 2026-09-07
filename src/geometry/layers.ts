@@ -32,11 +32,6 @@ export function uValueFromLayers(layers: readonly Layer[], category: Constructio
 export const totalThickness = (layers: readonly Layer[]): number =>
   Math.round(layers.reduce((s, l) => s + l.thickness, 0) * 1e6) / 1e6;
 
-/** A construction's U-value: from its layers when it has them, otherwise the typed value. */
-export function constructionU(c: Construction): number {
-  return c.layers && c.layers.length > 0 ? uValueFromLayers(c.layers, c.category) : c.uValue;
-}
-
 /** Returns the construction with `uValue` brought in line with its layers. */
 export function withComputedU(c: Construction): Construction {
   return c.layers && c.layers.length > 0

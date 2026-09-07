@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { openingsOn, validateOpening } from "@/geometry/openings";
 import type { OpeningError } from "@/geometry/openings";
@@ -39,12 +39,14 @@ const openingErrorKey: Record<OpeningError, MessageKey> = {
   tooTall: "opening.error.tooTall",
   doorNotOnFloor: "opening.error.doorNotOnFloor",
   negativeSill: "opening.error.negativeSill",
+  nonFinite: "opening.error.nonFinite",
 };
 
 type Tab = "properties" | "energy" | "scenarios";
 
 export function RightPanel() {
   const t = useT();
+  const tabsId = useId();
   const selection = useEditorStore((s) => s.selection);
   const [tab, setTab] = useState<Tab>("properties");
   const [lastSelection, setLastSelection] = useState(selection);
@@ -59,6 +61,7 @@ export function RightPanel() {
       className="pointer-events-auto flex h-full min-h-0 flex-col overflow-hidden rounded-card border border-line bg-panel shadow-float"
     >
       <CustomTabs
+        id={tabsId}
         label={t("panel.properties")}
         value={tab}
         tabs={[
@@ -70,19 +73,19 @@ export function RightPanel() {
       />
       <div className="min-h-0 flex-1 overflow-y-auto">
         {tab === "properties" ? (
-          <CustomTabPanel value="properties">
+          <CustomTabPanel id={tabsId} value="properties">
             <CustomSection title={t("panel.properties")} first>
               {selection ? <Properties selection={selection} /> : <BuildingCard />}
             </CustomSection>
           </CustomTabPanel>
         ) : tab === "energy" ? (
-          <CustomTabPanel value="energy">
+          <CustomTabPanel id={tabsId} value="energy">
             <CustomSection title={t("energy.title")} first>
               <EnergyPanel />
             </CustomSection>
           </CustomTabPanel>
         ) : (
-          <CustomTabPanel value="scenarios">
+          <CustomTabPanel id={tabsId} value="scenarios">
             <CustomSection title={t("scenarios.title")} first>
               <ScenariosPanel />
             </CustomSection>
@@ -185,14 +188,15 @@ function RadiatorProperties({ storeyId, id }: { storeyId: string; id: string }) 
   const batch = useBatch();
   const rad = storey?.radiators?.find((r) => r.id === id);
   const edge = rad ? edges(building.footprint)[rad.wallIndex] : undefined;
+  const loads = useMemo(() => roomHeatLoads(building), [building]);
   if (!storey || !rad || !edge) return null;
   const valid = validateRadiator(rad, storey, edge.length);
   const behind = {
-    x: edge.a.x + edge.direction.x * (rad.offset + rad.width / 2) - edge.normal.x * 0.3,
-    y: edge.a.y + edge.direction.y * (rad.offset + rad.width / 2) - edge.normal.y * 0.3,
+    x: edge.a.x + edge.direction.x * (rad.offset + rad.width / 2) - edge.normal.x * 0.05,
+    y: edge.a.y + edge.direction.y * (rad.offset + rad.width / 2) - edge.normal.y * 0.05,
   };
   const room = storey.rooms.find((r) => pointInPolygon(behind, r.polygon));
-  const load = room ? roomHeatLoads(building).find((l) => l.roomId === room.id) : undefined;
+  const load = room ? loads.find((l) => l.roomId === room.id) : undefined;
   const m = t("common.metres");
   const patch = (p: Partial<Omit<Radiator, "id">>) => {
     updateRadiator(storeyId, id, p);
@@ -205,7 +209,7 @@ function RadiatorProperties({ storeyId, id }: { storeyId: string; id: string }) 
           role="alert"
           className="rounded-inner border border-mark bg-mark-soft px-3 py-2 text-xs text-mark"
         >
-          {t("import.error.radiatorInvalid", { path: "" })}
+          {t("hvac.invalid")}
         </p>
       )}
       <CustomNumberInput
@@ -230,6 +234,7 @@ function RadiatorProperties({ storeyId, id }: { storeyId: string; id: string }) 
         step={0.1}
         unit={m}
         language={language}
+        invalid={!valid}
         onChange={(width) => {
           patch({ width });
         }}
@@ -274,7 +279,7 @@ function RadiatorProperties({ storeyId, id }: { storeyId: string; id: string }) 
         </>
       )}
       <RemoveButton
-        label={t("opening.remove").replace(t("opening.window"), t("hvac.radiator"))}
+        label={t("hvac.removeRadiator")}
         onClick={() => {
           removeRadiator(storeyId, id);
         }}
@@ -597,7 +602,16 @@ function WallProperties({ storeyId, wallIndex }: { storeyId: string; wallIndex: 
   const edge = edges(footprint)[wallIndex];
   if (!edge || !storey) return null;
   const onWall = openingsOn(storey.openings, wallIndex);
-  const netArea = edge.length * storey.height - onWall.reduce((a, o) => a + o.width * o.height, 0);
+  const validOpenings = onWall.filter(
+    (opening) =>
+      validateOpening(opening, {
+        wallLength: edge.length,
+        storeyHeight: storey.height,
+        siblings: storey.openings,
+      }).length === 0,
+  );
+  const netArea =
+    edge.length * storey.height - validOpenings.reduce((a, o) => a + o.width * o.height, 0);
   return (
     <>
       <Title>{t("wall.title", { n: wallIndex + 1 })}</Title>
@@ -735,12 +749,14 @@ function OpeningProperties({ storeyId, openingId }: { storeyId: string; openingI
           {...batch}
         />
       )}
-      <ConstructionSelect
-        category={opening.kind}
-        value={opening.constructionId}
-        area={opening.width * opening.height}
-        target={{ kind: "opening", storeyId, id: openingId }}
-      />
+      {!opening.interior && (
+        <ConstructionSelect
+          category={opening.kind}
+          value={opening.constructionId}
+          area={opening.width * opening.height}
+          target={{ kind: "opening", storeyId, id: openingId }}
+        />
+      )}
       <RemoveButton
         label={t("opening.remove")}
         onClick={() => {

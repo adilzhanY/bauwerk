@@ -1,15 +1,18 @@
-import { computeEnergy } from "./energy";
 import {
   AIR_CHANGE_RATE,
   AIR_HEAT_CAPACITY,
   FX_GROUND_FLOOR,
   FX_UNHEATED_ROOM,
+  INTERIOR_WALL_U,
+  computeEnergy,
+  interiorWallPieces,
   isRoomHeated,
+  roofSlopeFactor,
+  roomsAround,
 } from "./energy";
 import { findConstruction } from "./constructions";
 import { openingsOn, validateOpening } from "./openings";
-import { area, distance, edges, pointInPolygon, pointOnSegment } from "./polygon";
-import { buildRoof } from "./roof";
+import { distance, edges, pointInPolygon, pointOnSegment } from "./polygon";
 import type { Building, Radiator, Room, Storey } from "./types";
 
 /**
@@ -18,13 +21,14 @@ import type { Building, Radiator, Room, Storey } from "./types";
  * with θ_in from the zone (20 °C heated) and θ_e = −14 °C, the design outdoor
  * temperature for Berlin in DIN EN 12831 Beiblatt 1. The floor slab counts with
  * F_x = 0.6 and walls to unheated rooms with 0.5, as in the energy balance.
- * Thermal bridges are spread onto the room by floor area share. Radiators are
+ * V is the room's share of the storey's heated volume by floor area, so a heated
+ * attic on the top storey is spread over its rooms and the room loads sum to the
+ * building load. Thermal bridges are spread onto the room by floor area share. Radiators are
  * sized to the room load rounded up to 100 W; the heat pump to the building load
  * with a 1.1 safety factor.
  */
 
 export const DESIGN_OUTDOOR_TEMPERATURE = -14;
-export const INTERIOR_WALL_U = 1.0;
 
 export interface RoomHeatLoad {
   roomId: string;
@@ -79,29 +83,16 @@ export function roomEnvelopeLoss(building: Building, storey: Storey, room: Room)
   }
   const index = building.storeys.findIndex((s) => s.id === storey.id);
   if (index === 0) loss += FX_GROUND_FLOOR * u(building.floorConstructionId) * room.area;
-  if (index === building.storeys.length - 1) {
-    const fpArea = Math.max(1e-9, area(fp));
-    const slope = buildRoof(building, 0).area / fpArea;
-    loss += u(building.roofConstructionId) * room.area * slope;
-  }
-  // Interior walls to unheated rooms.
-  for (const wall of storey.interiorWalls) {
-    const mid = { x: (wall.a.x + wall.b.x) / 2, y: (wall.a.y + wall.b.y) / 2 };
-    const d = { x: wall.b.x - wall.a.x, y: wall.b.y - wall.a.y };
-    const len = Math.hypot(d.x, d.y);
-    if (len < 1e-9) continue;
-    const nrm = { x: -d.y / len, y: d.x / len };
-    const left = { x: mid.x + nrm.x * 0.01, y: mid.y + nrm.y * 0.01 };
-    const right = { x: mid.x - nrm.x * 0.01, y: mid.y - nrm.y * 0.01 };
-    const mine = pointInPolygon(left, room.polygon)
-      ? right
-      : pointInPolygon(right, room.polygon)
-        ? left
-        : null;
-    if (!mine) continue;
-    const other = storey.rooms.find((r) => r.id !== room.id && pointInPolygon(mine, r.polygon));
-    if (other && !isRoomHeated(other, building.zones))
-      loss += FX_UNHEATED_ROOM * INTERIOR_WALL_U * len * storey.height;
+  if (index === building.storeys.length - 1)
+    loss += u(building.roofConstructionId) * room.area * roofSlopeFactor(building);
+  // Interior wall pieces between this room and an unheated neighbour.
+  for (const piece of interiorWallPieces(fp, storey.interiorWalls)) {
+    const between = roomsAround(piece, storey.rooms);
+    if (!between) continue;
+    const other =
+      between[0].id === room.id ? between[1] : between[1].id === room.id ? between[0] : null;
+    if (!other || isRoomHeated(other, building.zones)) continue;
+    loss += FX_UNHEATED_ROOM * INTERIOR_WALL_U * distance(piece.a, piece.b) * storey.height;
   }
   return loss;
 }
@@ -111,6 +102,7 @@ export function roomHeatLoads(building: Building): RoomHeatLoad[] {
   const heatedArea = Math.max(1e-9, energy.heatedFloorArea);
   const out: RoomHeatLoad[] = [];
   for (const storey of building.storeys) {
+    const envelope = energy.storeys.find((s) => s.storeyId === storey.id);
     const radiatorPowerByRoom = new Map<string, number>();
     const es = edges(building.footprint);
     for (const rad of storey.radiators ?? []) {
@@ -129,10 +121,15 @@ export function roomHeatLoads(building: Building): RoomHeatLoad[] {
       if (!isRoomHeated(room, building.zones)) continue;
       const zone = building.zones.find((z) => z.id === room.zoneId);
       const deltaT = (zone?.temperature ?? 20) - DESIGN_OUTDOOR_TEMPERATURE;
-      const envelope = roomEnvelopeLoss(building, storey, room);
-      const ventilation = AIR_HEAT_CAPACITY * AIR_CHANGE_RATE * room.area * storey.height;
+      const transmission = roomEnvelopeLoss(building, storey, room);
+      // The room's share of the storey's heated volume, attic included on the top storey.
+      const volume =
+        envelope && envelope.heatedFloorArea > 0
+          ? envelope.heatedVolume * (room.area / envelope.heatedFloorArea)
+          : room.area * storey.height;
+      const ventilation = AIR_HEAT_CAPACITY * AIR_CHANGE_RATE * volume;
       const bridges = energy.bridgeLoss * (room.area / heatedArea);
-      const load = (envelope + ventilation + bridges) * deltaT;
+      const load = (transmission + ventilation + bridges) * deltaT;
       const installed = radiatorPowerByRoom.get(room.id) ?? 0;
       out.push({
         roomId: room.id,

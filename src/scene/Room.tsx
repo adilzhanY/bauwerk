@@ -1,16 +1,16 @@
 import { useMemo } from "react";
-import { Mesh } from "three";
 import { Html } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
 import { centroid } from "@/geometry/polygon";
 import type { Id, Room as RoomData, Zone } from "@/geometry/types";
-import { colors, INACTIVE_OPACITY } from "@/lib/colors";
+import { colors } from "@/lib/colors";
 import type { StoreyDisplay } from "./display";
 import { formatArea } from "@/lib/format";
 import { sameSelection, useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
 import { useHover } from "./hover";
-import { flatGeometry } from "./three";
+import { flatGeometry, meshRaycast, noRaycast } from "./three";
+import { useDisposableGeometry } from "./useDisposableGeometry";
 
 interface Props {
   storeyId: Id;
@@ -19,18 +19,11 @@ interface Props {
   elevation: number;
   active: boolean;
   display: StoreyDisplay;
+  ghostOpacity: number;
 }
 
-// Passing `undefined` to switch the override off writes undefined onto the mesh and every
-// later pointer event throws inside the raycaster, killing all interaction until reload.
-// Switch between the real Mesh raycast and a no-op instead.
-const meshRaycast: Mesh["raycast"] = function raycast(this: Mesh, raycaster, intersects) {
-  Mesh.prototype.raycast.call(this, raycaster, intersects);
-};
-const noRaycast = () => null;
-
 /** Flat fill on the floor, coloured by zone, with a label facing the camera. */
-export function Room({ storeyId, room, zone, elevation, active, display }: Props) {
+export function Room({ storeyId, room, zone, elevation, active, display, ghostOpacity }: Props) {
   const target: Selection = useMemo(
     () => ({ kind: "room", storeyId, id: room.id }),
     [storeyId, room.id],
@@ -50,6 +43,7 @@ export function Room({ storeyId, room, zone, elevation, active, display }: Props
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [hash, elevation],
   );
+  useDisposableGeometry(geometry);
   const centre = useMemo(() => centroid(room.polygon), [hash]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
@@ -64,11 +58,8 @@ export function Room({ storeyId, room, zone, elevation, active, display }: Props
 
   const fill = zone?.color ?? colors.floor;
   const baseOpacity = zone ? 0.55 : 0.001;
-  const opacity = active
-    ? hovered || selected
-      ? Math.max(baseOpacity, 0.35)
-      : baseOpacity
-    : INACTIVE_OPACITY * (zone ? 1 : 0);
+  const highlightedOpacity = hovered || selected ? Math.max(baseOpacity, 0.35) : baseOpacity;
+  const opacity = display === "ghost" ? highlightedOpacity * ghostOpacity : highlightedOpacity;
 
   if (display === "outline") return null;
   return (

@@ -230,4 +230,66 @@ describe("SyncClient", () => {
     expect(server.building.wallThickness).toBe(0.6);
     vi.useRealTimers();
   });
+
+  it("keeps the newest local state when a remote update races with a conflict", async () => {
+    const server = fakeServer(createDefaultBuilding());
+    let releaseFirstPut: (() => void) | undefined;
+    const firstPut = new Promise<void>((resolve) => {
+      releaseFirstPut = resolve;
+    });
+    let delayed = false;
+    const fetchImpl: typeof fetch = async (input, init) => {
+      if (init?.method === "PUT" && !delayed) {
+        delayed = true;
+        await firstPut;
+      }
+      return server.fetchImpl(input, init);
+    };
+    class FakeSocket {
+      static instance: FakeSocket;
+      readyState = 1;
+      onopen: (() => void) | null = null;
+      onmessage: ((event: { data: string }) => void) | null = null;
+      onclose: (() => void) | null = null;
+      sent: string[] = [];
+      constructor() {
+        FakeSocket.instance = this;
+      }
+      send(message: string) {
+        this.sent.push(message);
+      }
+      close() {
+        this.readyState = 3;
+      }
+    }
+    const client = new SyncClient(store, {
+      apiUrl: "http://x",
+      projectId: "p1",
+      actor: "me",
+      color: "#000000",
+      fetchImpl,
+      webSocketImpl: FakeSocket as unknown as typeof WebSocket,
+    });
+    await client.start();
+    store.getState().setWallThickness(0.4);
+    store.getState().setWallThickness(0.6);
+    server.externalWrite((building) => ({ ...building, name: "Remote" }));
+    FakeSocket.instance.onmessage?.({
+      data: JSON.stringify({
+        type: "update",
+        version: 2,
+        building: server.building,
+        actor: "other",
+      }),
+    });
+    expect(store.getState().building.wallThickness).toBe(0.6);
+
+    releaseFirstPut?.();
+    await flush();
+    await flush();
+    expect(server.building.wallThickness).toBe(0.6);
+    expect(store.getState().building.wallThickness).toBe(0.6);
+    expect(client.currentVersion).toBe(3);
+    client.stop();
+  });
 });

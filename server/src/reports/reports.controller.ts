@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Header,
+  HttpCode,
   Inject,
   NotFoundException,
   Param,
@@ -12,8 +13,7 @@ import {
   ServiceUnavailableException,
 } from "@nestjs/common";
 import type { Request, Response } from "express";
-import { validateBuilding } from "@/geometry/export";
-import type { Building } from "@/geometry/types";
+import { EXPORT_VERSION, fromJson } from "@/geometry/export";
 import { clientServed } from "../app";
 import { ProjectsService } from "../projects/projects.service";
 import { ReportService } from "./report.service";
@@ -28,7 +28,10 @@ const fileName = (name: string) => {
 };
 
 const lang = (q: string | undefined): "en" | "de" => (q === "de" ? "de" : "en");
-const baseUrlOf = (req: Request) => `${req.protocol}://${req.get("host") ?? "127.0.0.1"}`;
+/** Chromium only needs the client served by this process, never an untrusted Host target. */
+const baseUrlOf = (req: Request) => `http://127.0.0.1:${req.socket.localPort}`;
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
 
 @Controller("reports")
 export class ReportsController {
@@ -39,6 +42,7 @@ export class ReportsController {
 
   /** PDF of a stored project. */
   @Post(":projectId")
+  @HttpCode(200)
   @Header("Content-Type", "application/pdf")
   async forProject(
     @Param("projectId") id: string,
@@ -59,21 +63,34 @@ export class ReportsController {
 
   /** PDF of a building sent in the body, for clients that work without a project. */
   @Post()
+  @HttpCode(200)
   @Header("Content-Type", "application/pdf")
   async forBody(
-    @Body() body: { building: Building },
+    @Body() body: unknown,
     @Query("lang") language: string | undefined,
     @Req() req: Request,
     @Res() res: Response,
   ) {
-    const error = validateBuilding(body.building);
-    if (error) {
-      res.status(422).json({ error: "invalid", detail: error });
+    if (!isRecord(body) || !("building" in body)) {
+      res.status(400).json({ error: "buildingRequired" });
+      return;
+    }
+    const parsed = fromJson(
+      JSON.stringify({ format: "bauwerk", version: EXPORT_VERSION, building: body.building }),
+    );
+    if (!parsed.ok) {
+      res.status(parsed.error.code === "invalidStructure" ? 400 : 422).json({
+        error: "invalid",
+        detail: parsed.error,
+      });
       return;
     }
     if (!clientServed()) throw new ServiceUnavailableException("client build not served");
-    const pdf = await this.reports.renderPdf(body.building, lang(language), baseUrlOf(req));
-    res.setHeader("Content-Disposition", `attachment; filename="${fileName(body.building.name)}"`);
+    const pdf = await this.reports.renderPdf(parsed.building, lang(language), baseUrlOf(req));
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${fileName(parsed.building.name)}"`,
+    );
     res.end(pdf);
   }
 }

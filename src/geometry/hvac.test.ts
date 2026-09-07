@@ -81,6 +81,22 @@ describe("roomEnvelopeLoss and roomHeatLoads", () => {
     expect(kw).toBeGreaterThanOrEqual((total * 1.1) / 1000);
     expect(kw * 2).toBe(Math.round(kw * 2));
   });
+
+  it("includes a heated attic in room ventilation loads", () => {
+    const b = building();
+    b.roof = {
+      kind: "gable",
+      pitch: 45,
+      overhang: 0.8,
+      ridgeAxis: "x",
+      parapet: 0,
+      heatedAttic: true,
+    };
+    const energy = computeEnergy(b);
+    expect(energy.heatedVolume).toBeGreaterThan(80 * 3);
+    const total = roomHeatLoads(b).reduce((sum, room) => sum + room.load, 0);
+    expect(total).toBeCloseTo((energy.transmissionLoss + energy.ventilationLoss) * 34, 3);
+  });
 });
 
 describe("validateRadiator", () => {

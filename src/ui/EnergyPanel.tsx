@@ -2,11 +2,11 @@ import { useMemo } from "react";
 import { bestInCategory } from "@/geometry/constructions";
 import { computeEnergy } from "@/geometry/energy";
 import { EnergyScale } from "./EnergyScale";
-import { evaluateAll } from "@/geometry/scenarios";
+import { applyScenario, evaluateAll } from "@/geometry/scenarios";
 import { gegChecks, gegPassCount } from "@/geometry/geg";
 import { cx } from "@/components/cx";
 import type { EnergySummary, Orientation } from "@/geometry/energy";
-import type { ConstructionCategory } from "@/geometry/types";
+import type { Building, ConstructionCategory } from "@/geometry/types";
 import type { BridgeType } from "@/geometry/bridges";
 import { DESIGN_OUTDOOR_TEMPERATURE, roomHeatLoads, suggestHeatPumpPower } from "@/geometry/hvac";
 import { useT } from "@/i18n/useT";
@@ -32,6 +32,10 @@ export function EnergyPanel() {
   const renovated = chosen !== undefined;
   const after = chosen?.energy ?? current;
   const shown = after;
+  const shownBuilding = useMemo(
+    () => (chosen ? applyScenario(building, chosen.scenario) : building),
+    [building, chosen],
+  );
   const saving = current.heatingDemand > 0 ? 1 - after.heatingDemand / current.heatingDemand : 0;
 
   const num = (v: number, digits = 1) => formatNumber(v, language, digits);
@@ -127,8 +131,8 @@ export function EnergyPanel() {
         <CustomReadOnly label={t("energy.heatedVolume")} value={`${num(shown.heatedVolume)} m³`} />
       </div>
 
-      <HeatLoads />
-      <Bridges summary={shown} />
+      <HeatLoads building={shownBuilding} />
+      <Bridges summary={shown} detail={shownBuilding.bridgeDetail ?? "poor"} disabled={renovated} />
       <Orientations summary={shown} />
       <Zones summary={shown} />
       <Assignments />
@@ -149,10 +153,9 @@ function Big({ label, value, unit }: { label: string; value: string; unit: strin
   );
 }
 
-function HeatLoads() {
+function HeatLoads({ building }: { building: Building }) {
   const t = useT();
   const language = useEditorStore((s) => s.language);
-  const building = useEditorStore((s) => s.building);
   const loads = useMemo(() => roomHeatLoads(building), [building]);
   if (loads.length === 0) return null;
   const total = loads.reduce((s, l) => s + l.load, 0);
@@ -160,7 +163,7 @@ function HeatLoads() {
     <div className="flex flex-col gap-1 border-t border-line pt-3">
       <span className="text-xs font-medium text-muted">{t("hvac.title")}</span>
       <p className="text-xs text-muted">
-        {t("hvac.design", { inside: 20, outside: DESIGN_OUTDOOR_TEMPERATURE })}
+        {t("hvac.design", { outside: DESIGN_OUTDOOR_TEMPERATURE })}
       </p>
       {loads.map((l) => (
         <div key={l.roomId} className="flex items-baseline justify-between gap-2 text-xs">
@@ -199,10 +202,17 @@ const bridgeTypeKey: Record<BridgeType, MessageKey> = {
   junction: "bridges.type.junction",
 };
 
-function Bridges({ summary }: { summary: EnergySummary }) {
+function Bridges({
+  summary,
+  detail,
+  disabled,
+}: {
+  summary: EnergySummary;
+  detail: "good" | "poor";
+  disabled: boolean;
+}) {
   const t = useT();
   const language = useEditorStore((s) => s.language);
-  const detail = useEditorStore((s) => s.building.bridgeDetail ?? "poor");
   const setBridgeDetail = useEditorStore((s) => s.setBridgeDetail);
   const types = (Object.keys(summary.bridges.lengths) as BridgeType[]).filter(
     (k) => summary.bridges.lengths[k] > 0,
@@ -213,6 +223,7 @@ function Bridges({ summary }: { summary: EnergySummary }) {
       <CustomSegmented
         label={t("bridges.detail")}
         value={detail}
+        disabled={disabled}
         options={[
           { value: "poor", label: t("bridges.poor") },
           { value: "good", label: t("bridges.good") },

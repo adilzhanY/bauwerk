@@ -90,7 +90,7 @@ export function EnergyScale({ current, compare, compareLabel, variant }: Props) 
             fontSize={classFont}
             fontWeight="600"
             textAnchor="middle"
-            fill="#1b1d20"
+            fill="var(--fixed-ink)"
           >
             {s.c}
           </text>
@@ -126,7 +126,7 @@ export function EnergyScale({ current, compare, compareLabel, variant }: Props) 
         fill={ink}
         opacity="0.7"
       >
-        {"kWh/(m²·a)"}
+        {"kWh/(m²a)"}
       </text>
       {marker(current.specificHeatingDemand, t("energy.scenario.current"), true)}
       {compare &&

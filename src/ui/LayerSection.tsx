@@ -6,13 +6,13 @@ import { formatNumber } from "@/lib/format";
 import type { Language } from "@/i18n";
 
 const fills: Record<MaterialClass, string> = {
-  masonry: "#d9b8a0",
-  concrete: "#b9bcbf",
-  insulation: "#f3e39a",
-  plaster: "#ece7dc",
-  timber: "#d7b783",
-  membrane: "#4a4a4a",
-  other: "#cfd6de",
+  masonry: "var(--layer-masonry)",
+  concrete: "var(--layer-concrete)",
+  insulation: "var(--layer-insulation)",
+  plaster: "var(--layer-plaster)",
+  timber: "var(--layer-timber)",
+  membrane: "var(--layer-membrane)",
+  other: "var(--layer-other)",
 };
 
 interface Props {
@@ -29,6 +29,7 @@ interface Props {
  */
 export function LayerSection({ layers, language, plain = false }: Props) {
   const t = useT();
+  const patternPrefix = useId().replace(/:/g, "");
   const total = layers.reduce((s, l) => s + l.thickness, 0) || 1;
   const w = 320;
   const h = 96;
@@ -52,7 +53,7 @@ export function LayerSection({ layers, language, plain = false }: Props) {
     >
       <defs>
         <pattern
-          id="hatch-masonry"
+          id={`${patternPrefix}-hatch-masonry`}
           width="8"
           height="8"
           patternUnits="userSpaceOnUse"
@@ -60,14 +61,29 @@ export function LayerSection({ layers, language, plain = false }: Props) {
         >
           <line x1="0" y1="0" x2="0" y2="8" stroke={stroke} strokeWidth="0.8" />
         </pattern>
-        <pattern id="hatch-insulation" width="10" height="10" patternUnits="userSpaceOnUse">
+        <pattern
+          id={`${patternPrefix}-hatch-insulation`}
+          width="10"
+          height="10"
+          patternUnits="userSpaceOnUse"
+        >
           <path d="M0 5 Q2.5 0 5 5 T10 5" fill="none" stroke={stroke} strokeWidth="0.8" />
         </pattern>
-        <pattern id="hatch-concrete" width="6" height="6" patternUnits="userSpaceOnUse">
+        <pattern
+          id={`${patternPrefix}-hatch-concrete`}
+          width="6"
+          height="6"
+          patternUnits="userSpaceOnUse"
+        >
           <circle cx="1.5" cy="1.5" r="0.7" fill={stroke} />
           <circle cx="4.5" cy="4.5" r="0.7" fill={stroke} />
         </pattern>
-        <pattern id="hatch-timber" width="8" height="8" patternUnits="userSpaceOnUse">
+        <pattern
+          id={`${patternPrefix}-hatch-timber`}
+          width="8"
+          height="8"
+          patternUnits="userSpaceOnUse"
+        >
           <line x1="0" y1="4" x2="8" y2="4" stroke={stroke} strokeWidth="0.6" />
         </pattern>
       </defs>
@@ -98,7 +114,7 @@ export function LayerSection({ layers, language, plain = false }: Props) {
                 y={bandTop}
                 width={bw}
                 height={bandH}
-                fill={`url(#hatch-${cls})`}
+                fill={`url(#${patternPrefix}-hatch-${cls})`}
                 stroke="none"
               />
             )}
@@ -154,3 +170,4 @@ export function LayerTable({ layers, language }: { layers: readonly Layer[]; lan
     </table>
   );
 }
+import { useId } from "react";

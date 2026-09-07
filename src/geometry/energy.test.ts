@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_ASSIGNMENT, PRESET_IDS, defaultConstructions } from "./constructions";
 import { computeEnergy, energyClass, orientationOf } from "./energy";
 import { lShape, rect } from "./fixtures";
-import { edges } from "./polygon";
+import { edges, pointInPolygon } from "./polygon";
 import { computeRooms } from "./rooms";
 import type { Building, Opening, Segment } from "./types";
 
@@ -133,8 +133,15 @@ describe("computeEnergy on the default 10 by 8 single storey", () => {
     expect(e.elements.some((x) => x.category === "interiorWall")).toBe(true);
 
     const allCold = computeEnergy(building(split, [], zones, { 0: "cold", 1: "cold" }));
-    expect(allCold.transmissionLoss - allCold.bridgeLoss).toBe(0);
+    expect(allCold.heated).toBe(false);
+    expect(allCold.transmissionLoss).toBe(0);
+    expect(allCold.bridgeLoss).toBe(0);
+    expect(allCold.envelopeArea).toBe(0);
     expect(allCold.heatedVolume).toBe(0);
+    expect(allCold.ventilationLoss).toBe(0);
+    expect(allCold.solarGains).toBe(0);
+    expect(allCold.internalGains).toBe(0);
+    expect(allCold.heatingDemand).toBe(0);
   });
 
   it("a window in an unheated room does not count, a window in a heated room does", () => {
@@ -152,6 +159,37 @@ describe("computeEnergy on the default 10 by 8 single storey", () => {
     const base = WALL * 60 + 0.6 * FLOOR * 48 + ROOF * 48 + 12;
     expect(a.transmissionLoss - a.bridgeLoss).toBeCloseTo(base);
     expect(b.transmissionLoss - b.bridgeLoss).toBeCloseTo(base - WALL * 1.68 + 2.8 * 1.68);
+    expect(a.solarGains).toBe(0);
+  });
+
+  it("splits crossing interior walls before measuring heated to cold boundaries", () => {
+    const zones: Building["zones"] = [
+      { id: "cold", name: "Unheated", color: "#000", heated: false, temperature: 10 },
+    ];
+    const walls: Segment[] = [
+      { a: { x: 4, y: 0 }, b: { x: 4, y: 8 } },
+      { a: { x: 0, y: 4 }, b: { x: 10, y: 4 } },
+    ];
+    const b = building(walls, [], zones);
+    const cold = b.storeys[0]!.rooms.find((room) => pointInPolygon({ x: 2, y: 2 }, room.polygon));
+    expect(cold).toBeDefined();
+    cold!.zoneId = "cold";
+    const e = computeEnergy(b);
+    const partitions = e.elements.filter((element) => element.category === "interiorWall");
+    expect(partitions.reduce((sum, element) => sum + element.area, 0)).toBeCloseTo(8 * 3);
+    expect(partitions.reduce((sum, element) => sum + element.loss, 0)).toBeCloseTo(12);
+  });
+
+  it("uses only heated surfaces in the specific transmission denominator", () => {
+    const zones: Building["zones"] = [
+      { id: "cold", name: "Unheated", color: "#000", heated: false, temperature: 10 },
+    ];
+    const split: Segment[] = [{ a: { x: 4, y: 0 }, b: { x: 4, y: 8 } }];
+    const rooms = computeRooms(rect, split, [], factory);
+    const leftIndex = rooms.findIndex((room) => room.area === 32);
+    const e = computeEnergy(building(split, [], zones, { [leftIndex]: "cold" }));
+    expect(e.envelopeArea).toBeCloseTo(60 + 48 + 48);
+    expect(e.specificTransmissionLoss).toBeCloseTo(e.transmissionLoss / e.envelopeArea);
   });
 
   it("per zone breakdown sums to the total", () => {
@@ -219,6 +257,20 @@ describe("roof shape in the energy balance", () => {
       roof: { kind: "gable", pitch: 45, overhang: 0, ridgeAxis: "x", heatedAttic: true },
     });
     expect(attic.heatedVolume).toBeCloseTo(240 + 0.5 * 8 * 4 * 10);
+  });
+
+  it("excludes roof overhang from thermal area and heated attic volume", () => {
+    const without = computeEnergy({
+      ...building(),
+      roof: { kind: "gable", pitch: 40, overhang: 0, ridgeAxis: "x", heatedAttic: true },
+    });
+    const withOverhang = computeEnergy({
+      ...building(),
+      roof: { kind: "gable", pitch: 40, overhang: 2, ridgeAxis: "x", heatedAttic: true },
+    });
+    expect(withOverhang.storeys[0]?.roofArea).toBeCloseTo(without.storeys[0]!.roofArea);
+    expect(withOverhang.heatedVolume).toBeCloseTo(without.heatedVolume);
+    expect(withOverhang.transmissionLoss).toBeCloseTo(without.transmissionLoss);
   });
 });
 

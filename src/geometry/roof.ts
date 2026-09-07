@@ -22,8 +22,10 @@ import type { Building, Roof, Vec2 } from "./types";
  * tan(pitch). This works for any footprint as a folded plate; for a rectangle
  * it is the classic two-plane gable.
  * Hip: only for rectangular footprints (four axis-aligned vertices), where the
- * straight skeleton is two trapezoids and two triangles. Other footprints fall
- * back to a gable, documented in the roof summary.
+ * straight skeleton is two trapezoids and two triangles. The ridge always runs
+ * along the longer side, whatever the ridge axis setting says, since a ridge
+ * along the short side would collapse the hip into a pyramid. Other footprints
+ * fall back to a gable, documented in the roof summary.
  * Flat: the footprint at the top with a parapet band of the given height.
  * Attic volume under a gable or hip is the integral of a piecewise linear
  * height, which for each planar face is its plan area times the height at its
@@ -165,18 +167,20 @@ export function buildRoof(building: Building, topElevation: number): RoofGeometr
   }
   const eaves = offsetPolygon(fp, roof.overhang);
   const tan = Math.tan(rad(roof.pitch));
-  const alongXAxis = roof.ridgeAxis === "x";
-  const useHipRoof = roof.kind === "hip" && isAxisAlignedRectangle(fp);
+  const { min, max } = bounds(eaves);
+  const useHip = roof.kind === "hip" && isAxisAlignedRectangle(fp);
+  // A hip ridge runs along the longer side; a gable follows the setting.
+  const alongX = useHip ? max.x - min.x >= max.y - min.y : roof.ridgeAxis === "x";
   // Cross gable: a rectilinear footprint that is not a rectangle gets one gable per
   // rectangle of its decomposition along the ridge axis, each with its own ridge.
-  if (!useHipRoof && isRectilinear(eaves) && !isAxisAlignedRectangle(eaves)) {
-    const rects = decomposeRectilinear(eaves, alongXAxis ? "x" : "y");
+  if (!useHip && isRectilinear(eaves) && !isAxisAlignedRectangle(eaves)) {
+    const rects = decomposeRectilinear(eaves, alongX ? "x" : "y");
     const faces: RoofFace[] = [];
     const ridges: { a: Vec3; b: Vec3 }[] = [];
     let atticVolume = 0;
     let ridgeHeight = 0;
     for (const r of rects) {
-      const g = gableOverRectangle(r, alongXAxis, tan, topElevation);
+      const g = gableOverRectangle(r, alongX, tan, topElevation);
       faces.push(...g.faces);
       ridges.push(g.ridge);
       atticVolume += g.atticVolume;
@@ -194,10 +198,7 @@ export function buildRoof(building: Building, topElevation: number): RoofGeometr
       atticVolume,
     };
   }
-  const { min, max } = bounds(eaves);
   const centre = { x: (min.x + max.x) / 2, y: (min.y + max.y) / 2 };
-  const useHip = roof.kind === "hip" && isAxisAlignedRectangle(fp);
-  const alongX = roof.ridgeAxis === "x";
   const halfSpan = alongX ? (max.y - min.y) / 2 : (max.x - min.x) / 2;
   const ridgeHeight = halfSpan * tan;
   const zOf = (p: Vec2) => {

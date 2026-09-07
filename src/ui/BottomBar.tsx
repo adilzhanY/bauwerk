@@ -21,26 +21,7 @@ import {
 import { CustomButton } from "@/components/CustomButton";
 import { CustomIconButton } from "@/components/CustomIconButton";
 import { ShortcutSheet } from "./ShortcutSheet";
-
-function fileName(name: string, extension: string): string {
-  const slug =
-    name
-      .toLowerCase()
-      .replace(/[^a-z0-9äöüß]+/g, "-")
-      .replace(/^-|-$/g, "") || "building";
-  const date = new Date().toISOString().slice(0, 10);
-  return `bauwerk-${slug}-${date}.${extension}`;
-}
-
-function download(content: string, name: string, type: string) {
-  const blob = new Blob([content], { type });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = name;
-  a.click();
-  URL.revokeObjectURL(url);
-}
+import { buildingFileName, downloadFile } from "./download";
 
 interface Props {
   actor: { actor: string; color: string } | null;
@@ -61,6 +42,7 @@ export function BottomBar({ actor }: Props) {
   const floorArea = useEditorStore(selectTotalFloorArea);
   const fileInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<ImportError | null>(null);
+  const [ifcError, setIfcError] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
 
   const [ifcResult, setIfcResult] = useState<IfcImportResult | null>(null);
@@ -78,12 +60,8 @@ export function BottomBar({ actor }: Props) {
       });
       if (!res.ok) throw new Error(String(res.status));
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = fileName(building.name, "pdf");
-      a.click();
-      URL.revokeObjectURL(url);
+      downloadFile(blob, buildingFileName(building.name, "pdf"), "application/pdf");
+      setIfcError(null);
     } catch (e) {
       setIfcError(t("bar.pdfFailed", { message: e instanceof Error ? e.message : String(e) }));
     } finally {
@@ -97,6 +75,7 @@ export function BottomBar({ actor }: Props) {
       const result = importIfc(text, language);
       if (result.ok) {
         setError(null);
+        setIfcError(null);
         setIfcResult(result);
       } else {
         setIfcError(t("ifcImport.failed", { message: result.message }));
@@ -106,13 +85,12 @@ export function BottomBar({ actor }: Props) {
     const result = fromJson(text, language);
     if (result.ok) {
       setError(null);
+      setIfcError(null);
       loadBuilding(result.building);
     } else {
       setError(result.error);
     }
   };
-  const [ifcError, setIfcError] = useState<string | null>(null);
-
   return (
     <footer
       aria-label={t("a11y.bottomBar")}
@@ -129,7 +107,11 @@ export function BottomBar({ actor }: Props) {
         variant="quiet"
         icon={<Download size={14} />}
         onClick={() => {
-          download(toJson(building), fileName(building.name, "json"), "application/json");
+          downloadFile(
+            toJson(building),
+            buildingFileName(building.name, "json"),
+            "application/json",
+          );
         }}
       >
         {t("bar.export")}
@@ -138,8 +120,8 @@ export function BottomBar({ actor }: Props) {
         variant="quiet"
         icon={<FileBox size={14} />}
         onClick={() => {
-          const name = fileName(building.name, "ifc");
-          download(toIfc(building, { fileName: name }), name, "application/x-step");
+          const name = buildingFileName(building.name, "ifc");
+          downloadFile(toIfc(building, { fileName: name }), name, "application/x-step");
         }}
       >
         {t("bar.exportIfc")}

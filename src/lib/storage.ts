@@ -1,4 +1,5 @@
-import { fromJson, toJson } from "@/geometry/export";
+import { EXPORT_VERSION, fromJson } from "@/geometry/export";
+import type { ExportFile } from "@/geometry/export";
 import type { Building } from "@/geometry/types";
 import type { Language } from "@/i18n";
 import type { Theme } from "@/store/building";
@@ -33,7 +34,8 @@ export function loadBuilding(): Building | null {
 }
 
 export function saveBuilding(building: Building): void {
-  storage()?.setItem(BUILDING_KEY, toJson(building));
+  const file: ExportFile = { format: "bauwerk", version: EXPORT_VERSION, building };
+  storage()?.setItem(BUILDING_KEY, JSON.stringify(file));
 }
 
 export function clearBuilding(): void {

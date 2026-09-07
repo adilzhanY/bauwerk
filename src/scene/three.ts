@@ -1,5 +1,6 @@
 import type { BufferGeometry } from "three";
-import { ExtrudeGeometry, Shape, ShapeGeometry, Vector2 } from "three";
+import { ExtrudeGeometry, Mesh, Shape, ShapeGeometry, Vector2 } from "three";
+import { LineSegments2 } from "three-stdlib";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import type { Vec2 } from "@/geometry/types";
 
@@ -36,6 +37,21 @@ export function mergeAll(geometries: BufferGeometry[]): BufferGeometry {
   for (const g of geometries) g.dispose();
   return merged;
 }
+
+/** Explicit raycast functions used when a mesh changes between interactive and inert. */
+export const meshRaycast: Mesh["raycast"] = function raycast(this: Mesh, raycaster, intersects) {
+  Mesh.prototype.raycast.call(this, raycaster, intersects);
+};
+
+export const noRaycast = () => undefined;
+
+export const lineRaycast: LineSegments2["raycast"] = function raycast(
+  this: LineSegments2,
+  raycaster,
+  intersects,
+) {
+  LineSegments2.prototype.raycast.call(this, raycaster, intersects);
+};
 
 /** Rotation about Y that turns local +X into the plan direction (dx, dy). */
 export const yawFor = (direction: Vec2): number => Math.atan2(-direction.y, direction.x);

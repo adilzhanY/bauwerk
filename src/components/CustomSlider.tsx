@@ -16,7 +16,6 @@ interface Props {
   onGestureEnd?: () => void;
   /** Formats the value bubble. */
   format?: (value: number) => string;
-  id?: string;
 }
 
 import { snapToStep } from "./snap";
@@ -37,10 +36,8 @@ export function CustomSlider({
   onGestureStart,
   onGestureEnd,
   format,
-  id: givenId,
 }: Props) {
-  const autoId = useId();
-  const id = givenId ?? autoId;
+  const id = useId();
   const track = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(false);
   const gesture = useRef(false);

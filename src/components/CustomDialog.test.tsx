@@ -27,4 +27,15 @@ describe("CustomDialog", () => {
     fireEvent.click(dialog);
     expect(onClose).toHaveBeenCalledTimes(2);
   });
+
+  it("leaves Escape in a text field for that field to handle", () => {
+    const onClose = vi.fn();
+    render(
+      <CustomDialog title="Rename" closeLabel="Close" onClose={onClose}>
+        <input aria-label="Name" />
+      </CustomDialog>,
+    );
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Name" }), { key: "Escape" });
+    expect(onClose).not.toHaveBeenCalled();
+  });
 });

@@ -1,3 +1,14 @@
+FROM node:22-alpine AS client-build
+WORKDIR /repo
+COPY package.json package-lock.json ./
+RUN npm ci --legacy-peer-deps
+COPY index.html tsconfig.json tsconfig.app.json tsconfig.node.json vite.config.ts ./
+COPY public ./public
+COPY src ./src
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+RUN npm run build
+
 # Built from the repository root so the server can import src/geometry.
 # Playwright needs a glibc image with its browser dependencies.
 FROM mcr.microsoft.com/playwright:v1.63.0-noble
@@ -9,7 +20,7 @@ COPY server/migrations ./migrations
 COPY server/src ./src
 COPY src /repo/src
 # The built client is printed to PDF by the report endpoint.
-COPY dist /repo/dist
+COPY --from=client-build /repo/dist /repo/dist
 ENV PORT=3000
 EXPOSE 3000
 CMD ["npx", "tsx", "src/main.ts"]

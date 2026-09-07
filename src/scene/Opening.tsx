@@ -12,6 +12,7 @@ import { pointOnVertical } from "./tools/plane";
 import { useDragLock } from "./tools/useDragLock";
 import { snapOffset } from "@/geometry/openings";
 import { dot, sub } from "@/geometry/polygon";
+import { meshRaycast, noRaycast } from "./three";
 
 interface Props {
   storeyId: Id;
@@ -49,7 +50,6 @@ export function Opening({
   const select = useEditorStore((s) => s.select);
   const tool = useEditorStore((s) => s.tool);
   const updateOpening = useEditorStore((s) => s.updateOpening);
-  const setActiveStorey = useEditorStore((s) => s.setActiveStorey);
   const hover = useHover(target, active);
   const lock = useDragLock();
   const [dragOffset, setDragOffset] = useState<number | null>(null);
@@ -64,8 +64,8 @@ export function Opening({
 
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > 6) return;
+    if (!active) return;
     e.stopPropagation();
-    if (!active) setActiveStorey(storeyId);
     select(target);
   };
 
@@ -93,7 +93,7 @@ export function Opening({
     if (next !== null) setDragOffset(next);
   };
 
-  const onPointerUp = (e: ThreeEvent<PointerEvent>) => {
+  const finishDrag = (e: ThreeEvent<PointerEvent>, commit: boolean) => {
     try {
       (e.target as Element).releasePointerCapture(e.pointerId);
     } catch {
@@ -101,7 +101,9 @@ export function Opening({
     }
     if (dragOffset === null) return;
     lock(false);
-    if (dragOffset !== opening.offset) updateOpening(storeyId, opening.id, { offset: dragOffset });
+    if (commit && dragOffset !== opening.offset) {
+      updateOpening(storeyId, opening.id, { offset: dragOffset });
+    }
     setDragOffset(null);
   };
 
@@ -117,8 +119,13 @@ export function Opening({
       onClick={onClick}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      onPointerUp={(e) => {
+        finishDrag(e, true);
+      }}
+      onPointerCancel={(e) => {
+        finishDrag(e, false);
+      }}
+      raycast={active ? meshRaycast : noRaycast}
       {...hover}
     >
       {opening.kind === "door" ? (

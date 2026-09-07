@@ -8,6 +8,7 @@ export interface TabItem<V extends string> {
 }
 
 interface Props<V extends string> {
+  id: string;
   label: string;
   value: V;
   tabs: readonly TabItem<V>[];
@@ -15,13 +16,23 @@ interface Props<V extends string> {
 }
 
 /** Tab list with roving focus. The panel is the caller's, linked by id. */
-export function CustomTabs<V extends string>({ label, value, tabs, onChange }: Props<V>) {
-  const index = tabs.findIndex((t) => t.value === value);
+export function CustomTabs<V extends string>({ id, label, value, tabs, onChange }: Props<V>) {
+  const selectedIndex = tabs.findIndex((t) => t.value === value);
+  const index = selectedIndex < 0 ? 0 : selectedIndex;
   const onKeyDown = (e: KeyboardEvent) => {
-    const delta = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-    if (delta === 0) return;
+    const nextIndex =
+      e.key === "Home"
+        ? 0
+        : e.key === "End"
+          ? tabs.length - 1
+          : e.key === "ArrowRight"
+            ? (index + 1) % tabs.length
+            : e.key === "ArrowLeft"
+              ? (index - 1 + tabs.length) % tabs.length
+              : -1;
+    if (nextIndex < 0) return;
     e.preventDefault();
-    const next = tabs[(index + delta + tabs.length) % tabs.length];
+    const next = tabs[nextIndex];
     if (next) {
       onChange(next.value);
       (
@@ -38,10 +49,10 @@ export function CustomTabs<V extends string>({ label, value, tabs, onChange }: P
             key={t.value}
             type="button"
             role="tab"
-            id={`tab-${t.value}`}
+            id={`${id}-tab-${t.value}`}
             aria-selected={selected}
-            aria-controls={`panel-${t.value}`}
-            tabIndex={selected ? 0 : -1}
+            aria-controls={`${id}-panel-${t.value}`}
+            tabIndex={selected || (selectedIndex < 0 && tabs[0] === t) ? 0 : -1}
             onClick={() => {
               onChange(t.value);
             }}
@@ -60,12 +71,20 @@ export function CustomTabs<V extends string>({ label, value, tabs, onChange }: P
   );
 }
 
-export function CustomTabPanel({ value, children }: { value: string; children: ReactNode }) {
+export function CustomTabPanel({
+  id,
+  value,
+  children,
+}: {
+  id: string;
+  value: string;
+  children: ReactNode;
+}) {
   return (
     <div
       role="tabpanel"
-      id={`panel-${value}`}
-      aria-labelledby={`tab-${value}`}
+      id={`${id}-panel-${value}`}
+      aria-labelledby={`${id}-tab-${value}`}
       className="flex flex-col"
     >
       {children}

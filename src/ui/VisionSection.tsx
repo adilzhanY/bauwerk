@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ScanLine } from "lucide-react";
 import { useT } from "@/i18n/useT";
 import type { MessageKey } from "@/i18n";
@@ -20,7 +20,15 @@ export function VisionSection() {
   const acceptProposal = useEditorStore((s) => s.acceptProposal);
   const { state, run, reset } = useVision();
   const [minConfidence, setMinConfidence] = useState(0.6);
-  const [skew, setSkew] = useState(0);
+
+  // Move the worker result into the store once it arrives.
+  useEffect(() => {
+    if (state.status !== "done" || !state.proposal || proposal) return;
+    setProposal({
+      footprint: state.proposal.footprint,
+      interiorWalls: state.proposal.interiorWalls.map((w) => ({ ...w, enabled: true })),
+    });
+  }, [proposal, setProposal, state.proposal, state.status]);
 
   if (!underlay) return null;
   const running = state.status === "loading" || state.status === "running";
@@ -32,16 +40,6 @@ export function VisionSection() {
       minConfidence,
     ).then(() => undefined);
   };
-
-  // Move the worker result into the store once it arrives.
-  if (state.status === "done" && state.proposal && !proposal) {
-    setProposal({
-      footprint: state.proposal.footprint,
-      interiorWalls: state.proposal.interiorWalls.map((w) => ({ ...w, enabled: true })),
-    });
-    setSkew(state.proposal.skewDegrees);
-    reset();
-  }
 
   return (
     <div className="flex flex-col gap-3 border-t border-line pt-3">
@@ -81,7 +79,7 @@ export function VisionSection() {
             {t("vision.found", {
               corners: proposal.footprint.length,
               walls: proposal.interiorWalls.length,
-              skew: formatNumber(skew, language, 1),
+              skew: formatNumber(state.proposal?.skewDegrees ?? 0, language, 1),
             })}
           </p>
           <ul className="flex flex-col gap-1">
@@ -98,13 +96,20 @@ export function VisionSection() {
             ))}
           </ul>
           <div className="flex gap-2">
-            <CustomButton variant="primary" onClick={acceptProposal}>
+            <CustomButton
+              variant="primary"
+              onClick={() => {
+                acceptProposal();
+                reset();
+              }}
+            >
               {t("vision.accept")}
             </CustomButton>
             <CustomButton
               variant="quiet"
               onClick={() => {
                 setProposal(null);
+                reset();
               }}
             >
               {t("vision.discard")}

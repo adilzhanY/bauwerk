@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
-import { useEditorStore } from "@/store/building";
+import { sameSelection, useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
 
 /**
@@ -26,11 +26,22 @@ export function useHover(target: Selection | null, enabled = true) {
     [flush],
   );
 
+  useEffect(() => {
+    if (enabled) return;
+    const current = useEditorStore.getState().hovered;
+    const queued = pending.current;
+    if (sameSelection(current, target) || (queued !== undefined && sameSelection(queued, target))) {
+      schedule(null);
+    }
+  }, [enabled, schedule, target]);
+
   useEffect(
     () => () => {
       if (frame.current !== null) cancelAnimationFrame(frame.current);
+      const current = useEditorStore.getState().hovered;
+      if (sameSelection(current, target)) setHovered(null);
     },
-    [],
+    [setHovered, target],
   );
 
   const onPointerOver = useCallback(
@@ -42,9 +53,8 @@ export function useHover(target: Selection | null, enabled = true) {
     [enabled, schedule, target],
   );
   const onPointerOut = useCallback(() => {
-    if (!enabled) return;
     schedule(null);
-  }, [enabled, schedule]);
+  }, [schedule]);
 
   return { onPointerOver, onPointerOut };
 }

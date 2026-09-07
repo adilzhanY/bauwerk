@@ -99,6 +99,17 @@ describe("toJson and fromJson", () => {
     });
   });
 
+  it("recomputes stored room areas from their polygons", () => {
+    const raw = JSON.parse(toJson(sample())) as {
+      building: { storeys: { rooms: { area: number }[] }[] };
+    };
+    raw.building.storeys[0]!.rooms[0]!.area = 999;
+    const result = fromJson(JSON.stringify(raw));
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.building.storeys[0]?.rooms[0]?.area).toBe(32);
+  });
+
   it("rejects a JSON with an overlapping opening with the right message", () => {
     const b = sample();
     const storey = b.storeys[0];
@@ -189,6 +200,18 @@ describe("validateBuilding", () => {
     h.storeys[1]!.height = -1;
     expect(validateBuilding(h)?.code).toBe("storeyHeightInvalid");
   });
+
+  it("rejects locations outside geographic and rotation ranges", () => {
+    expect(
+      validateBuilding({ ...sample(), origin: { lat: 91, lon: 13.4, rotation: 0 } })?.code,
+    ).toBe("originInvalid");
+    expect(
+      validateBuilding({ ...sample(), origin: { lat: 52.5, lon: 181, rotation: 0 } })?.code,
+    ).toBe("originInvalid");
+    expect(
+      validateBuilding({ ...sample(), origin: { lat: 52.5, lon: 13.4, rotation: 360 } })?.code,
+    ).toBe("originInvalid");
+  });
 });
 
 describe("migration of files without energy data", () => {
@@ -230,6 +253,24 @@ describe("migration of files without energy data", () => {
     expect(result.building.zones[0]?.heated).toBe(true);
     expect(result.building.storeys[0]?.openings[0]?.constructionId).toBe(PRESET_IDS.doorOld);
     expect(result.building.storeys[0]?.openings[1]?.constructionId).toBe(PRESET_IDS.glazingDouble);
+  });
+
+  it("completes a partially migrated construction catalogue and assignments", () => {
+    const raw = JSON.parse(toJson(sample())) as {
+      building: {
+        constructions: { id: string }[];
+        floorConstructionId?: string;
+      };
+    };
+    raw.building.constructions = raw.building.constructions.filter(
+      (construction) => construction.id !== PRESET_IDS.floorBare,
+    );
+    delete raw.building.floorConstructionId;
+    const result = fromJson(JSON.stringify(raw), "en");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.building.floorConstructionId).toBe(PRESET_IDS.floorBare);
+    expect(result.building.constructions.some((c) => c.id === PRESET_IDS.floorBare)).toBe(true);
   });
 
   it("rejects an opening that points to a missing construction", () => {

@@ -288,9 +288,44 @@ describe("UI state and history", () => {
     store.getState().clearSelection();
     expect(store.getState().past).toHaveLength(1);
   });
+
+  it("clears model references that no longer exist after undo and redo", () => {
+    store.getState().addStorey();
+    const second = store.getState().activeStoreyId ?? "";
+    const zone = store.getState().addZone("Office", "#ff0000");
+    const scenario = store.getState().addScenario("Insulation");
+    store.getState().setActiveZone(zone);
+    store.getState().setViewScenario(scenario);
+    store.getState().select({ kind: "storey", id: second });
+    store.getState().setHovered({ kind: "storey", id: second });
+
+    store.getState().undo();
+    expect(store.getState().viewScenarioId).toBeNull();
+    store.getState().undo();
+    expect(store.getState().activeZoneId).toBeNull();
+    store.getState().undo();
+    expect(store.getState().activeStoreyId).toBe(storeyId());
+    expect(store.getState().selection).toBeNull();
+    expect(store.getState().hovered).toBeNull();
+  });
 });
 
 describe("store behaviour", () => {
+  it("rejects footprint edits that make the polygon invalid", () => {
+    const before = structuredClone(store.getState().building.footprint);
+    store.getState().setFootprintVertex(1, { x: 0, y: 8 });
+    expect(store.getState().building.footprint).toEqual(before);
+    store.getState().setFootprintVertex(1, { x: Number.NaN, y: 0 });
+    expect(store.getState().building.footprint).toEqual(before);
+    store.getState().setFootprint([
+      { x: 0, y: 0 },
+      { x: Number.POSITIVE_INFINITY, y: 0 },
+      { x: 0, y: 1 },
+    ]);
+    expect(store.getState().building.footprint).toEqual(before);
+    expect(store.getState().past).toHaveLength(0);
+  });
+
   it("translates the building and re-centres the origin onto it", () => {
     store.getState().setOrigin({ lat: 52.5, lon: 13.4, rotation: 0 });
     store.getState().translateBuilding({ x: 10, y: 0 });
@@ -327,6 +362,50 @@ describe("store behaviour", () => {
     expect(openings).toHaveLength(2);
     expect(openings.find((o) => o.id === kept)?.wallIndex).toBe(0);
     expect(openings.find((o) => !o.interior)?.wallIndex).toBe(0);
+  });
+
+  it("adjusts only an interior wall selection on the affected storey", () => {
+    const first = storeyId();
+    store.getState().addInteriorWall(first, { a: { x: 3, y: 0 }, b: { x: 3, y: 8 } });
+    store.getState().addInteriorWall(first, { a: { x: 6, y: 0 }, b: { x: 6, y: 8 } });
+    store.getState().select({ kind: "interiorWall", storeyId: first, index: 1 });
+    store.getState().removeInteriorWall(first, 0);
+    expect(store.getState().selection).toEqual({ kind: "interiorWall", storeyId: first, index: 0 });
+
+    store.getState().addStorey();
+    const second = store.getState().activeStoreyId ?? "";
+    store.getState().addInteriorWall(second, { a: { x: 4, y: 0 }, b: { x: 4, y: 8 } });
+    store.getState().select({ kind: "interiorWall", storeyId: second, index: 0 });
+    store.getState().removeInteriorWall(first, 0);
+    expect(store.getState().selection).toEqual({
+      kind: "interiorWall",
+      storeyId: second,
+      index: 0,
+    });
+  });
+
+  it("resets document scoped UI after loading a building", () => {
+    store.getState().setUnderlay({
+      url: "data:image/png;base64,x",
+      widthMetres: 10,
+      aspect: 1,
+      x: 0,
+      y: 0,
+      opacity: 0.5,
+    });
+    store.getState().setMeasurement({ a: { x: 0, y: 0 }, b: { x: 1, y: 1 } });
+    store.getState().setProposal({ footprint: [], interiorWalls: [] });
+    store.getState().setRenovatedView(true);
+    store.getState().loadBuilding(exampleAltbau("en"));
+    const state = store.getState();
+    expect(state.activeZoneId).toBeNull();
+    expect(state.selection).toBeNull();
+    expect(state.hovered).toBeNull();
+    expect(state.renovatedView).toBe(false);
+    expect(state.viewScenarioId).toBeNull();
+    expect(state.underlay).toBeNull();
+    expect(state.measurement).toBeNull();
+    expect(state.proposal).toBeNull();
   });
   it("derives rooms when interior walls change and keeps names", () => {
     const sid = storeyId();
@@ -630,6 +709,23 @@ describe("history batching", () => {
     store.getState().endBatch();
     expect(store.getState().past).toHaveLength(0);
   });
+
+  it("keeps a nested batch open until its outer batch ends", () => {
+    store.getState().beginBatch();
+    store.getState().setWallThickness(0.4);
+    store.getState().beginBatch();
+    store.getState().setWallThickness(0.45);
+    store.getState().endBatch();
+    store.getState().setWallThickness(0.5);
+    expect(store.getState().past).toHaveLength(1);
+    store.getState().endBatch();
+    store.getState().setWallThickness(0.55);
+    expect(store.getState().past).toHaveLength(2);
+    store.getState().undo();
+    expect(store.getState().building.wallThickness).toBe(0.5);
+    store.getState().undo();
+    expect(store.getState().building.wallThickness).toBe(0.3);
+  });
 });
 
 describe("layer actions", () => {
@@ -680,6 +776,28 @@ describe("roof", () => {
 });
 
 describe("footprint proposal", () => {
+  it("keeps a pending proposal aligned through rotation and recentering", () => {
+    store.getState().translateBuilding({ x: 10, y: 5 });
+    store.getState().setProposal({
+      footprint: structuredClone(store.getState().building.footprint),
+      interiorWalls: [
+        {
+          segment: { a: { x: 15, y: 5 }, b: { x: 15, y: 13 } },
+          confidence: 1,
+          enabled: true,
+        },
+      ],
+    });
+    store.getState().rotateBuilding(90);
+    expect(store.getState().proposal?.footprint).toEqual(store.getState().building.footprint);
+    store.getState().recentreOrigin();
+    expect(store.getState().proposal?.footprint).toEqual(store.getState().building.footprint);
+    expect(store.getState().proposal?.interiorWalls[0]?.segment).toEqual({
+      a: { x: 4, y: 0 },
+      b: { x: -4, y: 0 },
+    });
+  });
+
   it("acceptProposal replaces footprint and walls of the active storey in one undo step", () => {
     const sid = storeyId();
     store.getState().addInteriorWall(sid, { a: { x: 2, y: 0 }, b: { x: 2, y: 8 } });

@@ -1,8 +1,10 @@
-import { bridgeDetailOf, summarizeBridges } from "./bridges";
+import { bridgeDetailOf, emptyBridgeSummary, summarizeBridges } from "./bridges";
 import type { BridgeSummary } from "./bridges";
 import { bestInCategory, findConstruction } from "./constructions";
 import { buildRoof, roofOf } from "./roof";
-import { solarGains } from "./sun";
+import type { RoofGeometry } from "./roof";
+import { clipSegmentToPolygon, splitSegments } from "./rooms";
+import { GAIN_UTILISATION, solarGains } from "./sun";
 import { openingsOn, validateOpening } from "./openings";
 import { area, edges, pointInPolygon, pointOnSegment, sub, distance } from "./polygon";
 import type { Edge } from "./polygon";
@@ -12,6 +14,7 @@ import type {
   ConstructionCategory,
   Opening,
   Room,
+  Segment,
   Storey,
   Vec2,
   Zone,
@@ -34,7 +37,9 @@ import type {
  * net air volume. Solar gains come from ./sun.ts, thermal bridges from ./bridges.ts.
  * Interior walls between a heated and an unheated room count with a fixed U of
  * 1.0 W/(m²K). Rooms without a zone count as heated. The reference climate is the
- * German one, so the result does not change with the site.
+ * German one and does not change with the site; the orientation of the windows
+ * does, through the geo placement's rotation, so the solar gains follow the site.
+ * A storey without rooms counts as fully heated.
  */
 
 export const AIR_HEAT_CAPACITY = 0.34; // Wh/(m³K)
@@ -43,7 +48,6 @@ export const AIR_CHANGE_RATE = 0.5; // 1/h
 export const HEATING_DEGREE_HOURS = 66; // kKh per year
 /** Internal gains per square metre of heated floor area over the heating period. */
 export const INTERNAL_GAINS_PER_M2 = 22; // kWh/(m²a)
-export const GAINS_UTILISATION = 0.95;
 export const INTERIOR_WALL_U = 1.0; // W/(m²K)
 /** Temperature correction factors F_x, EnEV Annex 1 table 1. */
 export const FX_GROUND_FLOOR = 0.6;
@@ -88,6 +92,7 @@ export interface EnergySummary {
   /** Σ ψ·l, already included in transmissionLoss. */
   bridgeLoss: number;
   bridges: BridgeSummary;
+  /** H_T divided by the heat-transferring envelope area (walls, openings, floor, roof). */
   specificTransmissionLoss: number;
   ventilationLoss: number;
   /** Usable solar gains through windows over the heating period, kWh/a. */
@@ -97,6 +102,8 @@ export interface EnergySummary {
   /** Losses times degree hours minus usable gains, never below zero. */
   heatingDemand: number;
   specificHeatingDemand: number;
+  /** False when no room is heated; the demand is then zero and the class is not meaningful. */
+  heated: boolean;
   energyClass: EnergyClass;
   elements: ElementLoss[];
   /** Per zone: heated floor area and transmission loss through its envelope. */
@@ -219,11 +226,13 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
   let transmission = 0;
   let heatedVolume = 0;
   let heatedFloorArea = 0;
+  const heatedWindowsByOrientation: Record<Orientation, number> = { N: 0, E: 0, S: 0, W: 0 };
 
   building.storeys.forEach((storey, storeyIndex) => {
     const env = emptyEnvelope(storey.id);
     const heatedRooms = storey.rooms.filter((r) => isRoomHeated(r, building.zones));
-    env.heatedFloorArea = heatedRooms.reduce((s, r) => s + r.area, 0);
+    env.heatedFloorArea =
+      storey.rooms.length === 0 ? footprintArea : heatedRooms.reduce((s, r) => s + r.area, 0);
     env.heatedVolume = env.heatedFloorArea * storey.height;
     heatedFloorArea += env.heatedFloorArea;
     heatedVolume += env.heatedVolume;
@@ -258,6 +267,7 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
         } else env.doorArea += a;
         const heated = storey.rooms.length === 0 || inSpans(o.offset + o.width / 2, spans);
         if (!heated) continue;
+        if (o.kind === "window") heatedWindowsByOrientation[orientation] += a;
         const u = uOf(pick(o.constructionId, o.kind));
         transmission += u * a;
         elements.push({
@@ -293,7 +303,7 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
 
     if (storeyIndex === 0) {
       env.floorArea = footprintArea;
-      const heated = storey.rooms.length === 0 ? footprintArea : env.heatedFloorArea;
+      const heated = env.heatedFloorArea;
       const floorLoss = FX_GROUND_FLOOR * floorU * heated;
       transmission += floorLoss;
       if (heated > 0)
@@ -310,11 +320,12 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
       for (const r of heatedRooms) addZone(r.zoneId ?? null, r.area, 0);
     }
     if (storeyIndex === building.storeys.length - 1) {
-      // The roof's true sloped area, scaled to the heated share of the plan.
-      const roofGeo = buildRoof(building, 0);
-      const slope = footprintArea > 0 ? roofGeo.area / footprintArea : 1;
+      // The roof's true sloped area over the footprint (the overhang is outside the
+      // thermal envelope), scaled to the heated share of the plan.
+      const roofGeo = thermalRoof(building);
+      const slope = roofSlopeFactor(building, roofGeo);
       env.roofArea = roofGeo.area;
-      const heatedPlan = storey.rooms.length === 0 ? footprintArea : env.heatedFloorArea;
+      const heatedPlan = env.heatedFloorArea;
       const heated = heatedPlan * slope;
       transmission += roofU * heated;
       if (heated > 0) {
@@ -334,8 +345,9 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
       }
     }
 
-    // Interior walls between heated and unheated rooms.
-    for (const wall of storey.interiorWalls) {
+    // Interior walls between heated and unheated rooms, piece by piece: a drawn wall
+    // crossed by another one borders up to four rooms.
+    for (const wall of interiorWallPieces(building.footprint, storey.interiorWalls)) {
       const between = roomsAround(wall, storey.rooms);
       if (!between) continue;
       const [left, right] = between;
@@ -363,14 +375,19 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
     storeys.push(env);
   });
 
-  const envelopeArea = storeys.reduce(
-    (s, e) => s + e.wallNetArea + e.windowArea + e.doorArea + e.floorArea + e.roofArea,
-    0,
-  );
+  const heated = heatedFloorArea > 0;
+  // Heat-transferring envelope: the element areas, so H_T' divides the heated losses
+  // by the heated surfaces only. Interior walls and bridges are not envelope.
+  const envelopeArea = elements
+    .filter((e) => e.category !== "interiorWall" && e.category !== "bridge")
+    .reduce((s, e) => s + e.area, 0);
   const wallGross = storeys.reduce((s, e) => s + e.wallGrossArea, 0);
   const windowArea = storeys.reduce((s, e) => s + e.windowArea, 0);
-  // Thermal bridges: the renovated scenario assumes good detailing.
-  const bridges = summarizeBridges(building, options.renovated ? "good" : bridgeDetailOf(building));
+  // Thermal bridges: the renovated scenario assumes good detailing. Nothing heated
+  // means no temperature difference across them, so none are counted.
+  const bridges = heated
+    ? summarizeBridges(building, options.renovated ? "good" : bridgeDetailOf(building))
+    : emptyBridgeSummary();
   if (bridges.total > 0) {
     transmission += bridges.total;
     elements.push({
@@ -382,16 +399,11 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
     });
   }
   const ventilation = AIR_HEAT_CAPACITY * AIR_CHANGE_RATE * heatedVolume;
-  const windowsByOrientation = { N: 0, E: 0, S: 0, W: 0 };
-  for (const st of storeys)
-    for (const o of ["N", "E", "S", "W"] as const)
-      windowsByOrientation[o] += st.windowToWall[o].window;
-  const gains = solarGains(windowsByOrientation);
-  const internalGains = GAINS_UTILISATION * INTERNAL_GAINS_PER_M2 * heatedFloorArea;
-  const heatingDemand = Math.max(
-    0,
-    (transmission + ventilation) * HEATING_DEGREE_HOURS - gains - internalGains,
-  );
+  const gains = solarGains(heatedWindowsByOrientation);
+  const internalGains = GAIN_UTILISATION * INTERNAL_GAINS_PER_M2 * heatedFloorArea;
+  const heatingDemand = heated
+    ? Math.max(0, (transmission + ventilation) * HEATING_DEGREE_HOURS - gains - internalGains)
+    : 0;
   const specific = heatedFloorArea > 0 ? heatingDemand / heatedFloorArea : 0;
 
   return {
@@ -412,6 +424,7 @@ export function computeEnergy(building: Building, options: EnergyOptions = {}): 
     internalGains,
     heatingDemand,
     specificHeatingDemand: specific,
+    heated,
     energyClass: energyClass(specific),
     elements,
     zones: [...zoneLoss.entries()].map(([zoneId, v]) => ({ zoneId, ...v })),
@@ -434,8 +447,45 @@ function emptyEnvelope(storeyId: string): StoreyEnvelope {
   };
 }
 
+/**
+ * The roof as the thermal envelope sees it: built without the overhang, since the
+ * eave strip hangs outside the heated volume. Used by the energy balance and the
+ * room heat loads so both agree.
+ */
+export function thermalRoof(building: Building): RoofGeometry {
+  return buildRoof({ ...building, roof: { ...roofOf(building), overhang: 0 } }, 0);
+}
+
+/** Sloped roof area per square metre of plan, 1 for a flat roof. */
+export function roofSlopeFactor(building: Building, roof = thermalRoof(building)): number {
+  const plan = area(building.footprint);
+  return plan > 0 ? roof.area / plan : 1;
+}
+
+/**
+ * The interior walls of a storey as the room graph sees them: clipped to the
+ * footprint, split where they cross each other or meet the footprint, and without
+ * the pieces lying on the footprint boundary. Every piece borders exactly two rooms
+ * (or one room twice when it dangles), so per-piece midpoint tests are exact.
+ */
+export function interiorWallPieces(
+  footprint: readonly Vec2[],
+  interiorWalls: readonly Segment[],
+): Segment[] {
+  const n = footprint.length;
+  const boundary: Segment[] = footprint.map((p, i) => ({ a: p, b: footprint[(i + 1) % n] ?? p }));
+  const clipped = interiorWalls.flatMap((w) => clipSegmentToPolygon(w, footprint));
+  const onBoundary = (p: Vec2) => boundary.some((e) => pointOnSegment(p, e.a, e.b, 1e-6));
+  return splitSegments([...boundary, ...clipped]).filter(
+    (piece) => !onBoundary({ x: (piece.a.x + piece.b.x) / 2, y: (piece.a.y + piece.b.y) / 2 }),
+  );
+}
+
 /** The two rooms on either side of an interior wall's midpoint, or null on the boundary. */
-function roomsAround(wall: { a: Vec2; b: Vec2 }, rooms: readonly Room[]): [Room, Room] | null {
+export function roomsAround(
+  wall: { a: Vec2; b: Vec2 },
+  rooms: readonly Room[],
+): [Room, Room] | null {
   const mid = { x: (wall.a.x + wall.b.x) / 2, y: (wall.a.y + wall.b.y) / 2 };
   const d = sub(wall.b, wall.a);
   const len = Math.hypot(d.x, d.y);

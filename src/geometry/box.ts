@@ -79,6 +79,7 @@ const ROOF_DEFAULTS: Record<Roof["kind"], Roof> = {
 
 const round = (v: number) => Math.round(v * 1e6) / 1e6;
 const roundSize = (v: number) => Math.round(v * 1e5) / 1e5;
+const RECTANGLE_TOLERANCE = 1e-5;
 
 /** Axis-aligned rectangle centred on `centre`, counter-clockwise. */
 export function rectangleAround(centre: Vec2, width: number, depth: number): Vec2[] {
@@ -92,16 +93,23 @@ export function rectangleAround(centre: Vec2, width: number, depth: number): Vec
   ];
 }
 
-/** Width and depth when the footprint is an axis-aligned rectangle, else null. */
+/** Width and depth when the footprint is a rectangle at any angle, else null. */
 export function rectangleOf(footprint: readonly Vec2[]): { width: number; depth: number } | null {
   if (footprint.length !== 4) return null;
   const es = edges(footprint);
   const [a, b, c, d] = es;
   if (!a || !b || !c || !d) return null;
   const perpendicular = Math.abs(a.direction.x * b.direction.x + a.direction.y * b.direction.y);
-  const oppositeSidesMatch =
-    Math.abs(a.length - c.length) < 1e-9 && Math.abs(b.length - d.length) < 1e-9;
-  if (perpendicular > 1e-9 || !oppositeSidesMatch) return null;
+  const closeLength = (x: number, y: number) =>
+    Math.abs(x - y) <= RECTANGLE_TOLERANCE * Math.max(1, x, y);
+  const oppositeSidesMatch = closeLength(a.length, c.length) && closeLength(b.length, d.length);
+  if (
+    a.length <= RECTANGLE_TOLERANCE ||
+    b.length <= RECTANGLE_TOLERANCE ||
+    perpendicular > RECTANGLE_TOLERANCE ||
+    !oppositeSidesMatch
+  )
+    return null;
   return { width: roundSize(a.length), depth: roundSize(b.length) };
 }
 

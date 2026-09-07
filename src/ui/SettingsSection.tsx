@@ -17,16 +17,24 @@ import { formatNumber } from "@/lib/format";
 import { BERLIN_FALLBACK, daylight, formatClock, formatDay, sunAt } from "@/lib/sunTime";
 import { bounds } from "@/geometry/polygon";
 import { selectTotalHeight } from "@/store/selectors";
+import { useShallow } from "zustand/react/shallow";
 
 function CutControls() {
   const t = useT();
-  const s = useEditorStore();
-  const height = selectTotalHeight(s);
-  const { min, max } = bounds(s.building.footprint);
+  const height = useEditorStore(selectTotalHeight);
+  const { sectionCut, footprint, language, setSectionCut } = useEditorStore(
+    useShallow((s) => ({
+      sectionCut: s.sectionCut,
+      footprint: s.building.footprint,
+      language: s.language,
+      setSectionCut: s.setSectionCut,
+    })),
+  );
+  const { min, max } = bounds(footprint);
   const range =
-    s.sectionCut.axis === "horizontal"
+    sectionCut.axis === "horizontal"
       ? { min: 0.1, max: Math.max(1, height + 1) }
-      : s.sectionCut.axis === "x"
+      : sectionCut.axis === "x"
         ? { min: min.x - 1, max: max.x + 1 }
         : { min: min.y - 1, max: max.y + 1 };
   return (
@@ -34,38 +42,38 @@ function CutControls() {
       <CustomCheckbox
         variant="switch"
         label={t("view.sectionCut")}
-        checked={s.sectionCut.enabled}
+        checked={sectionCut.enabled}
         onChange={(enabled) => {
-          s.setSectionCut({ enabled });
+          setSectionCut({ enabled });
         }}
       />
-      {s.sectionCut.enabled && (
+      {sectionCut.enabled && (
         <>
           <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-muted">{t("view.cutAxis")}</span>
             <CustomSegmented
               label={t("view.cutAxis")}
-              value={s.sectionCut.axis}
+              value={sectionCut.axis}
               options={[
                 { value: "horizontal", label: t("view.cutHorizontal") },
                 { value: "x", label: t("view.cutX") },
                 { value: "y", label: t("view.cutY") },
               ]}
               onChange={(axis) => {
-                s.setSectionCut({ axis });
+                setSectionCut({ axis });
               }}
             />
           </div>
           <CustomNumberInput
             label={t("view.cutValue")}
-            value={s.sectionCut.value}
+            value={sectionCut.value}
             min={range.min}
             max={range.max}
             step={0.1}
             unit={t("common.metres")}
-            language={s.language}
+            language={language}
             onChange={(value) => {
-              s.setSectionCut({ value });
+              setSectionCut({ value });
             }}
           />
         </>
@@ -76,8 +84,13 @@ function CutControls() {
 
 function OtherStoreysControls() {
   const t = useT();
-  const s = useEditorStore();
-  const o = s.otherStoreys;
+  const { o, language, setOtherStoreys } = useEditorStore(
+    useShallow((s) => ({
+      o: s.otherStoreys,
+      language: s.language,
+      setOtherStoreys: s.setOtherStoreys,
+    })),
+  );
   const showOpacity = o.above === "ghost" || o.below === "ghost" || o.roof === "ghost";
   return (
     <div className="flex flex-col gap-3">
@@ -92,7 +105,7 @@ function OtherStoreysControls() {
             { value: "ghost", label: t("view.storeysGhost") },
           ]}
           onChange={(above) => {
-            s.setOtherStoreys({ above });
+            setOtherStoreys({ above });
           }}
         />
       </div>
@@ -107,7 +120,7 @@ function OtherStoreysControls() {
             { value: "solid", label: t("view.storeysSolid") },
           ]}
           onChange={(below) => {
-            s.setOtherStoreys({ below });
+            setOtherStoreys({ below });
           }}
         />
       </div>
@@ -123,13 +136,13 @@ function OtherStoreysControls() {
             { value: "solid", label: t("view.storeysSolid") },
           ]}
           onChange={(roof) => {
-            s.setOtherStoreys({ roof });
+            setOtherStoreys({ roof });
           }}
         />
       </div>
       {showOpacity && (
         <CustomField
-          label={`${t("view.ghostOpacity")}: ${formatNumber(Math.round(o.ghostOpacity * 100), s.language)} %`}
+          label={`${t("view.ghostOpacity")}: ${formatNumber(Math.round(o.ghostOpacity * 100), language)} %`}
         >
           <CustomSlider
             label={t("view.ghostOpacity")}
@@ -138,9 +151,9 @@ function OtherStoreysControls() {
             max={60}
             step={5}
             onChange={(pct) => {
-              s.setOtherStoreys({ ghostOpacity: pct / 100 });
+              setOtherStoreys({ ghostOpacity: pct / 100 });
             }}
-            format={(pct) => `${formatNumber(pct, s.language)} %`}
+            format={(pct) => `${formatNumber(pct, language)} %`}
           />
         </CustomField>
       )}
@@ -150,44 +163,51 @@ function OtherStoreysControls() {
 
 function SunControls() {
   const t = useT();
-  const s = useEditorStore();
-  const origin = s.building.origin ?? { ...BERLIN_FALLBACK, rotation: 0 };
-  const pos = sunAt(s.sun.dayOfYear, s.sun.minutes, origin.lat, origin.lon);
-  const dl = daylight(s.sun.dayOfYear, origin.lat, origin.lon);
+  const { configuredOrigin, sun, language, setSun } = useEditorStore(
+    useShallow((s) => ({
+      configuredOrigin: s.building.origin,
+      sun: s.sun,
+      language: s.language,
+      setSun: s.setSun,
+    })),
+  );
+  const origin = configuredOrigin ?? { ...BERLIN_FALLBACK, rotation: 0 };
+  const pos = sunAt(sun.dayOfYear, sun.minutes, origin.lat, origin.lon);
+  const dl = daylight(sun.dayOfYear, origin.lat, origin.lon);
   return (
     <div className="flex flex-col gap-3">
       <CustomCheckbox
         variant="switch"
         label={t("sun.enabled")}
-        checked={s.sun.enabled}
+        checked={sun.enabled}
         onChange={(enabled) => {
-          s.setSun({ enabled });
+          setSun({ enabled });
         }}
       />
-      {s.sun.enabled && (
+      {sun.enabled && (
         <>
-          <CustomField label={`${t("sun.day")}: ${formatDay(s.sun.dayOfYear, s.language)}`}>
+          <CustomField label={`${t("sun.day")}: ${formatDay(sun.dayOfYear, language)}`}>
             <CustomSlider
               label={t("sun.day")}
-              value={s.sun.dayOfYear}
+              value={sun.dayOfYear}
               min={1}
               max={365}
               step={1}
               onChange={(dayOfYear) => {
-                s.setSun({ dayOfYear });
+                setSun({ dayOfYear });
               }}
-              format={(d) => formatDay(d, s.language)}
+              format={(d) => formatDay(d, language)}
             />
           </CustomField>
-          <CustomField label={`${t("sun.time")}: ${formatClock(s.sun.minutes)}`}>
+          <CustomField label={`${t("sun.time")}: ${formatClock(sun.minutes)}`}>
             <CustomSlider
               label={t("sun.time")}
-              value={s.sun.minutes}
+              value={sun.minutes}
               min={0}
               max={1435}
               step={5}
               onChange={(minutes) => {
-                s.setSun({ minutes });
+                setSun({ minutes });
               }}
               format={formatClock}
             />
@@ -196,11 +216,11 @@ function SunControls() {
             <>
               <CustomReadOnly
                 label={t("sun.elevation")}
-                value={`${formatNumber(pos.elevation, s.language, 1)}°`}
+                value={`${formatNumber(pos.elevation, language, 1)}°`}
               />
               <CustomReadOnly
                 label={t("sun.azimuth")}
-                value={`${formatNumber(pos.azimuth, s.language, 0)}°`}
+                value={`${formatNumber(pos.azimuth, language, 0)}°`}
               />
             </>
           ) : (
@@ -220,7 +240,31 @@ function SunControls() {
 
 export function SettingsSection() {
   const t = useT();
-  const s = useEditorStore();
+  const s = useEditorStore(
+    useShallow((state) => ({
+      showGrid: state.showGrid,
+      setShowGrid: state.setShowGrid,
+      planView: state.planView,
+      setPlanView: state.setPlanView,
+      showUValueBands: state.showUValueBands,
+      setShowUValueBands: state.setShowUValueBands,
+      showBridges: state.showBridges,
+      setShowBridges: state.setShowBridges,
+      walkthrough: state.walkthrough,
+      setWalkthrough: state.setWalkthrough,
+      theme: state.theme,
+      setTheme: state.setTheme,
+      buildingName: state.building.name,
+      wallThickness: state.building.wallThickness,
+      renameBuilding: state.renameBuilding,
+      setWallThickness: state.setWallThickness,
+      language: state.language,
+      setLanguage: state.setLanguage,
+      loadBuilding: state.loadBuilding,
+      beginBatch: state.beginBatch,
+      endBatch: state.endBatch,
+    })),
+  );
   const themes: Theme[] = ["light", "dark", "system"];
 
   return (
@@ -292,12 +336,12 @@ export function SettingsSection() {
       <CustomSection title={t("panel.settings")}>
         <CustomTextInput
           label={t("building.name")}
-          value={s.building.name}
+          value={s.buildingName}
           onCommit={s.renameBuilding}
         />
         <CustomNumberInput
           label={t("settings.wallThickness")}
-          value={s.building.wallThickness}
+          value={s.wallThickness}
           min={0.1}
           max={1}
           step={0.05}

@@ -9,9 +9,11 @@ import { sameSelection, useEditorStore } from "@/store/building";
 import { selectTotalHeight } from "@/store/selectors";
 import { useHover } from "./hover";
 import { mergeAll, prismGeometry } from "./three";
+import { useDisposableGeometry } from "./useDisposableGeometry";
 
 const ROOF_COLOR = "#8d6e63";
 const ROOF_THICKNESS = 0.2;
+const ROOF_SELECTION = { kind: "roof" } as const;
 
 /** Roof faces triangulated over their plan projection, or a flat slab. Click selects the roof. */
 export function Roof() {
@@ -19,12 +21,12 @@ export function Roof() {
   const top = useEditorStore(selectTotalHeight);
   const select = useEditorStore((s) => s.select);
   const tool = useEditorStore((s) => s.tool);
-  const selected = useEditorStore((s) => sameSelection(s.selection, { kind: "roof" }));
-  const hovered = useEditorStore((s) => sameSelection(s.hovered, { kind: "roof" }));
+  const selected = useEditorStore((s) => sameSelection(s.selection, ROOF_SELECTION));
+  const hovered = useEditorStore((s) => sameSelection(s.hovered, ROOF_SELECTION));
   const other = useEditorStore((s) => s.otherStoreys);
   // A selected roof is always drawn solid so pitch and overhang edits are visible.
   const display = selected ? "solid" : other.roof;
-  const hover = useHover({ kind: "roof" }, display !== "outline");
+  const hover = useHover(ROOF_SELECTION, display !== "outline");
 
   const geometry = useMemo(() => {
     if (building.storeys.length === 0) return null;
@@ -33,13 +35,14 @@ export function Roof() {
       return prismGeometry(building.footprint, top, top + ROOF_THICKNESS);
     return mergeAll(roof.faces.map(faceGeometry));
   }, [building, top]);
+  useDisposableGeometry(geometry);
 
   if (!geometry || display === "hidden") return null;
   if (display === "outline") return <Outline geometry={geometry} />;
   const onClick = (e: ThreeEvent<MouseEvent>) => {
     if (e.delta > 6 || tool !== "select") return;
     e.stopPropagation();
-    select({ kind: "roof" });
+    select(ROOF_SELECTION);
   };
   return (
     <mesh geometry={geometry} onClick={onClick} castShadow receiveShadow {...hover}>

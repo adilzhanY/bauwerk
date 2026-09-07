@@ -6,7 +6,7 @@ import { toIfc } from "./ifc";
 import { importIfc } from "./ifc-import";
 import { area } from "./polygon";
 import { effectiveWallThickness } from "./layers";
-import { asNumber, asString, decodeControl, parseStep } from "./step-parse";
+import { asNumber, asRef, asRefs, asString, decodeControl, parseStep } from "./step-parse";
 import type { Building } from "./types";
 
 describe("STEP parser", () => {
@@ -69,6 +69,37 @@ function stripIds(b: Building) {
   };
 }
 
+const appendData = (text: string, entities: string): string =>
+  text.replace("ENDSEC;\nEND-ISO-10303-21;", `${entities}ENDSEC;\nEND-ISO-10303-21;`);
+
+const scaledReal = (token: string, factor: number): string => {
+  const value = Number(token) * factor;
+  return Number.isInteger(value) ? `${value}.` : String(value);
+};
+
+function asMillimetres(text: string): string {
+  return text
+    .replace("IFCSIUNIT(*,.LENGTHUNIT.,$,.METRE.)", "IFCSIUNIT(*,.LENGTHUNIT.,.MILLI.,.METRE.)")
+    .replace(
+      /(IFCCARTESIANPOINT\(\()([^)]*)(\)\);)/g,
+      (_line, start: string, values: string, end: string) =>
+        `${start}${values
+          .split(",")
+          .map((value) => scaledReal(value, 1000))
+          .join(",")}${end}`,
+    )
+    .replace(
+      /(IFCEXTRUDEDAREASOLID\([^,\n]+,[^,\n]+,[^,\n]+,)([-+0-9.E]+)(\);)/g,
+      (_line, start: string, value: string, end: string) =>
+        `${start}${scaledReal(value, 1000)}${end}`,
+    )
+    .replace(
+      /(IFCBUILDINGSTOREY\([^\n]+,\.ELEMENT\.,)([-+0-9.E]+)(\);)/g,
+      (_line, start: string, value: string, end: string) =>
+        `${start}${scaledReal(value, 1000)}${end}`,
+    );
+}
+
 describe("importIfc round trip", () => {
   it("export then import of the example house gives an equal building up to ids", () => {
     resetIds();
@@ -114,6 +145,108 @@ describe("importIfc round trip", () => {
       original.storeys.reduce((s, st) => s + st.openings.length, 0),
     );
     expect(area(result.building.footprint)).toBeCloseTo(area(original.footprint));
+  });
+
+  it("round trips an opening in an interior wall", () => {
+    resetIds();
+    const original = exampleHouse("en");
+    original.storeys[0]!.openings.push({
+      id: "interior-door",
+      wallIndex: 0,
+      interior: true,
+      kind: "door",
+      offset: 1,
+      width: 1,
+      height: 2.1,
+      sill: 0,
+      constructionId: original.doorConstructionId,
+    });
+    const result = importIfc(toIfc(original), "en");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.building.storeys[0]?.openings).toContainEqual(
+      expect.objectContaining({
+        interior: true,
+        wallIndex: 0,
+        kind: "door",
+        offset: 1,
+        width: 1,
+        height: 2.1,
+      }),
+    );
+  });
+
+  it("uses the storey placement when the optional Elevation attribute is absent", () => {
+    resetIds();
+    const text = toIfc(exampleHouse("en")).replace(
+      /(IFCBUILDINGSTOREY\([^\n]+,\.ELEMENT\.),3\.\);/,
+      "$1,$);",
+    );
+    const result = importIfc(text, "en");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.building.storeys.map((storey) => storey.height)).toEqual([3, 2.8]);
+  });
+
+  it("selects the Body representation when an Axis representation comes first", () => {
+    resetIds();
+    const original = exampleHouse("en");
+    const text = toIfc(original);
+    const file = parseStep(text);
+    const wall = [...file.entities.values()].find((entity) => entity.type === "IFCWALL")!;
+    const shapeId = asRef(wall.args[6])!;
+    const shape = file.entities.get(shapeId)!;
+    const bodyId = asRefs(shape.args[2])[0]!;
+    const body = file.entities.get(bodyId)!;
+    const contextId = asRef(body.args[0])!;
+    const withAxis = appendData(
+      text.replace(
+        `#${shapeId}=IFCPRODUCTDEFINITIONSHAPE($,$,(#${bodyId}));`,
+        `#${shapeId}=IFCPRODUCTDEFINITIONSHAPE($,$,(#9003,#${bodyId}));`,
+      ),
+      `#9000=IFCCARTESIANPOINT((0.,0.));\n#9001=IFCCARTESIANPOINT((1.,0.));\n#9002=IFCPOLYLINE((#9000,#9001));\n#9003=IFCSHAPEREPRESENTATION(#${contextId},'Axis','Curve2D',(#9002));\n`,
+    );
+    const result = importIfc(withAxis, "en");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.building.footprint).toEqual(original.footprint);
+  });
+
+  it("converts millimetre project units to metres", () => {
+    resetIds();
+    const original = exampleHouse("en");
+    const result = importIfc(asMillimetres(toIfc(original)), "en");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.building.footprint).toEqual(original.footprint);
+    expect(result.building.wallThickness).toBeCloseTo(effectiveWallThickness(original), 3);
+    expect(result.building.storeys.map((storey) => storey.height)).toEqual([3, 2.8]);
+  });
+
+  it("imports a vertical opening profile extruded horizontally through its wall", () => {
+    resetIds();
+    const text = toIfc(exampleHouse("en"));
+    const file = parseStep(text);
+    const voidRel = [...file.entities.values()].find(
+      (entity) => entity.type === "IFCRELVOIDSELEMENT",
+    )!;
+    const opening = file.entities.get(asRef(voidRel.args[5])!)!;
+    const shape = file.entities.get(asRef(opening.args[6])!)!;
+    const representation = file.entities.get(asRefs(shape.args[2])[0]!)!;
+    const solidId = asRefs(representation.args[3])[0]!;
+    const horizontal = appendData(
+      text.replace(
+        new RegExp(`^#${solidId}=IFCEXTRUDEDAREASOLID\\([^\\n]+;$`, "m"),
+        `#${solidId}=IFCEXTRUDEDAREASOLID(#9010,#9014,#9015,0.435);`,
+      ),
+      "#9004=IFCCARTESIANPOINT((0.,0.));\n#9005=IFCCARTESIANPOINT((1.,0.));\n#9006=IFCCARTESIANPOINT((1.,2.1));\n#9007=IFCCARTESIANPOINT((0.,2.1));\n#9008=IFCPOLYLINE((#9004,#9005,#9006,#9007,#9004));\n#9010=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#9008);\n#9011=IFCCARTESIANPOINT((4.5,0.425,0.));\n#9012=IFCDIRECTION((0.,-1.,0.));\n#9013=IFCDIRECTION((1.,0.,0.));\n#9014=IFCAXIS2PLACEMENT3D(#9011,#9012,#9013);\n#9015=IFCDIRECTION((0.,0.,1.));\n",
+    );
+    const result = importIfc(horizontal, "en");
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.building.storeys[0]?.openings).toContainEqual(
+      expect.objectContaining({ kind: "door", wallIndex: 0, offset: 4.5, width: 1, height: 2.1 }),
+    );
   });
 });
 

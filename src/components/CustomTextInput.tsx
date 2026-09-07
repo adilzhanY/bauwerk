@@ -1,5 +1,4 @@
 import { useId, useState } from "react";
-import type { ReactNode } from "react";
 import { CustomField } from "./CustomField";
 import { cx } from "./cx";
 
@@ -7,8 +6,6 @@ interface Props {
   label: string;
   value: string;
   onCommit: (value: string) => void;
-  icon?: ReactNode;
-  placeholder?: string;
   disabled?: boolean;
   hideLabel?: boolean;
   autoFocus?: boolean;
@@ -19,8 +16,6 @@ export function CustomTextInput({
   label,
   value,
   onCommit,
-  icon,
-  placeholder,
   disabled = false,
   hideLabel = false,
   autoFocus = false,
@@ -49,12 +44,10 @@ export function CustomTextInput({
           disabled && "opacity-40",
         )}
       >
-        {icon && <span className="text-muted">{icon}</span>}
         <input
           id={id}
           type="text"
           value={draft}
-          placeholder={placeholder}
           disabled={disabled}
           autoFocus={autoFocus}
           onChange={(e) => {

@@ -29,7 +29,7 @@ import { area, sub } from "./polygon";
 import { NULL, DERIVED, StepWriter, bool, enm, ifcGuid, list, real, ref, str, typed } from "./step";
 import type { Attr } from "./step";
 import type { Building, Opening, Room, Storey, Vec2 } from "./types";
-import { buildWalls } from "./walls";
+import { buildWalls, interiorWallAsWall, INTERIOR_WALL_THICKNESS } from "./walls";
 import type { Wall } from "./walls";
 
 export interface IfcOptions {
@@ -40,7 +40,6 @@ export interface IfcOptions {
 }
 
 const SLAB_THICKNESS = 0.2;
-const INTERIOR_WALL_THICKNESS = 0.1;
 const WINDOW_THICKNESS = 0.05;
 
 interface Context {
@@ -106,7 +105,7 @@ export function toIfc(building: Building, options: IfcOptions = {}): string {
     // Model +y points to compass `rotation` degrees; model +x is 90 degrees clockwise of it.
     const north = northInPlan(building.origin);
     const xAbscissa = north.y; // cos(rotation)
-    const xOrdinate = -north.x; // sin(rotation), east component of model +x
+    const xOrdinate = north.x; // -sin(rotation), north component of model +x
     w.add("IFCMAPCONVERSION", [
       ref(modelContext),
       ref(crs),
@@ -271,9 +270,9 @@ export function toIfc(building: Building, options: IfcOptions = {}): string {
 
     // Interior walls.
     storey.interiorWalls.forEach((segment, i) => {
-      const plan = thickSegment(segment.a, segment.b, INTERIOR_WALL_THICKNESS);
+      const wall = interiorWallAsWall(segment, i, storey.height, INTERIOR_WALL_THICKNESS);
       const placement = localPlacement(ctx, storeyPlacement, 0);
-      const solid = extrudedSolid(ctx, plan, 0, storey.height);
+      const solid = extrudedSolid(ctx, wall.quad, 0, storey.height);
       const ifcWall = w.add("IFCWALL", [
         guid(
           `${storey.id}/interior/${i}/${segment.a.x},${segment.a.y},${segment.b.x},${segment.b.y}`,
@@ -295,6 +294,18 @@ export function toIfc(building: Building, options: IfcOptions = {}): string {
         [ifcWall],
         [["IsExternal", typed("IFCBOOLEAN", bool(false))]],
       );
+      const onWall = openingsOn(storey.openings, i, true);
+      for (const opening of onWall) {
+        if (
+          validateOpening(opening, {
+            wallLength: wall.length,
+            storeyHeight: storey.height,
+            siblings: onWall,
+          }).length > 0
+        )
+          continue;
+        contained.push(addOpening(ctx, building, storeyPlacement, wall, opening, ifcWall, false));
+      }
     });
 
     // Heating: radiators as IfcSpaceHeater on the inner wall face, pipe runs as IfcPipeSegment per leg.
@@ -765,6 +776,7 @@ function addOpening(
   wall: Wall,
   opening: Opening,
   ifcWall: number,
+  isExternal = true,
 ): number {
   const w = ctx.w;
   const t = effectiveWallThickness(building);
@@ -835,7 +847,7 @@ function addOpening(
     isDoor ? "Pset_DoorCommon" : "Pset_WindowCommon",
     [filled],
     [
-      ["IsExternal", typed("IFCBOOLEAN", bool(true))],
+      ["IsExternal", typed("IFCBOOLEAN", bool(isExternal))],
       ...(u === undefined
         ? []
         : [

@@ -33,6 +33,7 @@ function mapBuilding(b: Building, f: (p: Vec2) => Vec2): Building {
       ...s,
       interiorWalls: s.interiorWalls.map((w) => ({ a: f(w.a), b: f(w.b) })),
       rooms: s.rooms.map((r) => ({ ...r, polygon: r.polygon.map(f) })),
+      pipes: s.pipes?.map((pipe) => ({ ...pipe, points: pipe.points.map(f) })),
     })),
     heatPumps: b.heatPumps?.map((h) => ({ ...h, position: f(h.position) })),
   };

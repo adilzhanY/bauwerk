@@ -7,6 +7,15 @@ describe("translateBuilding and rotateBuilding", () => {
   it("moves every plan coordinate and nothing else", () => {
     const b = exampleHouse("en");
     b.heatPumps = [{ id: "hp", position: { x: -2, y: 1 }, power: 8, kind: "air" }];
+    b.storeys[0]!.pipes = [
+      {
+        id: "pipe",
+        points: [
+          { x: 1, y: 1 },
+          { x: 3, y: 1 },
+        ],
+      },
+    ];
     const moved = translateBuilding(b, { x: 3, y: -1.5 });
     expect(buildingCentre(moved)).toEqual({ x: 8, y: 2.5 });
     expect(area(moved.footprint)).toBeCloseTo(area(b.footprint));
@@ -14,6 +23,10 @@ describe("translateBuilding and rotateBuilding", () => {
     expect(moved.storeys[0]?.rooms.map((r) => r.id)).toEqual(b.storeys[0]?.rooms.map((r) => r.id));
     expect(moved.storeys[0]?.rooms[0]?.area).toBeCloseTo(b.storeys[0]?.rooms[0]?.area ?? 0);
     expect(moved.heatPumps?.[0]?.position).toEqual({ x: 1, y: -0.5 });
+    expect(moved.storeys[0]?.pipes?.[0]?.points).toEqual([
+      { x: 4, y: -0.5 },
+      { x: 6, y: -0.5 },
+    ]);
     // Openings and radiators are offsets, so they are the same objects' values.
     expect(moved.storeys[0]?.openings).toEqual(b.storeys[0]?.openings);
     expect(moved.origin).toBe(b.origin);
@@ -27,6 +40,20 @@ describe("translateBuilding and rotateBuilding", () => {
     expect(buildingCentre(turned).y).toBeCloseTo(buildingCentre(b).y);
     expect(isCounterClockwise(turned.footprint)).toBe(true);
     expect(area(turned.footprint)).toBeCloseTo(80);
+    b.storeys[0]!.pipes = [
+      {
+        id: "pipe",
+        points: [
+          { x: 6, y: 4 },
+          { x: 7, y: 4 },
+        ],
+      },
+    ];
+    const pipesTurned = rotateBuilding(b, 90);
+    expect(pipesTurned.storeys[0]?.pipes?.[0]?.points).toEqual([
+      { x: 5, y: 5 },
+      { x: 5, y: 6 },
+    ]);
     // A 10 by 8 box turned by 90 degrees spans 8 by 10.
     const xs = turned.footprint.map((p) => p.x);
     expect(Math.max(...xs) - Math.min(...xs)).toBeCloseTo(8);

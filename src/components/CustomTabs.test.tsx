@@ -12,8 +12,8 @@ function Harness() {
   const [v, setV] = useState<"properties" | "energy">("properties");
   return (
     <>
-      <CustomTabs label="Panel" value={v} tabs={tabs} onChange={setV} />
-      <CustomTabPanel value={v}>
+      <CustomTabs id="test-tabs" label="Panel" value={v} tabs={tabs} onChange={setV} />
+      <CustomTabPanel id="test-tabs" value={v}>
         {v === "energy" ? "Energy content" : "Property content"}
       </CustomTabPanel>
     </>
@@ -34,5 +34,7 @@ describe("CustomTabs", () => {
     expect(screen.getByRole("tab", { name: "Properties" }).getAttribute("aria-selected")).toBe(
       "true",
     );
+    fireEvent.keyDown(screen.getByRole("tab", { name: "Properties" }), { key: "End" });
+    expect(screen.getByRole("tab", { name: "Energy" }).getAttribute("aria-selected")).toBe("true");
   });
 });

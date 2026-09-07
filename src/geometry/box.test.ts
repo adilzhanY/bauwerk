@@ -95,6 +95,17 @@ describe("rectangleOf and resizeRectangle", () => {
     ).toBeCloseTo(angle);
   });
 
+  it("recognises a rectangle with harmless coordinate noise", () => {
+    expect(
+      rectangleOf([
+        { x: 0, y: 0 },
+        { x: 10, y: 0.000001 },
+        { x: 10.000001, y: 8 },
+        { x: 0, y: 7.999999 },
+      ]),
+    ).toEqual({ width: 10, depth: 8 });
+  });
+
   it("resizes about the centre and keeps openings inside their walls", () => {
     const b = exampleHouse("en");
     const small = resizeRectangle(b, 6, 8);

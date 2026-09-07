@@ -1,5 +1,7 @@
 import type { StateCreator, StoreMutatorIdentifier } from "zustand";
-import type { Building } from "@/geometry/types";
+import type { Building, Id } from "@/geometry/types";
+import type { Selection } from "./building";
+import { selectionExists } from "./selectors";
 
 export const HISTORY_LIMIT = 200;
 
@@ -11,8 +13,9 @@ export interface HistorySlice {
   /** Runs `fn` without recording building changes. For applying remote state. */
   withoutHistory: (fn: () => void) => void;
   /**
-   * Starts a gesture: every building change until `endBatch` is one undo step.
-   * Used by sliders and inputs that update the model live while the user drags or types.
+   * Starts a gesture: every building change until the matching `endBatch` is one undo
+   * step. Used by sliders and inputs that update the model live while the user drags or
+   * types. Calls nest: only the outermost pair opens and closes the gesture.
    */
   beginBatch: () => void;
   endBatch: () => void;
@@ -20,13 +23,20 @@ export interface HistorySlice {
 
 interface WithBuilding {
   building: Building;
+  activeStoreyId: Id | null;
+  activeZoneId: Id | null;
+  selection: Selection | null;
+  hovered: Selection | null;
+  viewScenarioId: string | null;
 }
 
 /**
  * Undo and redo middleware. It watches the `building` slice only: whenever a
  * state update replaces `building` with a new reference, the previous one is
  * pushed onto `past` and `future` is cleared. UI state (selection, tool,
- * language, active storey) is never recorded and never touched by undo.
+ * language, active storey) is never recorded. After a restore the active storey
+ * and the selection are only clamped so they never point at an element the
+ * restored building does not have.
  *
  * Buildings are immutable values (Immer produces fresh objects), so keeping
  * references is enough to restore an exact previous state.
@@ -43,10 +53,32 @@ type HistoryImpl = <T extends WithBuilding>(
   initializer: StateCreator<T>,
 ) => StateCreator<T & HistorySlice>;
 
+/** UI references that must stay valid for `building`. Returns only the fields that change. */
+export function clampUiState(
+  building: Building,
+  ui: Omit<WithBuilding, "building">,
+): Partial<Omit<WithBuilding, "building">> {
+  const patch: Partial<Omit<WithBuilding, "building">> = {};
+  if (!building.storeys.some((s) => s.id === ui.activeStoreyId)) {
+    patch.activeStoreyId = building.storeys[0]?.id ?? null;
+  }
+  if (!building.zones.some((z) => z.id === ui.activeZoneId)) patch.activeZoneId = null;
+  if (ui.selection && !selectionExists(building, ui.selection)) patch.selection = null;
+  if (ui.hovered && !selectionExists(building, ui.hovered)) patch.hovered = null;
+  if (
+    ui.viewScenarioId !== null &&
+    ui.viewScenarioId !== "full-envelope" &&
+    !building.scenarios?.some((scenario) => scenario.id === ui.viewScenarioId)
+  ) {
+    patch.viewScenarioId = null;
+  }
+  return patch;
+}
+
 const historyImpl: HistoryImpl = (initializer) => (set, get, api) => {
   type S = ReturnType<typeof initializer> & HistorySlice;
   let restoring = false;
-  let batching = false;
+  let batchDepth = 0;
   let batchRecorded = false;
 
   const trackedSet: typeof set = (partial, replace) => {
@@ -58,7 +90,7 @@ const historyImpl: HistoryImpl = (initializer) => (set, get, api) => {
     }
     const after = get().building;
     if (restoring || before === after) return;
-    if (batching) {
+    if (batchDepth > 0) {
       // Only the first change of a gesture records the snapshot taken before it.
       if (batchRecorded) return;
       batchRecorded = true;
@@ -77,14 +109,17 @@ const historyImpl: HistoryImpl = (initializer) => (set, get, api) => {
     if (target === undefined) return;
     restoring = true;
     try {
+      const ui = clampUiState(target, state);
       set(
         (direction === "undo"
           ? {
+              ...ui,
               building: target,
               past: source.slice(0, -1),
               future: [...state.future, state.building],
             }
           : {
+              ...ui,
               building: target,
               future: source.slice(0, -1),
               past: [...state.past, state.building],
@@ -107,12 +142,13 @@ const historyImpl: HistoryImpl = (initializer) => (set, get, api) => {
       restore("redo");
     },
     beginBatch: () => {
-      batching = true;
-      batchRecorded = false;
+      if (batchDepth === 0) batchRecorded = false;
+      batchDepth += 1;
     },
     endBatch: () => {
-      batching = false;
-      batchRecorded = false;
+      if (batchDepth === 0) return;
+      batchDepth -= 1;
+      if (batchDepth === 0) batchRecorded = false;
     },
     withoutHistory: (fn) => {
       const previous = restoring;

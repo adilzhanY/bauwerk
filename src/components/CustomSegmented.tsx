@@ -13,6 +13,7 @@ interface Props<V extends string> {
   value: V;
   options: readonly SegmentOption<V>[];
   onChange: (value: V) => void;
+  disabled?: boolean;
   /** Stack vertically, for the tool rail. */
   vertical?: boolean;
   /** Icon-only buttons with the label as tooltip. */
@@ -25,10 +26,12 @@ export function CustomSegmented<V extends string>({
   value,
   options,
   onChange,
+  disabled = false,
   vertical = false,
   iconsOnly = false,
 }: Props<V>) {
-  const index = options.findIndex((o) => o.value === value);
+  const selectedIndex = options.findIndex((o) => o.value === value);
+  const index = selectedIndex < 0 ? 0 : selectedIndex;
   const onKeyDown = (e: KeyboardEvent) => {
     const forward =
       e.key === (vertical ? "ArrowDown" : "ArrowRight") ||
@@ -36,9 +39,19 @@ export function CustomSegmented<V extends string>({
     const back =
       e.key === (vertical ? "ArrowUp" : "ArrowLeft") ||
       e.key === (vertical ? "ArrowLeft" : "ArrowUp");
-    if (!forward && !back) return;
+    const nextIndex =
+      e.key === "Home"
+        ? 0
+        : e.key === "End"
+          ? options.length - 1
+          : forward
+            ? (index + 1) % options.length
+            : back
+              ? (index - 1 + options.length) % options.length
+              : -1;
+    if (nextIndex < 0) return;
     e.preventDefault();
-    const next = options[(index + (forward ? 1 : -1) + options.length) % options.length];
+    const next = options[nextIndex];
     if (next) {
       onChange(next.value);
       (
@@ -61,11 +74,12 @@ export function CustomSegmented<V extends string>({
           <button
             key={o.value}
             type="button"
+            disabled={disabled}
             role="radio"
             aria-checked={selected}
             aria-label={iconsOnly ? o.label : undefined}
             title={o.hint ? `${o.label} (${o.hint})` : o.label}
-            tabIndex={selected ? 0 : -1}
+            tabIndex={selected || (selectedIndex < 0 && options[0] === o) ? 0 : -1}
             onClick={() => {
               onChange(o.value);
             }}
@@ -81,6 +95,7 @@ export function CustomSegmented<V extends string>({
                   : "h-11 w-11 text-sm"
                 : cx("h-9 min-w-0 flex-1", options.length > 3 ? "px-2 text-xs" : "px-3 text-sm"),
               selected ? "bg-ink text-paper" : "text-muted hover:bg-panel-2 hover:text-ink",
+              disabled && "cursor-not-allowed opacity-50",
             )}
           >
             {o.icon}

@@ -141,6 +141,21 @@ describe("App", () => {
     expect(useEditorStore.getState().building.wallThickness).toBeCloseTo(0.3);
   });
 
+  it("does not let slider keys switch storeys", () => {
+    const state = useEditorStore.getState();
+    const groundId = state.activeStoreyId ?? "";
+    act(() => {
+      state.addStorey();
+      state.setActiveStorey(groundId);
+    });
+    render(<App />);
+    fireEvent.click(screen.getByRole("radio", { name: "Settings" }));
+    const slider = screen.getByRole("slider", { name: "Wall thickness" });
+    slider.focus();
+    fireEvent.keyDown(slider, { key: "PageUp" });
+    expect(useEditorStore.getState().activeStoreyId).toBe(groundId);
+  });
+
   it("shows the empty state when the last storey is removed", () => {
     render(<App />);
     fireEvent.click(screen.getByRole("button", { name: "Remove storey" }));
@@ -178,8 +193,26 @@ describe("App", () => {
     expect(screen.getByRole("button", { name: "Print" })).toBeTruthy();
     // German number format regardless of the English interface: 80 m² floor, 268 m² envelope shown as "268".
     expect(screen.getAllByText(/1\.234|268 m²|80 m²/).length).toBeGreaterThan(0);
+    expect(container.textContent).toMatch(/\d+,\d+ W\/\(m²K\)/);
     vi.useRealTimers();
     window.history.replaceState(null, "", "/");
+  });
+
+  it("shows a correctly named radiator removal action and validation", () => {
+    const building = exampleAltbau("en");
+    const storey = building.storeys[0];
+    const radiator = storey?.radiators?.[0];
+    if (!storey || !radiator) throw new Error("The Altbau fixture needs a radiator");
+    radiator.offset = 100;
+    act(() => {
+      useEditorStore.getState().loadBuilding(building);
+      useEditorStore.getState().select({ kind: "radiator", storeyId: storey.id, id: radiator.id });
+    });
+    render(<App />);
+    expect(screen.getByRole("button", { name: "Remove radiator" })).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain(
+      "The radiator leaves its wall or overlaps an opening.",
+    );
   });
 
   it("prints all known document names in the selected German language", () => {

@@ -2,6 +2,7 @@ import { useId, useRef, useState } from "react";
 import type { KeyboardEvent, PointerEvent } from "react";
 import { formatNumber, parseNumber } from "@/lib/format";
 import type { Language } from "@/i18n";
+import { useT } from "@/i18n/useT";
 import { CustomField } from "./CustomField";
 import { CustomSlider } from "./CustomSlider";
 import { snapToStep } from "./snap";
@@ -25,11 +26,15 @@ interface Props {
   onChange: (value: number) => void;
   onGestureStart?: () => void;
   onGestureEnd?: () => void;
-  /** Pixels of drag per step when scrubbing on the label. */
-  scrubPixelsPerStep?: number;
 }
 
 const round = (v: number) => Math.round(v * 1e6) / 1e6;
+const SCRUB_PIXELS_PER_STEP = 8;
+
+function digitsForStep(step: number): number {
+  if (!Number.isFinite(step) || step <= 0) return 0;
+  return Math.min(6, Math.max(0, Math.ceil(-Math.log10(step) - 1e-12)));
+}
 
 /**
  * Number field with mono digits and the unit drawn inside. Typing commits live
@@ -53,13 +58,16 @@ export function CustomNumberInput({
   onChange,
   onGestureStart,
   onGestureEnd,
-  scrubPixelsPerStep = 8,
 }: Props) {
+  const t = useT();
   const id = useId();
-  const fmt = (v: number) => formatNumber(v, language, 3);
+  const digits = digitsForStep(step);
+  const fmt = (v: number) => formatNumber(v, language, digits, { useGrouping: false });
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const gesture = useRef(false);
+  const valueAtFocus = useRef(value);
+  const cancelBlurCommit = useRef(false);
   const scrub = useRef<{ startX: number; startValue: number } | null>(null);
 
   const begin = () => {
@@ -77,22 +85,25 @@ export function CustomNumberInput({
   };
 
   const onFocus = () => {
+    valueAtFocus.current = value;
+    cancelBlurCommit.current = false;
     setEditing(true);
     setDraft(fmt(value));
     begin();
   };
   const onText = (text: string) => {
     setDraft(text);
-    const parsed = parseNumber(text);
+    const parsed = parseNumber(text, language);
     if (parsed === null || parsed < min || parsed > max) return;
     emit(round(parsed));
   };
   const commitDraft = () => {
-    const parsed = parseNumber(draft);
+    const parsed = parseNumber(draft, language);
     if (parsed !== null) emit(snapToStep(parsed, min, max, step));
   };
   const onBlur = () => {
-    commitDraft();
+    if (cancelBlurCommit.current) cancelBlurCommit.current = false;
+    else commitDraft();
     setEditing(false);
     end();
   };
@@ -101,7 +112,9 @@ export function CustomNumberInput({
       commitDraft();
       e.currentTarget.blur();
     } else if (e.key === "Escape") {
-      setDraft(fmt(value));
+      cancelBlurCommit.current = true;
+      emit(valueAtFocus.current);
+      setDraft(fmt(valueAtFocus.current));
       setEditing(false);
       e.currentTarget.blur();
     } else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
@@ -124,7 +137,7 @@ export function CustomNumberInput({
   const onLabelMove = (e: PointerEvent<HTMLLabelElement>) => {
     if (!scrub.current) return;
     const fine = e.shiftKey ? 0.1 : 1;
-    const steps = Math.round(((e.clientX - scrub.current.startX) / scrubPixelsPerStep) * fine);
+    const steps = Math.round(((e.clientX - scrub.current.startX) / SCRUB_PIXELS_PER_STEP) * fine);
     emit(snapToStep(scrub.current.startValue + steps * step, min, max, step));
   };
   const onLabelUp = (e: PointerEvent<HTMLLabelElement>) => {
@@ -146,7 +159,7 @@ export function CustomNumberInput({
         onPointerUp: onLabelUp,
         onPointerCancel: onLabelUp,
         className: disabled ? undefined : "cursor-scrub touch-none",
-        title: disabled ? undefined : "Drag to change",
+        title: disabled ? undefined : t("common.scrub"),
       }}
     >
       <div className="flex items-center gap-3">
@@ -159,8 +172,8 @@ export function CustomNumberInput({
             step={step}
             disabled={disabled}
             onChange={onChange}
-            onGestureStart={onGestureStart}
-            onGestureEnd={onGestureEnd}
+            onGestureStart={begin}
+            onGestureEnd={end}
             format={(v) => `${fmt(v)}${unit ? ` ${unit}` : ""}`}
           />
         )}

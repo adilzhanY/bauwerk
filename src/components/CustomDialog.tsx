@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import type { ReactNode } from "react";
 import { X } from "lucide-react";
 import { CustomIconButton } from "./CustomIconButton";
@@ -16,8 +16,14 @@ const FOCUSABLE =
 
 /** Modal with a focus trap. Escape and a click on the backdrop close it; focus returns to the opener. */
 export function CustomDialog({ title, closeLabel, onClose, children, width = 440 }: Props) {
+  const titleId = useId();
   const panel = useRef<HTMLDivElement>(null);
   const opener = useRef<Element | null>(null);
+  const closeRef = useRef(onClose);
+
+  useEffect(() => {
+    closeRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     opener.current = document.activeElement;
@@ -25,8 +31,9 @@ export function CustomDialog({ title, closeLabel, onClose, children, width = 440
     (first ?? panel.current)?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
         e.stopPropagation();
-        onClose();
+        closeRef.current();
         return;
       }
       if (e.key !== "Tab" || !panel.current) return;
@@ -48,7 +55,7 @@ export function CustomDialog({ title, closeLabel, onClose, children, width = 440
       window.removeEventListener("keydown", onKey, true);
       if (opener.current instanceof HTMLElement) opener.current.focus();
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div
@@ -59,7 +66,7 @@ export function CustomDialog({ title, closeLabel, onClose, children, width = 440
         ref={panel}
         role="dialog"
         aria-modal="true"
-        aria-labelledby="dialog-title"
+        aria-labelledby={titleId}
         tabIndex={-1}
         onClick={(e) => {
           e.stopPropagation();
@@ -68,7 +75,7 @@ export function CustomDialog({ title, closeLabel, onClose, children, width = 440
         className="rounded-card border border-line bg-paper p-5 shadow-2xl outline-none"
       >
         <header className="mb-4 flex items-center justify-between">
-          <h2 id="dialog-title" className="font-display text-lg font-semibold text-ink">
+          <h2 id={titleId} className="font-display text-lg font-semibold text-ink">
             {title}
           </h2>
           <CustomIconButton label={closeLabel} size="sm" onClick={onClose}>

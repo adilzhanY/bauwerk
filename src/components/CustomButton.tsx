@@ -7,7 +7,6 @@ interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   icon?: ReactNode;
   loading?: boolean;
-  active?: boolean;
 }
 
 const variants: Record<ButtonVariant, string> = {
@@ -22,7 +21,6 @@ export function CustomButton({
   variant = "default",
   icon,
   loading = false,
-  active = false,
   className,
   children,
   disabled,
@@ -33,12 +31,10 @@ export function CustomButton({
       type="button"
       disabled={(disabled ?? false) || loading}
       aria-busy={loading || undefined}
-      aria-pressed={active || undefined}
       className={cx(
         "inline-flex h-10 items-center gap-2 rounded-pill border px-3 text-sm font-medium transition-colors",
         "disabled:cursor-not-allowed disabled:opacity-40",
         variants[variant],
-        active && "border-select bg-select-soft text-select",
         className,
       )}
       {...rest}

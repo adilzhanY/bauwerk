@@ -11,6 +11,7 @@ import { CustomButton } from "@/components/CustomButton";
 import { CustomCheckbox } from "@/components/CustomCheckbox";
 import { CustomReadOnly, CustomSection } from "@/components/CustomField";
 import { CustomNumberInput } from "@/components/CustomNumberInput";
+import { buildingFileName, downloadFile } from "./download";
 
 const BERLIN = { lat: 52.516275, lon: 13.377704, rotation: 0 };
 
@@ -36,15 +37,11 @@ export function LocationSection() {
 
   const onExport = () => {
     if (!origin) return;
-    const blob = new Blob([JSON.stringify(toGeoJson(building), null, 2)], {
-      type: "application/geo+json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `bauwerk-${building.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.geojson`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadFile(
+      JSON.stringify(toGeoJson(building), null, 2),
+      buildingFileName(building.name, "geojson", false),
+      "application/geo+json",
+    );
   };
 
   const onImport = async (file: File) => {

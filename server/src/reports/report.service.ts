@@ -1,4 +1,5 @@
 import { Injectable } from "@nestjs/common";
+import type { OnModuleDestroy } from "@nestjs/common";
 import { chromium } from "playwright";
 import type { Browser } from "playwright";
 import { toJson } from "@/geometry/export";
@@ -12,7 +13,7 @@ import type { Building } from "@/geometry/types";
  * reports 503.
  */
 @Injectable()
-export class ReportService {
+export class ReportService implements OnModuleDestroy {
   private browser: Browser | null = null;
 
   async renderPdf(building: Building, language: "en" | "de", baseUrl: string): Promise<Buffer> {
@@ -45,5 +46,9 @@ export class ReportService {
   async close(): Promise<void> {
     await this.browser?.close();
     this.browser = null;
+  }
+
+  async onModuleDestroy(): Promise<void> {
+    await this.close();
   }
 }

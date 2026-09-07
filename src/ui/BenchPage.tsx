@@ -76,7 +76,7 @@ export function BenchPage({
         <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
           <Row k={t("bench.fps")} v={num(stats.fps, 0)} />
           <Row k={t("bench.mean")} v={`${num(stats.mean)} ms`} />
-          <Row k="p95" v={`${num(stats.p95)} ms`} />
+          <Row k={t("bench.p95")} v={`${num(stats.p95)} ms`} />
           <Row k={t("bench.max")} v={`${num(stats.max)} ms`} />
           <Row k={t("bench.calls")} v={num(sample?.calls ?? 0, 0)} />
           <Row k={t("bench.triangles")} v={num(sample?.triangles ?? 0, 0)} />

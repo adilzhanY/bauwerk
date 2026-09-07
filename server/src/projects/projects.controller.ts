@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   Controller,
   Delete,
   Get,
@@ -12,17 +13,17 @@ import {
   Post,
   Put,
 } from "@nestjs/common";
-import type { Building } from "@/geometry/types";
 import { ProjectsService } from "./projects.service";
 import type { WriteResult } from "./projects.service";
 
-interface CreateBody {
-  building: Building;
-}
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
 
-interface UpdateBody {
-  building: Building;
-  baseVersion: number;
+function buildingOf(body: unknown): unknown {
+  if (!isRecord(body) || !("building" in body)) {
+    throw new BadRequestException({ error: "buildingRequired" });
+  }
+  return body.building;
 }
 
 function unwrap(result: WriteResult) {
@@ -57,19 +58,17 @@ export class ProjectsController {
   }
 
   @Post()
-  async create(@Body() body: CreateBody, @Headers("x-actor") actor?: string) {
-    return unwrap(await this.projects.create(body.building, actorOf(actor)));
+  async create(@Body() body: unknown, @Headers("x-actor") actor?: string) {
+    return unwrap(await this.projects.create(buildingOf(body), actorOf(actor)));
   }
 
   @Put(":id")
-  async update(
-    @Param("id") id: string,
-    @Body() body: UpdateBody,
-    @Headers("x-actor") actor?: string,
-  ) {
-    if (typeof body.baseVersion !== "number")
+  async update(@Param("id") id: string, @Body() body: unknown, @Headers("x-actor") actor?: string) {
+    const building = buildingOf(body);
+    const baseVersion = isRecord(body) ? body.baseVersion : undefined;
+    if (typeof baseVersion !== "number" || !Number.isInteger(baseVersion) || baseVersion < 1)
       throw new HttpException({ error: "baseVersionRequired" }, 400);
-    return unwrap(await this.projects.update(id, body.building, body.baseVersion, actorOf(actor)));
+    return unwrap(await this.projects.update(id, building, baseVersion, actorOf(actor)));
   }
 
   @Delete(":id")

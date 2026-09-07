@@ -1,5 +1,5 @@
 import { buildWalls, interiorWallAsWall } from "@/geometry/walls";
-import { edges, pointInPolygon, pointOnSegment, sub, dot } from "@/geometry/polygon";
+import { edges, pointInPolygon, sub, dot } from "@/geometry/polygon";
 import { openingsOn, validateOpening } from "@/geometry/openings";
 import type { Building, Segment, Storey, Vec2 } from "@/geometry/types";
 
@@ -22,7 +22,12 @@ export function constrainWalk(
   let p = to;
   // Exterior: stay inside the inner face unless stepping through a door.
   if (!pointInPolygon(p, inner)) {
-    if (!throughDoor(building, storey, p)) p = slide(from, to, inner);
+    if (!throughDoor(building, storey, p)) {
+      const recovering =
+        !pointInPolygon(from, inner) &&
+        distanceToBoundary(p, inner) < distanceToBoundary(from, inner) - 1e-9;
+      if (!recovering) p = slide(from, to, inner);
+    }
   }
   // Interior walls: keep a body radius away from every segment, except in a door span.
   for (const [index, wall] of storey.interiorWalls.entries()) {
@@ -102,6 +107,14 @@ function distanceToSegment(p: Vec2, a: Vec2, b: Vec2): number {
   return Math.hypot(p.x - q.x, p.y - q.y);
 }
 
+function distanceToBoundary(p: Vec2, polygon: readonly Vec2[]): number {
+  let closest = Infinity;
+  for (const edge of edges(polygon)) {
+    closest = Math.min(closest, distanceToSegment(p, edge.a, edge.b));
+  }
+  return closest;
+}
+
 function normalAwayFrom(p: Vec2, a: Vec2, b: Vec2): Vec2 {
   const d = sub(b, a);
   const len = Math.hypot(d.x, d.y) || 1;
@@ -109,6 +122,3 @@ function normalAwayFrom(p: Vec2, a: Vec2, b: Vec2): Vec2 {
   const side = dot(sub(p, a), n) >= 0 ? 1 : -1;
   return { x: n.x * side, y: n.y * side };
 }
-
-export const isOnBoundary = (p: Vec2, polygon: Vec2[]): boolean =>
-  edges(polygon).some((e) => pointOnSegment(p, e.a, e.b, 1e-6));

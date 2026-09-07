@@ -4,7 +4,7 @@ import { Vector3 } from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { bounds } from "@/geometry/polygon";
 import { useEditorStore } from "@/store/building";
-import { storeyElevation } from "@/store/selectors";
+import { selectTotalHeight } from "@/store/selectors";
 
 const STOREY_ANIMATION_MS = 300;
 
@@ -23,20 +23,35 @@ export function Camera() {
   // orbit target, so only orbit controls are used here.
   const controls = useThree((s) => {
     const c = s.controls as OrbitControlsImpl | null;
-    return c !== null && "target" in c && c.target instanceof Vector3 ? c : null;
+    return c != null && "target" in c && c.target instanceof Vector3 ? c : null;
   });
   const camera = useThree((s) => s.camera);
-  const building = useEditorStore((s) => s.building);
+  const buildingId = useEditorStore((s) => s.building.id);
+  const footprint = useEditorStore((s) => s.building.footprint);
+  const height = useEditorStore(selectTotalHeight);
   const activeStoreyId = useEditorStore((s) => s.activeStoreyId);
   const planView = useEditorStore((s) => s.planView);
+  const activeMidpoint = useEditorStore((state) => {
+    let elevation = 0;
+    for (const storey of state.building.storeys) {
+      if (storey.id === state.activeStoreyId) return elevation + storey.height / 2;
+      elevation += storey.height;
+    }
+    return null;
+  });
   const tween = useRef<Tween | null>(null);
   const fittedBuildingId = useRef<string | null>(null);
+  const fittedControls = useRef<OrbitControlsImpl | null>(null);
   const skipStoreyFocus = useRef(false);
 
   useEffect(() => {
-    if (!controls || fittedBuildingId.current === building.id) return;
-    const { min, max } = bounds(building.footprint);
-    const height = building.storeys.reduce((s, st) => s + st.height, 0);
+    if (
+      !controls ||
+      planView ||
+      (fittedBuildingId.current === buildingId && fittedControls.current === controls)
+    )
+      return;
+    const { min, max } = bounds(footprint);
     const centre = new Vector3((min.x + max.x) / 2, height / 2, (min.y + max.y) / 2);
     const size = Math.max(max.x - min.x, max.y - min.y, height, 4);
     const distance = size * 1.8;
@@ -47,23 +62,24 @@ export function Camera() {
     );
     controls.target.copy(centre);
     controls.update();
-    fittedBuildingId.current = building.id;
+    fittedBuildingId.current = buildingId;
+    fittedControls.current = controls;
     skipStoreyFocus.current = true;
-  }, [controls, camera, building]);
+  }, [controls, camera, buildingId, footprint, height, planView]);
 
   useEffect(() => {
-    if (!controls || activeStoreyId === null || planView) return;
+    if (!controls || activeStoreyId === null || activeMidpoint === null || planView) {
+      tween.current = null;
+      return;
+    }
     if (skipStoreyFocus.current) {
       skipStoreyFocus.current = false;
       return;
     }
-    const storey = building.storeys.find((s) => s.id === activeStoreyId);
-    if (!storey) return;
-    const y = storeyElevation(building, activeStoreyId) + storey.height / 2;
-    const to = controls.target.clone().setY(y);
+    const to = controls.target.clone().setY(activeMidpoint);
     if (Math.abs(to.y - controls.target.y) < 1e-6) return;
     tween.current = { from: controls.target.clone(), to, start: performance.now() };
-  }, [controls, building, activeStoreyId, planView]);
+  }, [controls, activeStoreyId, activeMidpoint, planView]);
 
   useFrame(() => {
     const t = tween.current;

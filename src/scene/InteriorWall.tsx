@@ -1,6 +1,5 @@
 import { useMemo, useRef } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
-import { Mesh } from "three";
 import { defaultOpening, snapOffset } from "@/geometry/openings";
 import { dot, sub } from "@/geometry/polygon";
 import { interiorWallAsWall, wallSolids } from "@/geometry/walls";
@@ -10,9 +9,8 @@ import type { StoreyDisplay } from "./display";
 import { sameSelection, useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
 import { useHover } from "./hover";
-import { mergeAll, prismGeometry } from "./three";
-
-export { INTERIOR_WALL_THICKNESS } from "@/geometry/walls";
+import { mergeAll, meshRaycast, noRaycast, prismGeometry } from "./three";
+import { useDisposableGeometry } from "./useDisposableGeometry";
 
 interface Props {
   storeyId: Id;
@@ -25,14 +23,6 @@ interface Props {
   display: StoreyDisplay;
   ghostOpacity: number;
 }
-
-// Writing `undefined` to a mesh's raycast prop removes the method entirely, and the
-// next pointer event throws inside the raycaster, killing all interaction until reload.
-// Switch between the real Mesh raycast and a no-op instead.
-const meshRaycast: Mesh["raycast"] = function raycast(this: Mesh, raycaster, intersects) {
-  Mesh.prototype.raycast.call(this, raycaster, intersects);
-};
-const noRaycast = () => null;
 
 /** A thin wall inside the footprint, with holes for its openings. Clicking it with the Opening tool adds one. */
 export function InteriorWall({
@@ -64,6 +54,7 @@ export function InteriorWall({
     return mergeAll(prisms.map((p) => prismGeometry(p.plan, p.bottom, p.top)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hash]);
+  useDisposableGeometry(geometry);
 
   // Same press-and-release bookkeeping as the exterior wall.
   const down = useRef<{ x: number; y: number } | null>(null);
@@ -105,6 +96,9 @@ export function InteriorWall({
       position={[0, elevation, 0]}
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
+      onPointerCancel={() => {
+        down.current = null;
+      }}
       raycast={active ? meshRaycast : noRaycast}
       castShadow
       {...hover}

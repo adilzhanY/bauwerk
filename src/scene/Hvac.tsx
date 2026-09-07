@@ -4,12 +4,13 @@ import type { ThreeEvent } from "@react-three/fiber";
 import { edges } from "@/geometry/polygon";
 import { effectiveWallThickness } from "@/geometry/layers";
 import type { Building, HeatPump, Storey } from "@/geometry/types";
-import { colors, INACTIVE_OPACITY } from "@/lib/colors";
+import { colors } from "@/lib/colors";
 import { sameSelection, useEditorStore } from "@/store/building";
 import type { Selection } from "@/store/building";
 import { useHover } from "./hover";
-import { yawFor } from "./three";
+import { lineRaycast, meshRaycast, noRaycast, yawFor } from "./three";
 import { useSceneColors } from "./useSceneColors";
+import type { StoreyDisplay } from "./display";
 
 const RADIATOR_COLOR = "#e9e9e6";
 const PUMP_COLOR = "#9aa3ad";
@@ -36,14 +37,19 @@ export function StoreyHvac({
   storey,
   elevation,
   active,
+  display,
+  ghostOpacity,
 }: {
   building: Building;
   storey: Storey;
   elevation: number;
   active: boolean;
+  display: StoreyDisplay;
+  ghostOpacity: number;
 }) {
   const es = useMemo(() => edges(building.footprint), [building.footprint]);
   const thickness = effectiveWallThickness(building);
+  if (display === "outline") return null;
   return (
     <group>
       {(storey.radiators ?? []).map((r) => {
@@ -58,6 +64,8 @@ export function StoreyHvac({
             thickness={thickness}
             elevation={elevation}
             active={active}
+            display={display}
+            ghostOpacity={ghostOpacity}
             offset={r.offset}
             width={r.width}
             height={r.height}
@@ -72,6 +80,8 @@ export function StoreyHvac({
           points={p.points}
           elevation={elevation}
           active={active}
+          display={display}
+          ghostOpacity={ghostOpacity}
         />
       ))}
     </group>
@@ -85,11 +95,14 @@ function RadiatorMesh(props: {
   thickness: number;
   elevation: number;
   active: boolean;
+  display: StoreyDisplay;
+  ghostOpacity: number;
   offset: number;
   width: number;
   height: number;
 }) {
-  const { edge, thickness, elevation, active, offset, width, height } = props;
+  const { edge, thickness, elevation, active, display, ghostOpacity, offset, width, height } =
+    props;
   const target: Selection = useMemo(
     () => ({ kind: "radiator", storeyId: props.storeyId, id: props.id }),
     [props.storeyId, props.id],
@@ -104,6 +117,7 @@ function RadiatorMesh(props: {
       position={[cx, elevation + 0.15 + height / 2, cz]}
       rotation={[0, yawFor(edge.direction), 0]}
       onClick={onClick}
+      raycast={active ? meshRaycast : noRaycast}
       castShadow
       {...hover}
     >
@@ -114,9 +128,9 @@ function RadiatorMesh(props: {
         emissiveIntensity={selected ? 0.3 : 0}
         roughness={0.4}
         metalness={0.3}
-        transparent={!active}
-        opacity={active ? 1 : INACTIVE_OPACITY}
-        depthWrite={active}
+        transparent={display === "ghost"}
+        opacity={display === "ghost" ? ghostOpacity : 1}
+        depthWrite={display !== "ghost"}
       />
     </mesh>
   );
@@ -128,6 +142,8 @@ function PipeLine(props: {
   points: { x: number; y: number }[];
   elevation: number;
   active: boolean;
+  display: StoreyDisplay;
+  ghostOpacity: number;
 }) {
   const target: Selection = useMemo(
     () => ({ kind: "pipe", storeyId: props.storeyId, id: props.id }),
@@ -141,9 +157,10 @@ function PipeLine(props: {
       points={props.points.map((p) => [p.x, y, p.y] as [number, number, number])}
       color={selected ? scene.select : hovered ? scene.ink : "#c0392b"}
       lineWidth={selected ? 4 : 3}
-      transparent={!props.active}
-      opacity={props.active ? 1 : INACTIVE_OPACITY}
+      transparent={props.display === "ghost"}
+      opacity={props.display === "ghost" ? props.ghostOpacity : 1}
       onClick={onClick}
+      raycast={props.active ? lineRaycast : noRaycast}
       {...hover}
     />
   );

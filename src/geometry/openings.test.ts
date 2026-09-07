@@ -69,6 +69,14 @@ describe("validateOpening", () => {
     expect(validateOpening(window({ width: 0.05 }), ctx)).toContain("tooSmall");
   });
 
+  it("rejects non-finite dimensions and wall contexts", () => {
+    expect(validateOpening(window({ width: Number.NaN }), ctx)).toEqual(["nonFinite"]);
+    expect(validateOpening(window({ offset: Number.POSITIVE_INFINITY }), ctx)).toEqual([
+      "nonFinite",
+    ]);
+    expect(validateOpening(window(), { ...ctx, wallLength: Number.NaN })).toEqual(["nonFinite"]);
+  });
+
   it("two openings that touch exactly are allowed", () => {
     const a = window({ id: "a", offset: 1, width: 1.2 });
     const b = window({ id: "b", offset: 2.2, width: 1.2 });

@@ -6,6 +6,8 @@ import { useEditorStore } from "@/store/building";
 import { storeyElevation } from "@/store/selectors";
 import { flatGeometry } from "./three";
 import { uValueColor } from "./uValueColor";
+import { noRaycast } from "./three";
+import { useDisposableGeometries } from "./useDisposableGeometry";
 
 /** Thin band on top of each exterior wall of every storey, keyed to the wall construction's U-value. */
 export function UValueBands() {
@@ -22,11 +24,13 @@ export function UValueBands() {
       );
     });
   }, [show, building]);
+  const flatGeometries = useMemo(() => geometries.flat(), [geometries]);
+  useDisposableGeometries(flatGeometries);
   if (!show) return null;
   return (
     <group>
-      {geometries.flat().map((g, i) => (
-        <mesh key={i} geometry={g} raycast={() => null}>
+      {flatGeometries.map((g, i) => (
+        <mesh key={i} geometry={g} raycast={noRaycast}>
           <meshBasicMaterial color={color} />
         </mesh>
       ))}

@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { ThreeEvent } from "@react-three/fiber";
 import { bounds, centroid, snapPoint } from "@/geometry/polygon";
 import { GRID_SIZE } from "@/geometry/types";
@@ -32,6 +32,14 @@ export function MoveTool() {
   const endBatch = useEditorStore((s) => s.endBatch);
   const lock = useDragLock();
   const drag = useRef<Drag | null>(null);
+
+  useEffect(
+    () => () => {
+      if (drag.current) endBatch();
+      drag.current = null;
+    },
+    [endBatch],
+  );
 
   const plane = useMemo(() => {
     const { min, max } = bounds(footprint);

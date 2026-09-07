@@ -79,6 +79,17 @@ export function FootprintTool() {
     setDrag(null);
   };
 
+  const onCancel = (e: ThreeEvent<PointerEvent>) => {
+    try {
+      (e.target as Element).releasePointerCapture(e.pointerId);
+    } catch {
+      /* capture may already be gone */
+    }
+    if (!drag) return;
+    lock(false);
+    setDrag(null);
+  };
+
   const lineColor = drag ? (drag.valid ? colors.accent : colors.warning) : colors.accent;
 
   return (
@@ -94,6 +105,7 @@ export function FootprintTool() {
             onPointerDown={onDown(index)}
             onPointerMove={onMove}
             onPointerUp={onUp}
+            onPointerCancel={onCancel}
           >
             <sphereGeometry args={[0.16, 16, 16]} />
             <meshBasicMaterial color={color} />

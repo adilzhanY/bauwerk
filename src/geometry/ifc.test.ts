@@ -205,7 +205,7 @@ describe("georeferencing", () => {
     const text = toIfc(b);
     expect(text).toContain("IFCPROJECTEDCRS('EPSG:25833'");
     expect(text).toMatch(
-      /IFCMAPCONVERSION\(#\d+,#\d+,389918\.04\d*,5819699\.13\d*,0\.,0\.866025,0\.5,1\.\)/,
+      /IFCMAPCONVERSION\(#\d+,#\d+,389918\.04\d*,5819699\.13\d*,0\.,0\.866025,-0\.5,1\.\)/,
     );
     const { entities } = parse(text);
     expect(count(entities, "IFCMAPCONVERSION")).toBe(1);

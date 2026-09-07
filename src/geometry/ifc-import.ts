@@ -71,6 +71,8 @@ interface Ctx {
   file: StepFile;
   report: ImportReportItem[];
   ids: () => string;
+  lengthScale: number;
+  storeyPlacements: Set<number>;
 }
 
 const get = (ctx: Ctx, id: number | undefined): StepEntity | undefined =>
@@ -95,10 +97,37 @@ export function importIfc(
     };
   }
   let n = 0;
-  const ctx: Ctx = { file, report, ids: () => `imp_${++n}` };
+  const ctx: Ctx = {
+    file,
+    report,
+    ids: () => `imp_${++n}`,
+    lengthScale: lengthScaleOf(file),
+    storeyPlacements: new Set(),
+  };
 
-  const storeyEntities = byType(ctx, "IFCBUILDINGSTOREY")
-    .map((e) => ({ e, elevation: asNumber(e.args[9]) ?? 0, name: asString(e.args[2]) ?? "" }))
+  const rawStoreys = byType(ctx, "IFCBUILDINGSTOREY");
+  ctx.storeyPlacements = new Set(
+    rawStoreys
+      .map((storey) => asRef(storey.args[5]))
+      .filter((id): id is number => id !== undefined),
+  );
+  const storeyEntities = rawStoreys
+    .map((e) => {
+      const placement = get(ctx, asRef(e.args[5]));
+      const placedElevation = placement ? placementChain(ctx, placement, false).z : undefined;
+      const attributeElevation = asNumber(e.args[9]);
+      const scaledAttribute =
+        attributeElevation === undefined ? undefined : attributeElevation * ctx.lengthScale;
+      return {
+        e,
+        elevation:
+          placedElevation !== undefined &&
+          (Math.abs(placedElevation) > 1e-9 || scaledAttribute === undefined)
+            ? placedElevation
+            : (scaledAttribute ?? 0),
+        name: asString(e.args[2]) ?? "",
+      };
+    })
     .sort((a, b) => a.elevation - b.elevation);
   if (storeyEntities.length === 0) {
     report.push({ code: "noStoreys", entity: "IfcProject" });
@@ -237,18 +266,31 @@ export function importIfc(
     }
     const filler = fillerOf.get(openingEntity.id);
     const kind: "window" | "door" = filler?.type === "IFCDOOR" ? "door" : "window";
-    const placed = projectOpening(plan.polygon, fpEdges);
+    const interiorWallsForStorey = walls.filter(
+      (candidate) => candidate.storey === wall.storey && candidate.partition,
+    );
+    const interiorWallIndex = interiorWallsForStorey.findIndex(
+      (candidate) => candidate.id === wall.id,
+    );
+    const placed = wall.partition
+      ? projectOpeningOnSegment(plan.polygon, centreLine(wall.plan), interiorWallIndex)
+      : projectOpening(plan.polygon, fpEdges);
     if (!placed) {
       report.push({ code: "openingOffWall", entity: `#${openingEntity.id} IfcOpeningElement` });
       continue;
     }
-    const height = filler ? (asNumber(filler.args[8]) ?? plan.depth) : plan.depth;
-    const width = filler ? (asNumber(filler.args[9]) ?? placed.width) : placed.width;
+    const height = filler
+      ? (asNumber(filler.args[8]) ?? plan.depth / ctx.lengthScale) * ctx.lengthScale
+      : plan.depth;
+    const width = filler
+      ? (asNumber(filler.args[9]) ?? placed.width / ctx.lengthScale) * ctx.lengthScale
+      : placed.width;
     const sill = kind === "door" ? 0 : Math.max(0, round3(plan.z0));
     const list = openingsByStorey.get(wall.storey) ?? [];
     list.push({
       id: ctx.ids(),
       wallIndex: placed.wallIndex,
+      ...(wall.partition ? { interior: true } : {}),
       kind,
       offset: round3(placed.offset + (placed.width - width) / 2),
       width: round3(width),
@@ -345,7 +387,7 @@ export function importIfc(
     const xo = asNumber(conversion.args[6]) ?? 0;
     if (zone > 0 && zone <= 60 && e !== undefined && nn !== undefined) {
       const ll = fromUtm({ zone, north: true, easting: e, northing: nn });
-      const rotation = ((Math.atan2(xo, xa) * 180) / Math.PI + 360) % 360;
+      const rotation = ((-Math.atan2(xo, xa) * 180) / Math.PI + 360) % 360;
       origin = {
         lat: round6(ll.lat),
         lon: round6(ll.lon),
@@ -446,12 +488,22 @@ interface PlanSolid {
 function firstSolid(ctx: Ctx, product: StepEntity): StepEntity | undefined {
   const shape = get(ctx, asRef(product.args[6]));
   if (!shape) return undefined;
-  for (const repId of asRefs(shape.args[2])) {
-    const rep = get(ctx, repId);
-    for (const itemId of asRefs(rep?.args[3])) {
+  const representations = asRefs(shape.args[2])
+    .map((id) => get(ctx, id))
+    .filter((entity): entity is StepEntity => entity !== undefined);
+  const body = representations.filter(
+    (representation) => asString(representation.args[1])?.toUpperCase() === "BODY",
+  );
+  const candidates = body.length > 0 ? body : representations;
+  for (const rep of candidates) {
+    for (const itemId of asRefs(rep.args[3])) {
       const item = get(ctx, itemId);
-      if (item) return item;
+      if (item?.type === "IFCEXTRUDEDAREASOLID") return item;
     }
+  }
+  for (const rep of candidates) {
+    const item = get(ctx, asRefs(rep.args[3])[0]);
+    if (item) return item;
   }
   return undefined;
 }
@@ -469,13 +521,18 @@ function planOfSolid(ctx: Ctx, solid: StepEntity, owner: StepEntity): PlanSolid 
   const profile = get(ctx, asRef(solid.args[0]));
   const position = get(ctx, asRef(solid.args[1]));
   const direction = get(ctx, asRef(solid.args[2]));
-  const depth = asNumber(solid.args[3]) ?? 0;
-  const dir = asList(direction?.args[0]).map(asNumber);
-  if (dir.length === 3 && Math.abs((dir[2] ?? 1) - 1) > 1e-6) {
+  const depth = (asNumber(solid.args[3]) ?? 0) * ctx.lengthScale;
+  const dirValues = asList(direction?.args[0]).map(asNumber);
+  const extrusion = normalise3({
+    x: dirValues[0] ?? 0,
+    y: dirValues[1] ?? 0,
+    z: dirValues[2] ?? 1,
+  });
+  if (depth <= 0 || length3(extrusion) < 1e-9) {
     ctx.report.push({
-      code: "slopedWall",
+      code: "unknownGeometry",
       entity: `#${owner.id} ${owner.type}`,
-      detail: "extrusion not vertical",
+      detail: "invalid extrusion",
     });
     return null;
   }
@@ -500,18 +557,18 @@ function planOfSolid(ctx: Ctx, solid: StepEntity, owner: StepEntity): PlanSolid 
       pts.pop();
     polygon = pts;
   } else if (profile?.type === "IFCRECTANGLEPROFILEDEF") {
-    const x = asNumber(profile.args[3]) ?? 0;
-    const y = asNumber(profile.args[4]) ?? 0;
+    const x = (asNumber(profile.args[3]) ?? 0) * ctx.lengthScale;
+    const y = (asNumber(profile.args[4]) ?? 0) * ctx.lengthScale;
     const pos = axis2Placement2D(ctx, get(ctx, asRef(profile.args[2])));
     polygon = [
       { x: -x / 2, y: -y / 2 },
       { x: x / 2, y: -y / 2 },
       { x: x / 2, y: y / 2 },
       { x: -x / 2, y: y / 2 },
-    ].map((p) => ({
-      x: pos.x + p.x * pos.cos - p.y * pos.sin,
-      y: pos.y + p.x * pos.sin + p.y * pos.cos,
-    }));
+    ].map((p) => {
+      const transformed = applyPoint(pos, { x: p.x, y: p.y, z: 0 });
+      return { x: transformed.x, y: transformed.y };
+    });
   } else {
     ctx.report.push({
       code: "unsupportedProfile",
@@ -520,82 +577,180 @@ function planOfSolid(ctx: Ctx, solid: StepEntity, owner: StepEntity): PlanSolid 
     });
     return null;
   }
-  // Apply the solid's position and the owner's local placement chain (translation and yaw only).
+  // Apply the solid position and the owner's placement chain. The full 3D basis
+  // matters because many IFC writers cut openings by extruding a vertical profile
+  // horizontally through the wall.
   const placement = placementChain(ctx, get(ctx, asRef(owner.args[5])));
-  const apply = (p: Vec2): Vec2 => {
-    const a = {
-      x: local.x + p.x * local.cos - p.y * local.sin,
-      y: local.y + p.x * local.sin + p.y * local.cos,
-    };
-    return {
-      x: placement.x + a.x * placement.cos - a.y * placement.sin,
-      y: placement.y + a.x * placement.sin + a.y * placement.cos,
-    };
-  };
-  return { polygon: polygon.map(apply), z0: local.z + placement.z, depth };
+  const frame = composeFrames(placement, local);
+  const worldExtrusion = normalise3(applyVector(frame, extrusion));
+  const starts = polygon.map((p) => applyPoint(frame, { x: p.x, y: p.y, z: 0 }));
+  const ends = starts.map((p) => ({
+    x: p.x + worldExtrusion.x * depth,
+    y: p.y + worldExtrusion.y * depth,
+    z: p.z + worldExtrusion.z * depth,
+  }));
+  const vertices = [...starts, ...ends];
+  const z0 = Math.min(...vertices.map((point) => point.z));
+  const z1 = Math.max(...vertices.map((point) => point.z));
+  if (z1 - z0 < 1e-9) {
+    ctx.report.push({
+      code: "slopedWall",
+      entity: `#${owner.id} ${owner.type}`,
+      detail: "solid has no vertical extent",
+    });
+    return null;
+  }
+  const vertical = Math.hypot(worldExtrusion.x, worldExtrusion.y) < 1e-7;
+  const plan = vertical
+    ? starts.map((point) => ({ x: point.x, y: point.y }))
+    : convexHull(vertices.map((point) => ({ x: point.x, y: point.y })));
+  if (plan.length < 3 || area(plan) < 1e-10) {
+    ctx.report.push({
+      code: "unknownGeometry",
+      entity: `#${owner.id} ${owner.type}`,
+      detail: "solid has no plan area",
+    });
+    return null;
+  }
+  return { polygon: plan, z0, depth: z1 - z0 };
 }
 
 interface Frame {
   x: number;
   y: number;
   z: number;
-  cos: number;
-  sin: number;
+  xAxis: Vec3;
+  yAxis: Vec3;
+  zAxis: Vec3;
+}
+
+interface Vec3 {
+  x: number;
+  y: number;
+  z: number;
+}
+
+const IDENTITY_FRAME: Frame = {
+  x: 0,
+  y: 0,
+  z: 0,
+  xAxis: { x: 1, y: 0, z: 0 },
+  yAxis: { x: 0, y: 1, z: 0 },
+  zAxis: { x: 0, y: 0, z: 1 },
+};
+
+const length3 = (v: Vec3): number => Math.hypot(v.x, v.y, v.z);
+const dot3 = (a: Vec3, b: Vec3): number => a.x * b.x + a.y * b.y + a.z * b.z;
+const cross3 = (a: Vec3, b: Vec3): Vec3 => ({
+  x: a.y * b.z - a.z * b.y,
+  y: a.z * b.x - a.x * b.z,
+  z: a.x * b.y - a.y * b.x,
+});
+const normalise3 = (v: Vec3): Vec3 => {
+  const length = length3(v);
+  return length > 1e-12
+    ? { x: v.x / length, y: v.y / length, z: v.z / length }
+    : { x: 0, y: 0, z: 0 };
+};
+
+function applyVector(frame: Frame, v: Vec3): Vec3 {
+  return {
+    x: frame.xAxis.x * v.x + frame.yAxis.x * v.y + frame.zAxis.x * v.z,
+    y: frame.xAxis.y * v.x + frame.yAxis.y * v.y + frame.zAxis.y * v.z,
+    z: frame.xAxis.z * v.x + frame.yAxis.z * v.y + frame.zAxis.z * v.z,
+  };
+}
+
+function applyPoint(frame: Frame, p: Vec3): Vec3 {
+  const vector = applyVector(frame, p);
+  return { x: frame.x + vector.x, y: frame.y + vector.y, z: frame.z + vector.z };
+}
+
+function composeFrames(outer: Frame, inner: Frame): Frame {
+  const origin = applyPoint(outer, { x: inner.x, y: inner.y, z: inner.z });
+  return {
+    ...origin,
+    xAxis: applyVector(outer, inner.xAxis),
+    yAxis: applyVector(outer, inner.yAxis),
+    zAxis: applyVector(outer, inner.zAxis),
+  };
 }
 
 function point2(ctx: Ctx, id: number): Vec2 | null {
   const p = get(ctx, id);
   const c = asList(p?.args[0]).map(asNumber);
-  return c.length >= 2 ? { x: c[0] ?? 0, y: c[1] ?? 0 } : null;
+  return c.length >= 2
+    ? { x: (c[0] ?? 0) * ctx.lengthScale, y: (c[1] ?? 0) * ctx.lengthScale }
+    : null;
 }
 
 function axis2Placement3D(ctx: Ctx, e: StepEntity | undefined): Frame {
   const loc = asList(get(ctx, asRef(e?.args[0]))?.args[0]).map(asNumber);
-  const ref = asList(get(ctx, asRef(e?.args[2]))?.args[0]).map(asNumber);
-  const cos = ref.length >= 2 ? (ref[0] ?? 1) : 1;
-  const sin = ref.length >= 2 ? (ref[1] ?? 0) : 0;
-  return { x: loc[0] ?? 0, y: loc[1] ?? 0, z: loc[2] ?? 0, cos, sin };
+  const axisValues = asList(get(ctx, asRef(e?.args[1]))?.args[0]).map(asNumber);
+  const refValues = asList(get(ctx, asRef(e?.args[2]))?.args[0]).map(asNumber);
+  const zAxis = normalise3({
+    x: axisValues[0] ?? 0,
+    y: axisValues[1] ?? 0,
+    z: axisValues[2] ?? 1,
+  });
+  const requestedX = normalise3({
+    x: refValues[0] ?? 1,
+    y: refValues[1] ?? 0,
+    z: refValues[2] ?? 0,
+  });
+  const projection = dot3(requestedX, zAxis);
+  let xAxis = normalise3({
+    x: requestedX.x - projection * zAxis.x,
+    y: requestedX.y - projection * zAxis.y,
+    z: requestedX.z - projection * zAxis.z,
+  });
+  if (length3(xAxis) < 1e-9) {
+    const fallback = Math.abs(zAxis.z) < 0.9 ? { x: 0, y: 0, z: 1 } : { x: 1, y: 0, z: 0 };
+    xAxis = normalise3(cross3(fallback, zAxis));
+  }
+  const yAxis = normalise3(cross3(zAxis, xAxis));
+  return {
+    x: (loc[0] ?? 0) * ctx.lengthScale,
+    y: (loc[1] ?? 0) * ctx.lengthScale,
+    z: (loc[2] ?? 0) * ctx.lengthScale,
+    xAxis,
+    yAxis,
+    zAxis,
+  };
 }
 
 function axis2Placement2D(ctx: Ctx, e: StepEntity | undefined): Frame {
   const loc = asList(get(ctx, asRef(e?.args[0]))?.args[0]).map(asNumber);
   const ref = asList(get(ctx, asRef(e?.args[1]))?.args[0]).map(asNumber);
+  const cos = ref.length >= 2 ? (ref[0] ?? 1) : 1;
+  const sin = ref.length >= 2 ? (ref[1] ?? 0) : 0;
   return {
-    x: loc[0] ?? 0,
-    y: loc[1] ?? 0,
+    x: (loc[0] ?? 0) * ctx.lengthScale,
+    y: (loc[1] ?? 0) * ctx.lengthScale,
     z: 0,
-    cos: ref.length >= 2 ? (ref[0] ?? 1) : 1,
-    sin: ref.length >= 2 ? (ref[1] ?? 0) : 0,
+    xAxis: { x: cos, y: sin, z: 0 },
+    yAxis: { x: -sin, y: cos, z: 0 },
+    zAxis: { x: 0, y: 0, z: 1 },
   };
 }
 
 /** Composes IfcLocalPlacement up to, but excluding, the storey (elements are stored relative to their storey). */
-function placementChain(ctx: Ctx, placement: StepEntity | undefined): Frame {
+function placementChain(ctx: Ctx, placement: StepEntity | undefined, stopAtStorey = true): Frame {
   const frames: Frame[] = [];
   let current = placement;
   let guard = 0;
   while (current && guard++ < 20) {
+    if (stopAtStorey && ctx.storeyPlacements.has(current.id)) break;
     const rel = axis2Placement3D(ctx, get(ctx, asRef(current.args[1])));
     frames.push(rel);
     const parent = get(ctx, asRef(current.args[0]));
     if (!parent) break;
-    // Stop at a placement that belongs to a storey (its relative placement carries the elevation).
-    const isStoreyPlacement = [...ctx.file.entities.values()].some(
-      (e) => e.type === "IFCBUILDINGSTOREY" && asRef(e.args[5]) === parent.id,
-    );
-    if (isStoreyPlacement) break;
     current = parent;
   }
   // Compose from the outermost inwards.
-  let out: Frame = { x: 0, y: 0, z: 0, cos: 1, sin: 0 };
+  let out: Frame = IDENTITY_FRAME;
   for (const f of frames.reverse()) {
-    out = {
-      x: out.x + f.x * out.cos - f.y * out.sin,
-      y: out.y + f.x * out.sin + f.y * out.cos,
-      z: out.z + f.z,
-      cos: out.cos * f.cos - out.sin * f.sin,
-      sin: out.sin * f.cos + out.cos * f.sin,
-    };
+    out = composeFrames(out, f);
   }
   return out;
 }
@@ -661,6 +816,63 @@ function projectOpening(
   return { wallIndex: best.wallIndex, offset: Math.max(0, best.offset), width: best.width };
 }
 
+function projectOpeningOnSegment(
+  plan: Vec2[],
+  wall: Segment,
+  wallIndex: number,
+): { wallIndex: number; offset: number; width: number } | null {
+  if (wallIndex < 0) return null;
+  const vector = sub(wall.b, wall.a);
+  const length = Math.hypot(vector.x, vector.y);
+  if (length < 1e-9) return null;
+  const direction = { x: vector.x / length, y: vector.y / length };
+  const normal = { x: direction.y, y: -direction.x };
+  const centre = centroid(plan);
+  const off = Math.abs(dot(sub(centre, wall.a), normal));
+  const extent = plan.map((point) => dot(sub(point, wall.a), direction));
+  const start = Math.min(...extent);
+  const end = Math.max(...extent);
+  if (off > 1 || end < -0.5 || start > length + 0.5) return null;
+  return { wallIndex, offset: Math.max(0, start), width: end - start };
+}
+
+function convexHull(points: Vec2[]): Vec2[] {
+  const unique = new Map<string, Vec2>();
+  for (const point of points) unique.set(`${round6(point.x)}:${round6(point.y)}`, point);
+  const sorted = [...unique.values()].sort((a, b) => a.x - b.x || a.y - b.y);
+  if (sorted.length <= 2) return sorted;
+  const turn = (a: Vec2, b: Vec2, c: Vec2) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+  const lower: Vec2[] = [];
+  for (const point of sorted) {
+    while (lower.length >= 2) {
+      const p1 = lower[lower.length - 2];
+      const p2 = lower[lower.length - 1];
+      if (!p1 || !p2 || turn(p1, p2, point) <= 1e-10) {
+        lower.pop();
+      } else {
+        break;
+      }
+    }
+    lower.push(point);
+  }
+  const upper: Vec2[] = [];
+  for (const point of [...sorted].reverse()) {
+    while (upper.length >= 2) {
+      const p1 = upper[upper.length - 2];
+      const p2 = upper[upper.length - 1];
+      if (!p1 || !p2 || turn(p1, p2, point) <= 1e-10) {
+        upper.pop();
+      } else {
+        break;
+      }
+    }
+    upper.push(point);
+  }
+  lower.pop();
+  upper.pop();
+  return [...lower, ...upper];
+}
+
 function medianThickness(walls: { plan: Vec2[] }[], footprint: Vec2[]): number | undefined {
   const es = polygonEdges(footprint);
   const distances: number[] = [];
@@ -707,6 +919,38 @@ function psetValues<T>(
     }
   }
   return out;
+}
+
+function lengthScaleOf(file: StepFile): number {
+  const prefixScale: Record<string, number> = {
+    EXA: 1e18,
+    PETA: 1e15,
+    TERA: 1e12,
+    GIGA: 1e9,
+    MEGA: 1e6,
+    KILO: 1e3,
+    HECTO: 1e2,
+    DECA: 1e1,
+    DECI: 1e-1,
+    CENTI: 1e-2,
+    MILLI: 1e-3,
+    MICRO: 1e-6,
+    NANO: 1e-9,
+    PICO: 1e-12,
+    FEMTO: 1e-15,
+    ATTO: 1e-18,
+  };
+  for (const entity of file.entities.values()) {
+    if (
+      entity.type !== "IFCSIUNIT" ||
+      asEnum(entity.args[1]) !== "LENGTHUNIT" ||
+      asEnum(entity.args[3]) !== "METRE"
+    )
+      continue;
+    const prefix = asEnum(entity.args[2]);
+    return prefix === undefined ? 1 : (prefixScale[prefix] ?? 1);
+  }
+  return 1;
 }
 
 const round3 = (v: number) => Math.round(v * 1000) / 1000;

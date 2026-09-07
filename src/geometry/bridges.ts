@@ -1,6 +1,6 @@
 import { openingsOn, validateOpening } from "./openings";
 import { edges, pointOnSegment } from "./polygon";
-import type { Building, Storey, Vec2 } from "./types";
+import type { Building, Vec2 } from "./types";
 
 /**
  * Linear thermal bridges from the geometry. Every length the model already knows
@@ -10,7 +10,10 @@ import type { Building, Storey, Vec2 } from "./types";
  * Beiblatt 2 (the level assumed when a certificate uses the 0.05 W/(m²K)
  * blanket allowance); "poor" is the uninsulated stock without detail design,
  * taken from typical catalogue values for old buildings. Both are starting
- * points a consultant overrides, not survey results.
+ * points a consultant overrides, not survey results. The corner value of 0.05
+ * in the good set is a conservative placeholder, not the Beiblatt 2 figure
+ * (which is about zero or negative for an outer corner measured on outside
+ * dimensions); re-entrant corners of a concave footprint get the same value.
  */
 export type BridgeType = "corner" | "opening" | "slabEdge" | "roofEdge" | "floorJoint" | "junction";
 export type BridgeDetail = "good" | "poor";
@@ -52,7 +55,7 @@ export interface BridgeSummary {
   total: number;
 }
 
-const zero = (): Record<BridgeType, number> => ({
+export const zero = (): Record<BridgeType, number> => ({
   corner: 0,
   opening: 0,
   slabEdge: 0,
@@ -160,6 +163,10 @@ export function summarizeBridges(building: Building, detail: BridgeDetail): Brid
 
 export const bridgeDetailOf = (building: Building): BridgeDetail => building.bridgeDetail ?? "poor";
 
-export function storeyOf(building: Building, id: string): Storey | undefined {
-  return building.storeys.find((s) => s.id === id);
-}
+/** The summary of a building with nothing heated: no bridges count. */
+export const emptyBridgeSummary = (): BridgeSummary => ({
+  bridges: [],
+  lengths: zero(),
+  losses: zero(),
+  total: 0,
+});

@@ -49,6 +49,11 @@ describe("uValueFromLayers", () => {
     expect(glazing.layers).toBeUndefined();
     expect(glazing.uValue).toBe(0.8);
     expect(withComputedU({ ...wall, uValue: 99 }).uValue).toBe(wall.uValue);
+    for (const construction of all.filter((c) => c.layers && c.layers.length > 0)) {
+      expect(construction.uValue).toBe(
+        uValueFromLayers(construction.layers!, construction.category),
+      );
+    }
   });
 });
 

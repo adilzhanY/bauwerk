@@ -19,6 +19,7 @@ import { CustomSegmented } from "@/components/CustomSegmented";
 import { CustomSelect } from "@/components/CustomSelect";
 import { CustomTextInput } from "@/components/CustomTextInput";
 import { cx } from "@/components/cx";
+import { computeEnergy, ENERGY_CLASS_COLORS } from "@/geometry/energy";
 
 const categoryLabel: Record<ConstructionCategory, MessageKey> = {
   wall: "energy.wallConstruction",
@@ -38,6 +39,7 @@ export function ScenariosPanel() {
   const updateScenario = useEditorStore((s) => s.updateScenario);
   const removeScenario = useEditorStore((s) => s.removeScenario);
   const results = useMemo(() => evaluateAll(building), [building]);
+  const current = useMemo(() => computeEnergy(building), [building]);
   const num = (v: number, d = 0) => formatNumber(v, language, d);
   const euro = (v: number) => `${num(v)} €`;
   const payback = (r: ScenarioResult) =>
@@ -75,14 +77,7 @@ export function ScenariosPanel() {
                   {t("scenarios.current")}
                 </button>
               </td>
-              <td className="py-1.5 text-right font-num">
-                {num(
-                  results[0]
-                    ? results[0].energy.specificHeatingDemand +
-                        results[0].demandSaved / Math.max(1e-9, results[0].energy.heatedFloorArea)
-                    : 0,
-                )}
-              </td>
+              <td className="py-1.5 text-right font-num">{num(current.specificHeatingDemand)}</td>
               <td className="py-1.5 text-right font-num text-muted">0 €</td>
               <td className="py-1.5 text-right text-muted">{""}</td>
             </tr>
@@ -104,7 +99,7 @@ export function ScenariosPanel() {
                   >
                     <span
                       className="inline-block h-2.5 w-2.5 rounded-full"
-                      style={{ background: classColor(r.energy.energyClass) }}
+                      style={{ background: ENERGY_CLASS_COLORS[r.energy.energyClass] }}
                     />
                     {r.scenario.id === "full-envelope" ? t("scenarios.full") : r.scenario.name}
                   </button>
@@ -181,7 +176,10 @@ function Roadmap() {
             </span>
             <span
               className="rounded-pill px-2 py-0.5 font-num text-xs font-semibold"
-              style={{ background: classColor(s.energy.energyClass), color: "#1b1d20" }}
+              style={{
+                background: ENERGY_CLASS_COLORS[s.energy.energyClass],
+                color: "var(--fixed-ink)",
+              }}
             >
               {s.energy.energyClass} · {num(s.energy.specificHeatingDemand)}
             </span>
@@ -200,29 +198,15 @@ function Roadmap() {
         <p className="text-xs leading-relaxed text-muted">
           {t("scenarios.roadmapHint", {
             years: num(last.year),
-            payback: Number.isFinite(last.cumulativeInvestment / Math.max(1e-9, last.savingPerYear))
-              ? num(last.cumulativeInvestment / Math.max(1e-9, last.savingPerYear), 1)
-              : t("scenarios.never"),
+            payback:
+              last.savingPerYear > 0
+                ? num(last.cumulativeInvestment / last.savingPerYear, 1)
+                : t("scenarios.never"),
           })}
         </p>
       )}
     </div>
   );
-}
-
-function classColor(c: string): string {
-  const map: Record<string, string> = {
-    "A+": "#1a9850",
-    A: "#66bd63",
-    B: "#a6d96a",
-    C: "#d9ef8b",
-    D: "#fee08b",
-    E: "#fdae61",
-    F: "#f46d43",
-    G: "#d73027",
-    H: "#a50026",
-  };
-  return map[c] ?? "#999";
 }
 
 function ScenarioEditor({

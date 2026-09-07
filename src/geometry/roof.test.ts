@@ -130,6 +130,14 @@ describe("hip roof", () => {
     );
     expect(fallback.builtKind).toBe("gable");
   });
+
+  it("runs the hip ridge along the longer side regardless of the gable axis setting", () => {
+    const hip = buildRoof(b({ kind: "hip", pitch: 30, overhang: 0, ridgeAxis: "y" }), 0);
+    expect(hip.ridge?.a.y).toBeCloseTo(4);
+    expect(hip.ridge?.b.y).toBeCloseTo(4);
+    expect(hip.ridge!.b.x - hip.ridge!.a.x).toBeCloseTo(2);
+    expect(hip.ridgeHeight).toBeCloseTo(4 * Math.tan(deg(30)));
+  });
 });
 
 describe("flat roof", () => {
