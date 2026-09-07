@@ -82,7 +82,7 @@ The Energy tab is the heating period balance of **DIN V 4108-6**, computed on ev
 | **Solar and internal gains**     | Sun through the windows by orientation, 22 kWh per square metre from people and appliances, both 95 % usable.                                                                                         |
 | **Heating demand**               | 66 kKh of the German reference climate times the losses, minus the gains. Divided by heated floor area: the number the class is made of.                                                              |
 | **GEG check**                    | Every assigned construction against GEG Annex 7. The 1905 house passes 0 of 5.                                                                                                                        |
-| **Heat load per room**           | DIN EN 12831 at minus 14 °C for Berlin, with the installed radiators and a red flag when they are undersized, and the heat pump size that falls out of it: 44 kW before insulation, a fraction after. |
+| **Heat load per room**           | DIN EN 12831 at minus 14 °C for Berlin, with the installed radiators and a red flag when they are undersized, and the heat pump size that falls out of it: 62 kW before insulation, a fraction after. |
 
 U-values are not typed in. Open a construction and you see its layers, outside to inside,
 with λ and R per layer and the U-value after ISO 6946. Scrub the insulation thickness and
@@ -100,8 +100,8 @@ A renovation scenario is a set of overrides: which construction each category us
 thermal bridge detailing, the roof. Change the baseline and every variant follows.
 
 For the Kreuzberg house: insulate the facade for about 75,000 euros and the class goes from
-G to E with an 18-year payback. Windows and roof, 95,000 euros, class F. Everything at once,
-219,000 euros, class B, saving about 8,000 euros a year.
+G to E with a 16-year payback. Windows and roof, 95,000 euros, class F. Everything at once,
+219,000 euros, class B, saving about 8,500 euros a year.
 
 ### The roadmap consultants sell
 

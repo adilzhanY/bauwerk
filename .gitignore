@@ -9,3 +9,5 @@ coverage
 .DS_Store
 .lavish
 .venv
+docs/shots/*.png
+!docs/shots/hero.png
