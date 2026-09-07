@@ -41,6 +41,7 @@ export function BottomBar({ actor }: Props) {
   const roomCount = useEditorStore(selectRoomCount);
   const floorArea = useEditorStore(selectTotalFloorArea);
   const fileInput = useRef<HTMLInputElement>(null);
+  const ifcFileInput = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<ImportError | null>(null);
   const [ifcError, setIfcError] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -150,9 +151,30 @@ export function BottomBar({ actor }: Props) {
       <input
         ref={fileInput}
         type="file"
-        accept="application/json,.json,.ifc"
+        accept="application/json,.json"
         className="hidden"
         aria-label={t("bar.import")}
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void onImportFile(file);
+          e.target.value = "";
+        }}
+      />
+      <CustomButton
+        variant="quiet"
+        icon={<FileBox size={14} />}
+        onClick={() => {
+          ifcFileInput.current?.click();
+        }}
+      >
+        {t("bar.importIfc")}
+      </CustomButton>
+      <input
+        ref={ifcFileInput}
+        type="file"
+        accept=".ifc,application/x-step"
+        className="hidden"
+        aria-label={t("bar.importIfc")}
         onChange={(e) => {
           const file = e.target.files?.[0];
           if (file) void onImportFile(file);

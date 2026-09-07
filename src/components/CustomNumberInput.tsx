@@ -162,7 +162,7 @@ export function CustomNumberInput({
         title: disabled ? undefined : t("common.scrub"),
       }}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex min-w-0 items-center gap-3">
         {slider && (
           <CustomSlider
             label={label}
@@ -179,7 +179,7 @@ export function CustomNumberInput({
         )}
         <div
           className={cx(
-            "flex h-10 items-center rounded-inner border bg-paper transition-colors focus-within:border-select",
+            "flex h-10 min-w-0 items-center rounded-inner border bg-paper transition-colors focus-within:border-select",
             invalid || error ? "border-mark" : "border-line",
             slider ? "w-28" : "flex-1",
             disabled && "opacity-40",

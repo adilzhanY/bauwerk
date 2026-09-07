@@ -6,6 +6,7 @@ import { resetIds } from "@/lib/ids";
 import { createDefaultBuilding, useEditorStore } from "@/store/building";
 
 beforeEach(() => {
+  window.innerWidth = 1600;
   resetIds();
   useEditorStore.setState({
     building: createDefaultBuilding("en"),
@@ -296,5 +297,11 @@ describe("App", () => {
     expect(screen.getByRole("dialog")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Close" }));
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("renders the too-narrow view when window width is under 1440px", () => {
+    window.innerWidth = 1200;
+    render(<App />);
+    expect(screen.getByRole("heading", { name: "Desktop browser needed" })).toBeTruthy();
   });
 });

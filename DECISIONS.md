@@ -191,3 +191,12 @@ After the German document fix, Adilzhan found that "Altbau Kreuzberg, Baujahr 19
 ## 2026-09-06: The agent enlarged the wrong Energy element
 
 Adilzhan reported that an element in the Energy panel had become too small and attached a screenshot. The agent assumed he meant the clipped scenario selector and changed it to two rows. He meant the colored Energy efficiency class scale directly below it. The unrelated selector change was reverted in the next commit. The panel scale now has its own compact 400-unit view box instead of sharing the 560-unit print proportions, which nearly doubles its rendered height at the same panel width. Its colored band, class letters, marker label and ticks all grow together. The print scale keeps its existing document proportions. The panel test checks both the current and renovated scale sizes.
+
+## 2026-09-07: Wall snapping, right panel width, desktop size limit and IFC import
+
+Adilzhan reported four issues during manual testing with screenshots:
+
+1. Interior wall placement left a gap near the exterior wall and failed to split rooms. The agent's interior wall tool had snapped clicks exclusively to the 0.5 m grid, which left an 8.5 to 20 cm gap against the exterior wall's inner face. The fix introduces `snapToFootprintOrGrid` to project clicks inside the wall attachment zone directly onto the footprint edge, and disables 3D wall mesh raycasts during wall drawing so pointer events cleanly hit the level plane.
+2. The Constructions section in the right panel broke visually with cramped inputs and misaligned buttons. The right panel column width was enlarged from 360 px to 440 px, and `min-w-0` styles plus a dedicated flex button group were applied to layer editor inputs.
+3. The editor got squashed on medium viewports with the right panel cut off. The minimum window width requirement was raised from 1024 px to 1440 px, with updated localized guidance in English and German.
+4. Foreign IFC import showed walls intersecting windows and protruding outside outer walls. The partition at x = 3 cut through the window at x = 2.0 to 3.2 in `foreign-sample.ifc` (window repositioned to x = 0.8 to 2.0). Interior wall import had been snapping extended endpoints to the 0.5 m grid, pushing them 20 cm outside the footprint; this was replaced by clipping to the footprint polygon and rounding to millimeter precision. Dedicated Import JSON and Import IFC buttons were added to the bottom bar.

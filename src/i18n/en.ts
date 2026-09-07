@@ -102,6 +102,7 @@ export const en = {
   "bar.export": "Export JSON",
   "bar.exportIfc": "Export IFC",
   "bar.import": "Import JSON",
+  "bar.importIfc": "Import IFC",
   "bar.shortcuts": "Keyboard shortcuts",
   "status.storeys": "Storeys",
   "status.rooms": "Rooms",
@@ -133,7 +134,7 @@ export const en = {
   "webgl.body": "Bauwerk needs a browser with WebGL to draw the model.",
 
   "narrow.title": "Desktop browser needed",
-  "narrow.body": "The editor needs a window at least 1024 pixels wide.",
+  "narrow.body": "The editor needs a window at least 1440 pixels wide.",
 
   "shortcuts.title": "Keyboard shortcuts",
   "shortcuts.close": "Close",

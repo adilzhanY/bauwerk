@@ -4,6 +4,7 @@ import { App } from "@/App";
 import { useEditorStore, createDefaultBuilding } from "@/store/building";
 
 beforeEach(() => {
+  window.innerWidth = 1600;
   window.localStorage.clear();
   useEditorStore.setState({
     building: createDefaultBuilding("en"),

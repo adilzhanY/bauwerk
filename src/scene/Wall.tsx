@@ -110,7 +110,7 @@ export function Wall({
       onPointerCancel={() => {
         down.current = null;
       }}
-      raycast={active ? meshRaycast : noRaycast}
+      raycast={active && tool !== "interiorWall" ? meshRaycast : noRaycast}
       castShadow
       receiveShadow
       {...hover}

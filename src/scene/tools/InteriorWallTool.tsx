@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { Line } from "@react-three/drei";
 import type { ThreeEvent } from "@react-three/fiber";
-import { bounds, equals, pointInPolygon, snapPoint } from "@/geometry/polygon";
+import { bounds, equals, pointInPolygon, snapToFootprintOrGrid } from "@/geometry/polygon";
+import { effectiveWallThickness } from "@/geometry/layers";
 import { GRID_SIZE } from "@/geometry/types";
 import type { Vec2 } from "@/geometry/types";
 import { colors } from "@/lib/colors";
@@ -40,10 +41,11 @@ export function InteriorWallTool() {
   ];
   const size = Math.max(max.x - min.x, max.y - min.y) + 4;
 
+  const wallThickness = effectiveWallThickness(building);
   const snap = (e: ThreeEvent<PointerEvent | MouseEvent>): Vec2 | null => {
     const hit = pointOnLevel(e, elevation);
     if (!hit) return null;
-    const p = snapPoint(hit, GRID_SIZE);
+    const p = snapToFootprintOrGrid(hit, building.footprint, wallThickness, GRID_SIZE);
     return pointInPolygon(p, building.footprint) ? p : null;
   };
 

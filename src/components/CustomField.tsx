@@ -14,7 +14,7 @@ interface FieldProps {
 /** Label above a control, with an optional hint or error line below. */
 export function CustomField({ label, htmlFor, hint, error, labelProps, children }: FieldProps) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex min-w-0 flex-col gap-1">
       <label
         htmlFor={htmlFor}
         {...labelProps}

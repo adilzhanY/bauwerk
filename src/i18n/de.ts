@@ -106,6 +106,7 @@ export const de: Messages = {
   "bar.export": "JSON exportieren",
   "bar.exportIfc": "IFC exportieren",
   "bar.import": "JSON importieren",
+  "bar.importIfc": "IFC importieren",
   "bar.shortcuts": "Tastenkürzel",
   "status.storeys": "Geschosse",
   "status.rooms": "Räume",
@@ -138,7 +139,7 @@ export const de: Messages = {
   "webgl.body": "Bauwerk braucht einen Browser mit WebGL, um das Modell zu zeichnen.",
 
   "narrow.title": "Desktop-Browser nötig",
-  "narrow.body": "Der Editor braucht ein Fenster mit mindestens 1024 Pixeln Breite.",
+  "narrow.body": "Der Editor braucht ein Fenster mit mindestens 1440 Pixeln Breite.",
 
   "shortcuts.title": "Tastenkürzel",
   "shortcuts.close": "Schließen",

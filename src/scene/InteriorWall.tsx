@@ -83,7 +83,7 @@ export function InteriorWall({
       select({ kind: "opening", storeyId, id });
       return;
     }
-    if (tool === "select" || tool === "interiorWall") {
+    if (tool === "select") {
       e.stopPropagation();
       select(target);
     }
@@ -99,7 +99,7 @@ export function InteriorWall({
       onPointerCancel={() => {
         down.current = null;
       }}
-      raycast={active ? meshRaycast : noRaycast}
+      raycast={active && tool !== "interiorWall" ? meshRaycast : noRaycast}
       castShadow
       {...hover}
     >

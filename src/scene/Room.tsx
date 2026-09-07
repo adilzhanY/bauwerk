@@ -67,7 +67,7 @@ export function Room({ storeyId, room, zone, elevation, active, display, ghostOp
       <mesh
         geometry={geometry}
         onClick={onClick}
-        raycast={active ? meshRaycast : noRaycast}
+        raycast={active && (tool === "select" || tool === "zone") ? meshRaycast : noRaycast}
         {...hover}
       >
         <meshStandardMaterial

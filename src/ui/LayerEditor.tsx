@@ -60,10 +60,10 @@ export function LayerEditor({ construction }: { construction: Construction }) {
       )}
       <ol className="flex flex-col gap-3">
         {layers.map((l, i) => (
-          <li key={l.id} className="flex flex-col gap-2 border-t border-line pt-3">
-            <div className="flex items-center gap-1">
-              <span className="w-5 font-num text-xs text-muted">{i + 1}</span>
-              <div className="flex-1">
+          <li key={l.id} className="flex min-w-0 flex-col gap-2.5 border-t border-line pt-3">
+            <div className="flex items-center gap-2">
+              <span className="w-5 shrink-0 font-num text-xs text-muted">{i + 1}</span>
+              <div className="min-w-0 flex-1">
                 <CustomTextInput
                   label={t("layers.name")}
                   value={l.name}
@@ -73,37 +73,39 @@ export function LayerEditor({ construction }: { construction: Construction }) {
                   }}
                 />
               </div>
-              <CustomIconButton
-                label={t("layers.up")}
-                size="sm"
-                disabled={i === 0}
-                onClick={() => {
-                  moveLayer(construction.id, l.id, -1);
-                }}
-              >
-                <ArrowLeft size={14} />
-              </CustomIconButton>
-              <CustomIconButton
-                label={t("layers.down")}
-                size="sm"
-                disabled={i === layers.length - 1}
-                onClick={() => {
-                  moveLayer(construction.id, l.id, 1);
-                }}
-              >
-                <ArrowRight size={14} />
-              </CustomIconButton>
-              <CustomIconButton
-                label={t("layers.remove")}
-                size="sm"
-                onClick={() => {
-                  removeLayer(construction.id, l.id);
-                }}
-              >
-                <Trash2 size={14} />
-              </CustomIconButton>
+              <div className="flex shrink-0 items-center gap-1">
+                <CustomIconButton
+                  label={t("layers.up")}
+                  size="sm"
+                  disabled={i === 0}
+                  onClick={() => {
+                    moveLayer(construction.id, l.id, -1);
+                  }}
+                >
+                  <ArrowLeft size={14} />
+                </CustomIconButton>
+                <CustomIconButton
+                  label={t("layers.down")}
+                  size="sm"
+                  disabled={i === layers.length - 1}
+                  onClick={() => {
+                    moveLayer(construction.id, l.id, 1);
+                  }}
+                >
+                  <ArrowRight size={14} />
+                </CustomIconButton>
+                <CustomIconButton
+                  label={t("layers.remove")}
+                  size="sm"
+                  onClick={() => {
+                    removeLayer(construction.id, l.id);
+                  }}
+                >
+                  <Trash2 size={14} />
+                </CustomIconButton>
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-3 min-w-0">
               <CustomNumberInput
                 label={t("layers.thickness")}
                 value={Math.round(l.thickness * 1000 * 10) / 10}

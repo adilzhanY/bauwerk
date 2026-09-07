@@ -264,6 +264,7 @@ describe("importIfc on a foreign file", () => {
     expect(result.building.wallThickness).toBeCloseTo(0.3, 2);
     const eg = result.building.storeys[0]!;
     expect(eg.interiorWalls).toHaveLength(1);
+    expect(eg.interiorWalls[0]).toEqual({ a: { x: 3, y: -0.3 }, b: { x: 3, y: 6.3 } });
     expect(eg.rooms).toHaveLength(2);
     expect(eg.openings).toHaveLength(1);
     expect(eg.openings[0]).toMatchObject({ kind: "window", width: 1.2, height: 1.4, sill: 0.9 });

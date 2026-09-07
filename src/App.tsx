@@ -15,7 +15,7 @@ import { ToolRail } from "@/ui/ToolRail";
 import { useKeyboardShortcuts } from "@/ui/useKeyboardShortcuts";
 import { useT } from "@/i18n/useT";
 
-const MIN_WIDTH = 1024;
+const MIN_WIDTH = 1440;
 
 function useWindowWidth(): number {
   const [width, setWidth] = useState(() => window.innerWidth);
@@ -66,7 +66,7 @@ export function App() {
       <main aria-label={t("a11y.scene")} className="absolute inset-0">
         {!hasStoreys ? <EmptyState /> : webgl ? <Viewport /> : <WebGLMissing />}
       </main>
-      <div className="pointer-events-none absolute inset-0 grid grid-cols-[380px_1fr_360px] grid-rows-[1fr_auto] gap-4 p-4">
+      <div className="pointer-events-none absolute inset-0 grid grid-cols-[380px_1fr_440px] grid-rows-[1fr_auto] gap-4 p-4">
         <LeftPanel syncStatus={sync.status} />
         <div className="flex flex-col items-center justify-end pb-1">
           <ToolRail />
@@ -77,7 +77,7 @@ export function App() {
             href="https://www.openstreetmap.org/copyright"
             target="_blank"
             rel="noreferrer"
-            className="pointer-events-auto absolute right-[380px] bottom-16 rounded-soft bg-paper/85 px-2 py-0.5 text-xs text-muted hover:text-ink"
+            className="pointer-events-auto absolute right-[460px] bottom-16 rounded-soft bg-paper/85 px-2 py-0.5 text-xs text-muted hover:text-ink"
           >
             {t("map.attribution")}
           </a>

@@ -10,11 +10,10 @@ import {
   sub,
   dot,
 } from "./polygon";
-import { cleanRing, computeRooms, facesOfSegments } from "./rooms";
+import { cleanRing, clipSegmentToPolygon, computeRooms, facesOfSegments } from "./rooms";
 import { asEnum, asList, asNumber, asRef, asRefs, asString, parseStep } from "./step-parse";
 import type { StepEntity, StepFile, StepValue } from "./step-parse";
 import type { Building, Construction, Opening, Segment, Storey, Vec2, Zone } from "./types";
-import { GRID_SIZE } from "./types";
 
 /**
  * Reads an IFC4 (or IFC2X3) STEP file into the editor's model. The editor holds
@@ -346,7 +345,11 @@ export function importIfc(
     const interiorWalls: Segment[] = walls
       .filter((w) => w.storey === s.e.id && w.partition)
       .map((w) => extendToBoundary(centreLine(w.plan), footprint, thickness + 0.05))
-      .map((seg) => ({ a: snap(seg.a), b: snap(seg.b) }));
+      .flatMap((seg) => clipSegmentToPolygon(seg, footprint))
+      .map((seg) => ({
+        a: { x: round3(seg.a.x), y: round3(seg.a.y) },
+        b: { x: round3(seg.b.x), y: round3(seg.b.y) },
+      }));
     const storeyId = ctx.ids();
     const rooms = computeRooms(footprint, interiorWalls, [], {
       createId: ctx.ids,
@@ -955,7 +958,3 @@ function lengthScaleOf(file: StepFile): number {
 
 const round3 = (v: number) => Math.round(v * 1000) / 1000;
 const round6 = (v: number) => Math.round(v * 1e6) / 1e6;
-const snap = (p: Vec2): Vec2 => ({
-  x: Math.round(p.x / GRID_SIZE) * GRID_SIZE,
-  y: Math.round(p.y / GRID_SIZE) * GRID_SIZE,
-});
