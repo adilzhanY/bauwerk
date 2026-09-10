@@ -11,3 +11,4 @@ coverage
 .venv
 docs/shots/*.png
 !docs/shots/hero.png
+docs/shots/.fonts/
